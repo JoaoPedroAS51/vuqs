@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='14'>%3F</text></svg>" />
+    <title>vuqs playground</title>
+    <script>
+      // Apply the theme before first paint: saved choice wins, otherwise inherit
+      // the system preference. Setting the background here too avoids a flash of
+      // the wrong palette before the stylesheet loads.
+      (function () {
+        try {
+          var saved = localStorage.getItem('vuqs-theme')
+          var theme = saved === 'light' || saved === 'dark'
+            ? saved
+            : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+          var root = document.documentElement
+          root.setAttribute('data-theme', theme)
+          root.style.colorScheme = theme
+          root.style.backgroundColor = theme === 'dark' ? '#16171d' : '#ffffff'
+        }
+        catch (e) {}
+      })()
+    </script>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

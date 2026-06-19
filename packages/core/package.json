@@ -1,0 +1,107 @@
+{
+  "name": "@vuqs/core",
+  "type": "module",
+  "version": "0.0.0",
+  "description": "Type-safe query state for Vue 3 with composable codecs and URL sync.",
+  "author": "João Pedro Antunes Silva <hi@joaopedroas.com>",
+  "license": "MIT",
+  "homepage": "https://JoaoPedroAS51.github.io/vuqs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JoaoPedroAS51/vuqs.git"
+  },
+  "keywords": [
+    "vue",
+    "query",
+    "state",
+    "url",
+    "router",
+    "type-safe",
+    "composable"
+  ],
+  "sideEffects": [
+    "./dist/debug.mjs"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs"
+    },
+    "./debug": {
+      "types": "./dist/debug.d.ts",
+      "import": "./dist/debug.mjs"
+    },
+    "./debug/console": {
+      "types": "./dist/debug/console.d.ts",
+      "import": "./dist/debug/console.mjs"
+    },
+    "./debug-protocol": {
+      "types": "./dist/debug-protocol.d.ts",
+      "import": "./dist/debug-protocol.mjs"
+    },
+    "./adapters/vue-router": {
+      "types": "./dist/adapters/vue-router.d.ts",
+      "import": "./dist/adapters/vue-router.mjs"
+    },
+    "./adapters/testing": {
+      "types": "./dist/adapters/testing.d.ts",
+      "import": "./dist/adapters/testing.mjs"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.mjs"
+    },
+    "./modules": {
+      "types": "./dist/modules/index.d.ts",
+      "import": "./dist/modules/index.mjs"
+    },
+    "./shared": {
+      "types": "./dist/shared/index.d.ts",
+      "import": "./dist/shared/index.mjs"
+    }
+  },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=11 <12"
+  },
+  "scripts": {
+    "build": "unbuild",
+    "dev": "unbuild --stub",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:types": "vitest --typecheck.only --run",
+    "test:perf": "vitest bench test/perf",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "cp ../../README.md ./README.md && pnpm build",
+    "postpublish": "rm -f ./README.md"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0",
+    "vue-router": "^4.0.0 || ^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vue-router": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "catalog:",
+    "typescript": "catalog:",
+    "unbuild": "catalog:",
+    "vitest": "catalog:",
+    "vue": "catalog:",
+    "vue-router": "catalog:"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

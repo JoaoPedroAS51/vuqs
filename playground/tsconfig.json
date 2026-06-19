@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "paths": {
+      "@vuqs/core": ["../packages/core/src/index.ts"],
+      "@vuqs/core/adapters/vue-router": ["../packages/core/src/adapters/vue-router.ts"],
+      "@vuqs/core/modules": ["../packages/core/src/modules/index.ts"]
+    },
+    "types": ["vite/client"]
+  },
+  "include": ["src", "vite.config.ts"]
+}

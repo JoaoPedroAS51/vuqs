@@ -1,0 +1,78 @@
+import type {
+  QueryParamBuilder,
+  QueryParamBuilderOptions,
+  QueryParamBuilderWithDefault,
+  QueryParamTransform,
+} from './query-param-types'
+import { createDefinedQueryParam } from './defined-query-param'
+import { structuralEq } from './equality'
+
+export function createQueryParamBuilder<T, TDefaultInput = T>(
+  options: QueryParamBuilderOptions<T>,
+): QueryParamBuilder<T, TDefaultInput> | QueryParamBuilderWithDefault<T, TDefaultInput> {
+  const defined = createDefinedQueryParam({
+    paths: options.paths,
+    read: options.read,
+    write: options.write,
+    eq: options.eq,
+    resolve: options.resolve,
+    defaultValue: options.defaultValue,
+    clearOnDefault: options.clearOnDefault,
+    presenceGated: options.presenceGated,
+  })
+
+  const builder = {
+    ...defined,
+    withDefault(defaultValue: TDefaultInput) {
+      return createQueryParamBuilder<T, TDefaultInput>({
+        ...options,
+        defaultValue: defaultValue as unknown as T,
+      }) as QueryParamBuilderWithDefault<T, TDefaultInput>
+    },
+    withEquality(eq: (a: T, b: T) => boolean) {
+      return createQueryParamBuilder<T, TDefaultInput>({
+        ...options,
+        eq,
+      })
+    },
+    keepOnDefault() {
+      return createQueryParamBuilder<T, TDefaultInput>({
+        ...options,
+        clearOnDefault: false,
+      })
+    },
+    transform<TOutput>(transformer: QueryParamTransform<T, TOutput>) {
+      const inputEq = options.eq ?? structuralEq
+
+      return createQueryParamBuilder<TOutput>({
+        paths: options.paths,
+        read(query, context) {
+          // Read the raw input selection (undefined when absent), so the transformed
+          // param's own default resolves in the engine's default layer. A present
+          // composite input still resolves its child defaults statically here (the
+          // runtime layer is not in scope through a transform), so `transform.read`
+          // sees a filled value.
+          const selection = options.read(query, context)
+
+          if (selection === undefined) {
+            return undefined
+          }
+
+          const resolved = options.resolve ? options.resolve(selection, options.defaultValue) : selection
+
+          return transformer.read(resolved)
+        },
+        write(value) {
+          return options.write(transformer.write(value))
+        },
+        eq: transformer.eq ?? ((a, b) => inputEq(transformer.write(a), transformer.write(b))),
+        defaultValue: options.defaultValue === undefined
+          ? undefined
+          : transformer.read(options.defaultValue),
+        clearOnDefault: options.clearOnDefault,
+      })
+    },
+  }
+
+  return builder as QueryParamBuilder<T, TDefaultInput> | QueryParamBuilderWithDefault<T, TDefaultInput>
+}

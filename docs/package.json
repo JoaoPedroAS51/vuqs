@@ -1,0 +1,16 @@
+{
+  "name": "@vuqs/docs",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Documentation site for vuqs.",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "vitepress": "catalog:",
+    "vue": "catalog:"
+  }
+}

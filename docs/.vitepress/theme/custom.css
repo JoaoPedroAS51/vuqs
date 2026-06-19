@@ -1,0 +1,23 @@
+/**
+ * vuqs brand + code tweaks over the default VitePress theme.
+ */
+
+:root {
+  /* Brand: vuqs green (default theme ships blue). */
+  --vp-c-brand-1: #2f9e6b;
+  --vp-c-brand-2: #29885c;
+  --vp-c-brand-3: #42b883;
+  --vp-c-brand-soft: rgba(66, 184, 131, 0.14);
+
+  /* Inline code reads as neutral mono, not brand-colored, so dense
+     Parameters/Returns lists don't become a wall of one color. Code blocks keep
+     their full Shiki syntax colors. */
+  --vp-code-color: var(--vp-c-text-1);
+}
+
+.dark {
+  --vp-c-brand-1: #4ecb8d;
+  --vp-c-brand-2: #42b883;
+  --vp-c-brand-3: #379e6d;
+  --vp-c-brand-soft: rgba(66, 184, 131, 0.18);
+}

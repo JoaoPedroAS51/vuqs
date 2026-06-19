@@ -1,0 +1,40 @@
+minimumReleaseAgeExcludePrune: true
+
+trustPolicy: no-downgrade
+trustPolicyExclude:
+  - semver@6.3.1
+  - chokidar@4.0.3
+  - undici-types@6.21.0
+
+shellEmulator: true
+
+packages:
+  - packages/*
+  - docs
+  - playground
+
+allowBuilds:
+  '@parcel/watcher': false
+  esbuild: true
+
+catalog:
+  '@antfu/eslint-config': ^9.5.1
+  '@changesets/cli': ^3.0.3
+  '@nuxt/kit': ^4.5.2
+  '@nuxt/module-builder': ^1.0.3
+  '@nuxt/schema': ^4.5.2
+  '@types/node': ^22.20.4
+  '@vitejs/plugin-vue': ^6.0.9
+  '@vitest/coverage-v8': ^5.0.1
+  defu: ^6.1.7
+  eslint: ^10.11.0
+  nuxt: ^4.5.2
+  turbo: ^2.11.3
+  typescript: ^6.0.3
+  unbuild: ^3.6.1
+  vite: ^8.3.0
+  vitepress: 2.0.0-alpha.20
+  vitest: ^5.0.1
+  vue: ^3.5.43
+  vue-router: ^5.3.1
+  vue-tsc: ^3.3.11

@@ -1,0 +1,36 @@
+{
+  "name": "vuqs-monorepo",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.27.1",
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=11 <12"
+  },
+  "scripts": {
+    "build": "turbo run build --filter='./packages/*'",
+    "dev": "turbo run dev --filter='./packages/*'",
+    "test": "turbo run test --filter='./packages/*'",
+    "test:run": "turbo run test:run --filter='./packages/*'",
+    "test:perf": "turbo run test:perf --filter=@vuqs/core",
+    "test:coverage": "turbo run test:coverage --filter='./packages/*'",
+    "test:types": "turbo run test:types --filter='./packages/*'",
+    "typecheck": "turbo run typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "playground": "turbo run build --filter=@vuqs/playground^... && pnpm --filter @vuqs/playground dev",
+    "playground:build": "turbo run build --filter=@vuqs/playground...",
+    "docs:dev": "turbo run build --filter=@vuqs/core && pnpm --filter @vuqs/docs dev",
+    "docs:build": "turbo run build --filter=@vuqs/core && pnpm --filter @vuqs/docs build",
+    "release": "pnpm build && changeset publish"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "catalog:",
+    "@changesets/cli": "catalog:",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
+  }
+}
