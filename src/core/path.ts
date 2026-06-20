@@ -1,4 +1,5 @@
 import type { ParsedQuery, ParsedQueryRaw, ParsedQueryValue } from './types'
+import { isPlainObject } from './query-object'
 
 const UNSAFE_PATH_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype'])
 
@@ -37,7 +38,9 @@ export function getPath(query: ParsedQuery, path: string): ParsedQueryValue {
  *
  * @remarks
  * Mutates `target` in place and preserves existing sibling keys. Intended to
- * build a fresh object during serialization.
+ * build a fresh object during serialization. As a prototype-pollution guard, a
+ * path whose segments include `__proto__`, `constructor`, or `prototype` is
+ * rejected and `target` is returned unchanged.
  *
  * @param target - The object to write into.
  * @param path - A dot-path, for example `'filters.sort'`.
@@ -112,6 +115,35 @@ export function deletePath(target: ParsedQueryRaw, path: string): void {
 }
 
 /**
+ * Removes empty-object ancestors left behind after deleting a key at `path`.
+ *
+ * @remarks
+ * Walks from the deepest parent upward, deleting each ancestor that became an
+ * empty object, and stops at the first non-empty ancestor since its parents
+ * cannot be empty. Only ancestors along `path` are touched, so unrelated keys
+ * survive.
+ *
+ * @param target - The object to prune.
+ * @param path - The dot-path whose now-empty ancestors should be removed.
+ *
+ * @internal
+ */
+export function pruneEmptyAncestors(target: ParsedQueryRaw, path: string): void {
+  const segments = path.split('.')
+
+  for (let depth = segments.length - 1; depth >= 1; depth--) {
+    const prefix = segments.slice(0, depth).join('.')
+    const node = getPath(target, prefix)
+
+    if (!isPlainObject(node) || Object.keys(node).length > 0) {
+      break
+    }
+
+    deletePath(target, prefix)
+  }
+}
+
+/**
  * Reads a non-empty string from a scalar query value or the first item of an array.
  *
  * @remarks
@@ -181,8 +213,4 @@ export function collectLeafPaths(value: ParsedQueryValue, prefix = ''): string[]
 
 function normalizeString(value: ParsedQueryValue): string | undefined {
   return typeof value === 'string' && value.trim() ? value : undefined
-}
-
-function isPlainObject(value: ParsedQueryValue): value is Record<string, ParsedQueryValue> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
 }

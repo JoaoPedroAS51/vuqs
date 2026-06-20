@@ -1,8 +1,10 @@
 import type { Codec } from '../../src/core/codec'
 import type { QueryStateDefinition } from '../../src/core/define-query-state'
+import type { QueryStateValues } from '../../src/core/schema'
 import { describe, expectTypeOf, it } from 'vitest'
 import { codecs } from '../../src/core/codec'
 import { defineQueryState } from '../../src/core/define-query-state'
+import { parseQueryStates } from '../../src/core/schema'
 
 describe('codec inference', () => {
   it('infers scalar value types', () => {
@@ -31,5 +33,27 @@ describe('defineQueryState inference', () => {
     })
 
     expectTypeOf(dateRange).toEqualTypeOf<QueryStateDefinition<{ from: string, to: string }>>()
+  })
+})
+
+describe('schema value inference', () => {
+  it('builds a partial value map keyed by field', () => {
+    const schema = {
+      currency: defineQueryState('currency', codecs.string),
+      page: defineQueryState('page', codecs.integer.withDefault(1)),
+      statuses: defineQueryState('filters.statuses', codecs.arrayOf(codecs.string)),
+    }
+
+    expectTypeOf<QueryStateValues<typeof schema>>().toEqualTypeOf<{
+      currency?: string
+      page?: number
+      statuses?: string[]
+    }>()
+
+    expectTypeOf(parseQueryStates(schema, {})).toEqualTypeOf<{
+      currency?: string
+      page?: number
+      statuses?: string[]
+    }>()
   })
 })
