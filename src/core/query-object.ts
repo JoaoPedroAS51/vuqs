@@ -15,7 +15,25 @@ export function isPlainObject(value: ParsedQueryValue): value is Record<string, 
  * @internal
  */
 export function cloneQuery(query: ParsedQuery): ParsedQueryRaw {
-  return structuredClone(query) as ParsedQueryRaw
+  return cloneValue(query) as ParsedQueryRaw
+}
+
+function cloneValue(value: ParsedQueryValue): ParsedQueryValue {
+  if (Array.isArray(value)) {
+    return value.map(cloneValue)
+  }
+
+  if (isPlainObject(value)) {
+    const result: ParsedQueryRaw = {}
+
+    for (const [key, child] of Object.entries(value)) {
+      result[key] = cloneValue(child)
+    }
+
+    return result
+  }
+
+  return value
 }
 
 /**

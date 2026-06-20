@@ -7,3 +7,12 @@ export { deletePath, getPath, getQueryString, getQueryStringArray, setPath } fro
 export { buildQuery, getManagedKeys, omitManagedKeys, parseQueryStates, serializeQueryStates } from './core/schema'
 export type { QueryStateSchema, QueryStateValueOf, QueryStateValues } from './core/schema'
 export type { ParsedQuery, ParsedQueryRaw, ParsedQueryValue } from './core/types'
+export { useQueryState } from './core/use-query-state'
+export { useQueryStates } from './core/use-query-states'
+export type {
+  NavigateOptions,
+  QueryStateNavigate,
+  QueryStateRef,
+  UseQueryStatesOptions,
+  UseQueryStatesReturn,
+} from './core/use-query-states'
