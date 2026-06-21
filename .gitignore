@@ -3,3 +3,6 @@ dist
 coverage
 *.tgz
 
+# README is copied into packages/vuqs only at publish time
+packages/vuqs/README.md
+

@@ -2,6 +2,11 @@ shellEmulator: true
 
 trustPolicy: no-downgrade
 
+packages:
+  - packages/*
+  - docs
+  - playground
+
 confirmModulesPurge: false
 
 allowBuilds:

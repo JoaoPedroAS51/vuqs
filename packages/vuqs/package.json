@@ -1,0 +1,46 @@
+{
+  "name": "vuqs",
+  "type": "module",
+  "version": "0.0.0",
+  "description": "Type-safe query state for Vue 3 — composable codecs, URL sync, and a context-aware store.",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "README.md",
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=11 <12"
+  },
+  "scripts": {
+    "build": "unbuild",
+    "dev": "unbuild --stub",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:types": "vitest --typecheck.only --run",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "cp ../../README.md ./README.md && pnpm build",
+    "postpublish": "rm -f ./README.md"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "unbuild": "^3.0.0",
+    "vitest": "^3.0.0",
+    "vue": "^3.5.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -17,6 +17,12 @@ importers:
       typescript:
         specifier: ^5.0.0
         version: 5.9.3
+
+  packages/vuqs:
+    devDependencies:
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
       unbuild:
         specifier: ^3.0.0
         version: 3.6.1(typescript@5.9.3)(vue@3.5.38(typescript@5.9.3))
