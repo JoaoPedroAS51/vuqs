@@ -95,6 +95,22 @@ describe('createQueryStore (no context)', () => {
     expect(query.value).toEqual({ yearEnding: '2024' })
   })
 
+  it('ignores keys not in the schema, without crashing a later reconcile', async () => {
+    const { query, navigate } = setup({ keep: 'me' })
+    const store = createQueryStore({ schema, query, navigate })
+
+    // @ts-expect-error a runtime caller may pass a foreign key
+    store.setValues({ currency: 'EUR', nope: 'y' })
+    await flush()
+
+    expect(query.value).toEqual({ keep: 'me', currency: 'EUR' })
+
+    query.value = { keep: 'other', currency: 'EUR' }
+    await flush()
+
+    expect(store.selected.value).toEqual({ currency: 'EUR' })
+  })
+
   it('clears all selected values', async () => {
     const { query, navigate } = setup({ currency: 'USD', other: 'keep' })
     const store = createQueryStore({ schema, query, navigate })

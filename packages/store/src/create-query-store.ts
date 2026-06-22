@@ -186,7 +186,7 @@ export function createQueryStore<TSchema extends QueryStateSchema, TContext exte
     value: QueryStateValues<TSchema>[Key],
     perCall?: NavigateOptions,
   ): void {
-    if (isValid(key)) {
+    if (Object.hasOwn(schema, key) && isValid(key)) {
       engine.setValue(key, value, perCall)
     }
   }
