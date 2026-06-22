@@ -1,4 +1,4 @@
-import type { Codec } from './codec'
+import type { Codec, CodecWithDefault } from './codec'
 import type { ParsedQuery, ParsedQueryRaw } from './types'
 import { structuralEq } from './equality'
 import { collectLeafPaths, getPath, setPath } from './path'
@@ -27,6 +27,20 @@ export interface QueryStateDefinition<T> {
 }
 
 /**
+ * A {@link QueryStateDefinition} whose codec declared a default, so its value is
+ * never absent: a missing key reads back as {@link QueryStateDefinition.defaultValue}.
+ *
+ * @remarks
+ * Carrying this as a distinct type lets {@link useQueryStates} narrow a defaulted
+ * field to `T` instead of `T | undefined`, matching the single-field overload.
+ *
+ * @typeParam T - The decoded value type of the field.
+ */
+export interface QueryStateDefinitionWithDefault<T> extends QueryStateDefinition<T> {
+  readonly defaultValue: T
+}
+
+/**
  * The escape-hatch form passed to {@link defineQueryState} for fields that span
  * multiple keys or need custom parse/serialize.
  *
@@ -48,12 +62,30 @@ export interface QueryStateDefinitionInput<T> {
 }
 
 /**
+ * Binds a codec with a static default to a single dot-path.
+ *
+ * @remarks
+ * `paths` is derived from `path`. The codec's default is surfaced as
+ * {@link QueryStateDefinition.defaultValue}, and the result is a
+ * {@link QueryStateDefinitionWithDefault}, so a missing key reads back as that
+ * default instead of `undefined`.
+ *
+ * @typeParam T - The decoded value type.
+ * @param path - A dot-path into the query object, for example `'filters.sort'`.
+ * @param codec - A codec carrying a default, from {@link Codec.withDefault}.
+ * @returns A definition that manages the single key at `path` and never reads absent.
+ *
+ * @example
+ * ```ts
+ * defineQueryState('page', codecs.integer.withDefault(1))
+ * ```
+ */
+export function defineQueryState<T>(path: string, codec: CodecWithDefault<T>): QueryStateDefinitionWithDefault<T>
+/**
  * Binds a codec to a single dot-path.
  *
  * @remarks
  * `paths` is derived from `path`, so there is nothing to keep in sync by hand.
- * The codec's default, when present, is surfaced as
- * {@link QueryStateDefinition.defaultValue}.
  *
  * @typeParam T - The decoded value type.
  * @param path - A dot-path into the query object, for example `'filters.sort'`.
@@ -64,7 +96,6 @@ export interface QueryStateDefinitionInput<T> {
  * ```ts
  * defineQueryState('currency', codecs.string)
  * defineQueryState('filters.sort', codecs.string)
- * defineQueryState('page', codecs.integer.withDefault(1))
  * ```
  */
 export function defineQueryState<T>(path: string, codec: Codec<T>): QueryStateDefinition<T>

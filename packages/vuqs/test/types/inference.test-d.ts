@@ -1,5 +1,5 @@
 import type { Codec } from '../../src/core/codec'
-import type { QueryStateDefinition } from '../../src/core/define-query-state'
+import type { QueryStateDefinition, QueryStateDefinitionWithDefault } from '../../src/core/define-query-state'
 import type { QueryStateValues } from '../../src/core/schema'
 import type { QueryStateRef } from '../../src/core/use-query-states'
 import { describe, expectTypeOf, it } from 'vitest'
@@ -7,6 +7,7 @@ import { codecs } from '../../src/core/codec'
 import { defineQueryState } from '../../src/core/define-query-state'
 import { parseQueryStates } from '../../src/core/schema'
 import { useQueryState } from '../../src/core/use-query-state'
+import { useQueryStates } from '../../src/core/use-query-states'
 
 describe('codec inference', () => {
   it('infers scalar value types', () => {
@@ -24,7 +25,7 @@ describe('codec inference', () => {
 describe('defineQueryState inference', () => {
   it('carries the codec value type (path form)', () => {
     expectTypeOf(defineQueryState('currency', codecs.string)).toEqualTypeOf<QueryStateDefinition<string>>()
-    expectTypeOf(defineQueryState('page', codecs.integer.withDefault(1))).toEqualTypeOf<QueryStateDefinition<number>>()
+    expectTypeOf(defineQueryState('page', codecs.integer.withDefault(1))).toEqualTypeOf<QueryStateDefinitionWithDefault<number>>()
   })
 
   it('infers the value type from parse (composite form)', () => {
@@ -75,5 +76,24 @@ describe('useQueryState signatures', () => {
   it('rejects a non-string defaultValue without a codec', () => {
     // @ts-expect-error a number default requires a codec, e.g. codecs.integer.withDefault(0)
     useQueryState('count', { defaultValue: 0 })
+  })
+
+  it('narrows a defaulted definition to a non-nullable ref', () => {
+    expectTypeOf(useQueryState(defineQueryState('page', codecs.integer.withDefault(1))))
+      .toEqualTypeOf<QueryStateRef<number>>()
+    expectTypeOf(useQueryState(defineQueryState('q', codecs.string)))
+      .toEqualTypeOf<QueryStateRef<string | undefined>>()
+  })
+})
+
+describe('useQueryStates inference', () => {
+  it('narrows defaulted fields to T and keeps others nullable', () => {
+    const states = useQueryStates({
+      q: defineQueryState('q', codecs.string),
+      page: defineQueryState('page', codecs.integer.withDefault(1)),
+    }, { query: {}, navigate: () => {} })
+
+    expectTypeOf(states.q).toEqualTypeOf<QueryStateRef<string | undefined>>()
+    expectTypeOf(states.page).toEqualTypeOf<QueryStateRef<number>>()
   })
 })

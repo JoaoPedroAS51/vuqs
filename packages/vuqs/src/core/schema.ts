@@ -1,4 +1,4 @@
-import type { QueryStateDefinition } from './define-query-state'
+import type { QueryStateDefinition, QueryStateDefinitionWithDefault } from './define-query-state'
 import type { ParsedQuery, ParsedQueryRaw } from './types'
 import { deletePath, pruneEmptyAncestors } from './path'
 import { cloneQuery, compactQuery, mergeQueries } from './query-object'
@@ -19,6 +19,21 @@ export type QueryStateSchema = Record<string, QueryStateDefinition<any>>
  */
 export type QueryStateValueOf<TDefinition>
   = TDefinition extends QueryStateDefinition<infer TValue> ? TValue : never
+
+/**
+ * The value a field's reactive ref exposes: `T` when the field declares a
+ * default, otherwise `T | undefined`.
+ *
+ * @remarks
+ * A defaulted field never reads back absent, so its ref drops `undefined`. This
+ * mirrors the single-field {@link useQueryState} overloads at the schema level.
+ *
+ * @typeParam TDefinition - The field definition to read the ref value type from.
+ */
+export type QueryStateRefValue<TDefinition extends QueryStateDefinition<any>>
+  = TDefinition extends QueryStateDefinitionWithDefault<any>
+    ? QueryStateValueOf<TDefinition>
+    : QueryStateValueOf<TDefinition> | undefined
 
 /**
  * The value map for a schema, with every field optional.

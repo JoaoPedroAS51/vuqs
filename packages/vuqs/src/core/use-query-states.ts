@@ -1,5 +1,5 @@
 import type { MaybeRefOrGetter, WritableComputedRef } from 'vue'
-import type { QueryStateSchema, QueryStateValueOf } from './schema'
+import type { QueryStateRefValue, QueryStateSchema } from './schema'
 import type { NavigateOptions, ParsedQuery, QueryStateNavigate } from './types'
 import { computed } from 'vue'
 import { useQueryAdapter } from './adapter'
@@ -49,7 +49,7 @@ export interface QueryStateRef<T> extends WritableComputedRef<T> {
  * @typeParam TSchema - The schema bound to the URL.
  */
 export type UseQueryStatesReturn<TSchema extends QueryStateSchema> = {
-  [Key in keyof TSchema]: QueryStateRef<QueryStateValueOf<TSchema[Key]> | undefined>
+  [Key in keyof TSchema]: QueryStateRef<QueryStateRefValue<TSchema[Key]>>
 }
 
 /**

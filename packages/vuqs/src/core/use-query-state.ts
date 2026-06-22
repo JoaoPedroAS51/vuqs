@@ -1,5 +1,5 @@
 import type { Codec, CodecWithDefault } from './codec'
-import type { QueryStateDefinition } from './define-query-state'
+import type { QueryStateDefinition, QueryStateDefinitionWithDefault } from './define-query-state'
 import type { QueryStateRef, UseQueryStatesOptions } from './use-query-states'
 import { codecs } from './codec'
 import { defineQueryState } from './define-query-state'
@@ -76,6 +76,19 @@ export function useQueryState(path: string, options: StringQueryStateOptions & {
  * ```
  */
 export function useQueryState(path: string, options?: StringQueryStateOptions): QueryStateRef<string | undefined>
+/**
+ * Binds a pre-built definition that declares a default to a writable ref.
+ *
+ * @remarks
+ * The default makes the ref non-nullable: a missing key reads back as the default.
+ *
+ * @typeParam T - The field's value type.
+ * @param definition - A definition carrying a default, from a codec's `withDefault`.
+ * @param options - The query source, navigate adapter, and navigation defaults.
+ * Optional: omitted parts fall back to a provided adapter.
+ * @returns A writable ref that always holds a value.
+ */
+export function useQueryState<T>(definition: QueryStateDefinitionWithDefault<T>, options?: UseQueryStatesOptions): QueryStateRef<T>
 /**
  * Binds a pre-built definition to a writable ref.
  *
