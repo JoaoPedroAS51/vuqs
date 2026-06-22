@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs"
+    },
+    "./adapters/vue-router": {
+      "types": "./dist/adapters/vue-router.d.ts",
+      "import": "./dist/adapters/vue-router.mjs"
     }
   },
   "main": "./dist/index.mjs",
@@ -32,13 +36,20 @@
     "postpublish": "rm -f ./README.md"
   },
   "peerDependencies": {
-    "vue": "^3.5.0"
+    "vue": "^3.5.0",
+    "vue-router": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vue-router": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "^5.0.0",
     "unbuild": "^3.0.0",
     "vitest": "^3.0.0",
-    "vue": "^3.5.0"
+    "vue": "^3.5.0",
+    "vue-router": "^4.0.0"
   },
   "publishConfig": {
     "access": "public"
