@@ -25,85 +25,136 @@ const schema = {
 describe('useQueryStates', () => {
   it('reads field values from the query', () => {
     const { query, navigate } = setup({ q: 'lease', filters: { sort: 'name' } })
-    const states = useQueryStates(schema, { query, navigate })
+    const { values } = useQueryStates(schema, { query, navigate })
 
-    expect(states.q.value).toBe('lease')
-    expect(states.sort.value).toBe('name')
+    expect(values.q).toBe('lease')
+    expect(values.sort).toBe('name')
   })
 
   it('updates the value optimistically before navigation flushes', () => {
     const { query, navigate } = setup()
-    const states = useQueryStates(schema, { query, navigate })
+    const { values } = useQueryStates(schema, { query, navigate })
 
-    states.q.value = 'sale'
+    values.q = 'sale'
 
-    expect(states.q.value).toBe('sale')
+    expect(values.q).toBe('sale')
     expect(navigate).not.toHaveBeenCalled()
   })
 
   it('writes to the URL on flush', async () => {
     const { query, navigate } = setup()
-    const states = useQueryStates(schema, { query, navigate })
+    const { values } = useQueryStates(schema, { query, navigate })
 
-    states.q.value = 'sale'
+    values.q = 'sale'
     await flush()
 
     expect(navigate).toHaveBeenCalledTimes(1)
     expect(query.value).toEqual({ q: 'sale' })
-    expect(states.q.value).toBe('sale')
+    expect(values.q).toBe('sale')
   })
 
   it('coalesces multiple writes in one tick into a single navigation', async () => {
     const { query, navigate } = setup()
-    const states = useQueryStates(schema, { query, navigate })
+    const { values } = useQueryStates(schema, { query, navigate })
 
-    states.q.value = 'sale'
-    states.sort.value = 'name'
+    values.q = 'sale'
+    values.sort = 'name'
     await flush()
 
     expect(navigate).toHaveBeenCalledTimes(1)
     expect(query.value).toEqual({ q: 'sale', filters: { sort: 'name' } })
   })
 
-  it('clears a field, removing it from the URL', async () => {
+  it('clears a nullable field by assigning undefined', async () => {
     const { query, navigate } = setup({ q: 'lease' })
-    const states = useQueryStates(schema, { query, navigate })
+    const { values } = useQueryStates(schema, { query, navigate })
 
-    states.q.clear()
+    values.q = undefined
     await flush()
 
     expect(query.value).toEqual({})
-    expect(states.q.value).toBeUndefined()
+    expect(values.q).toBeUndefined()
   })
 
-  it('honors per-call navigation options', async () => {
-    const { query, navigate } = setup()
-    const states = useQueryStates(schema, { query, navigate, history: 'replace' })
+  describe('setValues', () => {
+    it('sets several fields in a single navigation', async () => {
+      const { query, navigate } = setup()
+      const { setValues } = useQueryStates(schema, { query, navigate })
 
-    states.q.set('sale', { history: 'push' })
-    await flush()
+      setValues({ q: 'sale', sort: 'name' })
+      await flush()
 
-    expect(navigate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ history: 'push' }))
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(query.value).toEqual({ q: 'sale', filters: { sort: 'name' } })
+    })
+
+    it('clears a field with null and skips an undefined field', async () => {
+      const { query, navigate } = setup({ q: 'lease', filters: { sort: 'name' } })
+      const { setValues } = useQueryStates(schema, { query, navigate })
+
+      setValues({ q: null, sort: undefined })
+      await flush()
+
+      expect(query.value).toEqual({ filters: { sort: 'name' } })
+    })
+
+    it('ignores keys not in the schema, without crashing a later reconcile', async () => {
+      const { query, navigate } = setup({ tab: 'a' })
+      const { values, setValues } = useQueryStates(schema, { query, navigate })
+
+      // @ts-expect-error a runtime caller may pass a foreign key
+      setValues({ q: 'x', nope: 'y' })
+      await flush()
+
+      expect(query.value).toEqual({ tab: 'a', q: 'x' })
+      expect(values.q).toBe('x')
+
+      // an unrelated URL change must not throw in the reconcile watcher
+      query.value = { tab: 'b', q: 'x' }
+      await flush()
+
+      expect(values.q).toBe('x')
+    })
+
+    it('honors per-call navigation options', async () => {
+      const { query, navigate } = setup()
+      const { setValues } = useQueryStates(schema, { query, navigate, history: 'replace' })
+
+      setValues({ q: 'sale' }, { history: 'push' })
+      await flush()
+
+      expect(navigate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ history: 'push' }))
+    })
+
+    it('forwards the scroll option', async () => {
+      const { query, navigate } = setup()
+      const { setValues } = useQueryStates(schema, { query, navigate })
+
+      setValues({ q: 'sale' }, { scroll: false })
+      await flush()
+
+      expect(navigate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ scroll: false }))
+    })
   })
 
-  it('forwards the scroll option', async () => {
-    const { query, navigate } = setup()
-    const states = useQueryStates(schema, { query, navigate })
+  it('clears every field', async () => {
+    const { query, navigate } = setup({ q: 'lease', filters: { sort: 'name' }, keep: 'me' })
+    const { clear } = useQueryStates(schema, { query, navigate })
 
-    states.q.set('sale', { scroll: false })
+    clear()
     await flush()
 
-    expect(navigate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ scroll: false }))
+    expect(query.value).toEqual({ keep: 'me' })
   })
 
   it('keeps an in-flight write when an unrelated URL change occurs', async () => {
     const { query, navigate } = setup({ tab: 'a' })
-    const states = useQueryStates(schema, { query, navigate })
+    const { values } = useQueryStates(schema, { query, navigate })
 
-    states.q.value = 'sale'
+    values.q = 'sale'
     query.value = { tab: 'b' }
 
-    expect(states.q.value).toBe('sale')
+    expect(values.q).toBe('sale')
 
     await flush()
 
@@ -112,9 +163,9 @@ describe('useQueryStates', () => {
 
   it('preserves unmanaged params', async () => {
     const { query, navigate } = setup({ keep: 'me' })
-    const states = useQueryStates(schema, { query, navigate })
+    const { values } = useQueryStates(schema, { query, navigate })
 
-    states.q.value = 'sale'
+    values.q = 'sale'
     await flush()
 
     expect(query.value).toEqual({ keep: 'me', q: 'sale' })
@@ -135,20 +186,20 @@ describe('useQueryStates', () => {
 
     it('drops a value equal to the default from the URL', async () => {
       const { query, navigate } = setup({ page: '3' })
-      const states = useQueryStates(withDefault, { query, navigate })
+      const { values } = useQueryStates(withDefault, { query, navigate })
 
-      states.page.value = 1
+      values.page = 1
       await flush()
 
       expect(query.value).toEqual({})
-      expect(states.page.value).toBe(1)
+      expect(values.page).toBe(1)
     })
 
     it('writes a non-default value', async () => {
       const { query, navigate } = setup()
-      const states = useQueryStates(withDefault, { query, navigate })
+      const { values } = useQueryStates(withDefault, { query, navigate })
 
-      states.page.value = 2
+      values.page = 2
       await flush()
 
       expect(query.value).toEqual({ page: '2' })
@@ -159,10 +210,10 @@ describe('useQueryStates', () => {
     it('coalesces writes within the throttle window', async () => {
       vi.useFakeTimers()
       const { query, navigate } = setup()
-      const states = useQueryStates(schema, { query, navigate, throttleMs: 50 })
+      const { values } = useQueryStates(schema, { query, navigate, throttleMs: 50 })
 
-      states.q.value = 'a'
-      states.q.value = 'b'
+      values.q = 'a'
+      values.q = 'b'
       await vi.advanceTimersByTimeAsync(49)
       expect(navigate).not.toHaveBeenCalled()
 
@@ -193,6 +244,27 @@ describe('useQueryState', () => {
     const page = useQueryState('page', codecs.integer.withDefault(1), { query, navigate })
 
     expect(page.value).toBe(1)
+  })
+
+  it('clears via set and clear', async () => {
+    const { query, navigate } = setup({ q: 'lease' })
+    const q = useQueryState('q', codecs.string, { query, navigate })
+
+    q.clear()
+    await flush()
+
+    expect(query.value).toEqual({})
+    expect(q.value).toBeUndefined()
+  })
+
+  it('honors per-call navigation options', async () => {
+    const { query, navigate } = setup()
+    const q = useQueryState('q', codecs.string, { query, navigate, history: 'replace' })
+
+    q.set('sale', { history: 'push' })
+    await flush()
+
+    expect(navigate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ history: 'push' }))
   })
 
   it('accepts a definition', async () => {

@@ -19,6 +19,8 @@ export type {
   NavigateOptions,
   QueryStateNavigate,
   QueryStateRef,
+  QueryStatesActions,
+  QueryStatesValues,
   UseQueryStatesOptions,
   UseQueryStatesReturn,
 } from './core/use-query-states'

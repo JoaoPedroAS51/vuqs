@@ -87,13 +87,13 @@ describe('useQueryState signatures', () => {
 })
 
 describe('useQueryStates inference', () => {
-  it('narrows defaulted fields to T and keeps others nullable', () => {
-    const states = useQueryStates({
+  it('narrows defaulted fields to T and keeps others nullable in values', () => {
+    const { values } = useQueryStates({
       q: defineQueryState('q', codecs.string),
       page: defineQueryState('page', codecs.integer.withDefault(1)),
     }, { query: {}, navigate: () => {} })
 
-    expectTypeOf(states.q).toEqualTypeOf<QueryStateRef<string | undefined>>()
-    expectTypeOf(states.page).toEqualTypeOf<QueryStateRef<number>>()
+    expectTypeOf(values.q).toEqualTypeOf<string | undefined>()
+    expectTypeOf(values.page).toEqualTypeOf<number>()
   })
 })

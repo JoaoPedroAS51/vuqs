@@ -1,9 +1,9 @@
 import type { Codec, CodecWithDefault } from './codec'
 import type { QueryStateDefinition, QueryStateDefinitionWithDefault } from './define-query-state'
-import type { QueryStateRef, UseQueryStatesOptions } from './use-query-states'
+import type { NavigateOptions, QueryStateRef, UseQueryStatesOptions } from './use-query-states'
 import { codecs } from './codec'
 import { defineQueryState } from './define-query-state'
-import { useQueryStates } from './use-query-states'
+import { createQueryStateRefs } from './use-query-states'
 
 /**
  * Options for the string-implicit form. Forbids the `parse` and `serialize` keys
@@ -105,22 +105,38 @@ export function useQueryState<T>(
   maybeOptions?: UseQueryStatesOptions,
 ): QueryStateRef<T | undefined> {
   if (typeof pathOrDefinition !== 'string') {
-    return useQueryStates(
-      { state: pathOrDefinition },
-      (codecOrOptions as UseQueryStatesOptions | undefined) ?? {},
-    ).state
+    return toQueryStateRef(pathOrDefinition, (codecOrOptions as UseQueryStatesOptions | undefined) ?? {})
   }
 
   const path = pathOrDefinition
 
   if (isCodec(codecOrOptions)) {
-    return useQueryStates({ state: defineQueryState(path, codecOrOptions) }, maybeOptions ?? {}).state
+    return toQueryStateRef(defineQueryState(path, codecOrOptions), maybeOptions ?? {})
   }
 
   const { defaultValue, ...navigateOptions } = codecOrOptions ?? {}
   const codec = defaultValue === undefined ? codecs.string : codecs.string.withDefault(defaultValue)
 
-  return useQueryStates({ state: defineQueryState(path, codec) }, navigateOptions).state as QueryStateRef<T | undefined>
+  return toQueryStateRef(defineQueryState(path, codec), navigateOptions) as QueryStateRef<T | undefined>
+}
+
+/**
+ * Wires a single definition into a {@link QueryStateRef} (a writable ref plus
+ * `set`/`clear`), reusing the shared engine setup. `undefined` clears, matching
+ * `.value = undefined`.
+ *
+ * @internal
+ */
+function toQueryStateRef<T>(
+  definition: QueryStateDefinition<T>,
+  options: UseQueryStatesOptions,
+): QueryStateRef<T | undefined> {
+  const { engine, refs } = createQueryStateRefs({ field: definition }, options)
+
+  return Object.assign(refs.field, {
+    set: (value: unknown, perCall?: NavigateOptions) => engine.setValue('field', value, perCall),
+    clear: (perCall?: NavigateOptions) => engine.setValue('field', undefined, perCall),
+  }) as QueryStateRef<T | undefined>
 }
 
 /**

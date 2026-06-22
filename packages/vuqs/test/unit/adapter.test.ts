@@ -39,9 +39,9 @@ describe('provideQueryAdapter', () => {
       return () => h(Child)
     })
 
-    expect(states!.q.value).toBe('lease')
+    expect(states!.values.q).toBe('lease')
 
-    states!.q.value = 'sale'
+    states!.values.q = 'sale'
     await flush()
 
     expect(query.value).toEqual({ q: 'sale' })
@@ -66,11 +66,11 @@ describe('provideQueryAdapter', () => {
       return () => h(Child)
     })
 
-    states!.q.value = 'a'
+    states!.values.q = 'a'
     await flush()
     expect(navigate).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ history: 'push' }))
 
-    states!.q.set('b', { history: 'replace' })
+    states!.setValues({ q: 'b' }, { history: 'replace' })
     await flush()
     expect(navigate).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ history: 'replace' }))
   })
@@ -95,9 +95,9 @@ describe('provideQueryAdapter', () => {
       return () => h(Child)
     })
 
-    expect(states!.q.value).toBe('explicit')
+    expect(states!.values.q).toBe('explicit')
 
-    states!.q.value = 'x'
+    states!.values.q = 'x'
     await flush()
 
     expect(explicitNavigate).toHaveBeenCalled()
@@ -173,7 +173,7 @@ describe('provideQueryAdapter', () => {
       return () => h(Child)
     })
 
-    states!.page.value = 1
+    states!.values.page = 1
     await flush()
 
     expect(query.value).toEqual({ page: '1' })

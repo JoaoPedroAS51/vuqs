@@ -86,7 +86,7 @@ describe('provideVueRouterAdapter', () => {
     app.use(router)
     await renderToString(app)
 
-    expect(states!.q.value).toBe('lease')
+    expect(states!.values.q).toBe('lease')
   })
 
   it('writes through the engine to the router', async () => {
@@ -114,7 +114,7 @@ describe('provideVueRouterAdapter', () => {
     app.use(router)
     await renderToString(app)
 
-    states!.q.value = 'sale'
+    states!.values.q = 'sale'
     await flush()
 
     expect(router.currentRoute.value.query).toEqual({ q: 'sale' })
