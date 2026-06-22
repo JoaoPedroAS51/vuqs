@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { codecs } from '../../src/core/codec'
 import { defineQueryState } from '../../src/core/define-query-state'
-import { buildQuery, getManagedKeys, omitManagedKeys, parseQueryStates, serializeQueryStates } from '../../src/core/schema'
+import { buildQuery, dropDefaults, getManagedKeys, omitManagedKeys, parseQueryStates, serializeQueryStates } from '../../src/core/schema'
 
 const schema = {
   currency: defineQueryState('currency', codecs.string),
@@ -107,6 +107,25 @@ describe('buildQuery', () => {
       page: '2',
       currency: 'EUR',
     })
+  })
+})
+
+describe('dropDefaults', () => {
+  const withDefault = {
+    page: defineQueryState('page', codecs.integer.withDefault(1)),
+    q: defineQueryState('q', codecs.string),
+  }
+
+  it('drops a value equal to its default', () => {
+    expect(dropDefaults(withDefault, { page: 1, q: 'lease' })).toEqual({ q: 'lease' })
+  })
+
+  it('keeps a value that differs from its default', () => {
+    expect(dropDefaults(withDefault, { page: 2 })).toEqual({ page: 2 })
+  })
+
+  it('drops absent fields and keeps fields without a default', () => {
+    expect(dropDefaults(withDefault, { page: undefined, q: 'lease' })).toEqual({ q: 'lease' })
   })
 })
 

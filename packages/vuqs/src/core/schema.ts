@@ -161,6 +161,46 @@ export function buildQuery<TSchema extends QueryStateSchema>(
 }
 
 /**
+ * Drops fields whose value equals their codec default, so a default never
+ * reaches the URL.
+ *
+ * @remarks
+ * Absent (`undefined`) fields are dropped too. A field with no default, or whose
+ * value differs from its default, is kept. This is the `clearOnDefault` rule as a
+ * reusable function, so a caller building a query without the reactive engine,
+ * for example to render a link, applies it identically.
+ *
+ * @typeParam TSchema - The schema describing the fields.
+ * @param schema - The field definitions, used for per-field equality and defaults.
+ * @param values - The values to filter.
+ * @returns A new value map without absent or default-valued fields.
+ */
+export function dropDefaults<TSchema extends QueryStateSchema>(
+  schema: TSchema,
+  values: QueryStateValues<TSchema>,
+): QueryStateValues<TSchema> {
+  const result: QueryStateValues<TSchema> = {}
+
+  for (const key of keysOf(schema)) {
+    const value = values[key]
+
+    if (value === undefined) {
+      continue
+    }
+
+    const definition = schema[key]
+
+    if (definition.defaultValue !== undefined && definition.eq(value, definition.defaultValue)) {
+      continue
+    }
+
+    result[key] = value
+  }
+
+  return result
+}
+
+/**
  * Returns a schema's field names typed as a string-key array.
  *
  * @internal

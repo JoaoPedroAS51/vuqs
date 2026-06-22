@@ -3,6 +3,7 @@ import type { QueryStateDefinition } from './define-query-state'
 import type { QueryStateSchema, QueryStateValues } from './schema'
 import type { NavigateOptions, ParsedQuery, ParsedQueryRaw, QueryStateNavigate } from './types'
 import { computed, ref, toValue, watch } from 'vue'
+import { dropDefaults } from './schema'
 
 /**
  * Options for {@link createQueryStateEngine}.
@@ -136,26 +137,10 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
 
   function commit(perCall: NavigateOptions): void {
     const currentQuery = toValue(options.query)
-    const merged = { ...parse(currentQuery), ...pending.value } as Record<string, unknown>
-    const target: Record<string, unknown> = {}
+    const merged = { ...parse(currentQuery), ...pending.value } as QueryStateValues<TSchema>
+    const target = clearOnDefault ? dropDefaults(schema, merged) : merged
 
-    for (const key of keys) {
-      const value = merged[key]
-
-      if (value === undefined) {
-        continue
-      }
-
-      const definition = schema[key]
-
-      if (clearOnDefault && definition.defaultValue !== undefined && definition.eq(value, definition.defaultValue)) {
-        continue
-      }
-
-      target[key] = value
-    }
-
-    void navigate(build(currentQuery, target as QueryStateValues<TSchema>), {
+    void navigate(build(currentQuery, target), {
       history: perCall.history ?? options.history,
       scroll: perCall.scroll ?? options.scroll,
     })
