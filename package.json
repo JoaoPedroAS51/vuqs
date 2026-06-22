@@ -10,11 +10,11 @@
     "pnpm": ">=11 <12"
   },
   "scripts": {
-    "build": "pnpm --filter vuqs build",
-    "dev": "pnpm --filter vuqs dev",
-    "test": "pnpm --filter vuqs test",
-    "test:run": "pnpm --filter vuqs test:run",
-    "test:types": "pnpm --filter vuqs test:types",
+    "build": "pnpm --filter './packages/*' build",
+    "dev": "pnpm --filter './packages/*' dev",
+    "test": "pnpm --filter './packages/*' test",
+    "test:run": "pnpm --filter './packages/*' test:run",
+    "test:types": "pnpm --filter './packages/*' test:types",
     "typecheck": "pnpm --recursive typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"

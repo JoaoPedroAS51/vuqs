@@ -18,6 +18,25 @@ importers:
         specifier: ^5.0.0
         version: 5.9.3
 
+  packages/store:
+    dependencies:
+      vuqs:
+        specifier: workspace:*
+        version: link:../vuqs
+    devDependencies:
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
+      unbuild:
+        specifier: ^3.0.0
+        version: 3.6.1(typescript@5.9.3)(vue@3.5.38(typescript@5.9.3))
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.6(@types/debug@4.1.13)(jiti@2.7.0)(yaml@2.9.0)
+      vue:
+        specifier: ^3.5.0
+        version: 3.5.38(typescript@5.9.3)
+
   packages/vuqs:
     devDependencies:
       typescript:
