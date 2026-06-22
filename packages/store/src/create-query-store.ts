@@ -6,6 +6,7 @@ import type {
   QueryStateNavigate,
   QueryStateSchema,
   QueryStateValues,
+  QueryStateWriteValues,
 } from 'vuqs'
 import { computed, ref, toValue, watch } from 'vue'
 import {
@@ -84,14 +85,14 @@ export interface QueryStore<TSchema extends QueryStateSchema, TContext extends s
   effective: ComputedRef<QueryStateValues<TSchema>>
   /** The active context, or `undefined` when the store has no context. */
   activeContext: ComputedRef<TContext | undefined>
-  /** Sets one field. Passing `undefined` clears it (reverts to its default). */
+  /** Sets one field. Passing `undefined` clears it, reverting to its default; the batch {@link QueryStore.setValues} instead uses `null` to clear. */
   setValue: <Key extends keyof TSchema & string>(
     key: Key,
     value: QueryStateValues<TSchema>[Key],
     options?: NavigateOptions,
   ) => void
-  /** Sets several fields at once; coalesced into one navigation. */
-  setValues: (values: QueryStateValues<TSchema>, options?: NavigateOptions) => void
+  /** Sets several fields at once, coalesced into one navigation. Omit a field (or pass `undefined`) to leave it untouched, `null` to clear it, or a value to set it. */
+  setValues: (values: QueryStateWriteValues<TSchema>, options?: NavigateOptions) => void
   /** Clears every selected value (reverting each to its default). */
   clear: (options?: NavigateOptions) => void
   /** Replaces the defaults with a snapshot, for example from an API response. */
@@ -190,9 +191,15 @@ export function createQueryStore<TSchema extends QueryStateSchema, TContext exte
     }
   }
 
-  function setValues(values: QueryStateValues<TSchema>, perCall?: NavigateOptions): void {
+  function setValues(values: QueryStateWriteValues<TSchema>, perCall?: NavigateOptions): void {
     for (const key of Object.keys(values) as Array<keyof TSchema & string>) {
-      setValue(key, (values as Record<string, unknown>)[key] as QueryStateValues<TSchema>[typeof key], perCall)
+      const value = (values as Record<string, unknown>)[key]
+
+      if (value === undefined) {
+        continue
+      }
+
+      setValue(key, value === null ? undefined : value as QueryStateValues<TSchema>[typeof key], perCall)
     }
   }
 

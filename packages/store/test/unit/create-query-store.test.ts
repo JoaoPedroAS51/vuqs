@@ -85,6 +85,16 @@ describe('createQueryStore (no context)', () => {
     expect(query.value).toEqual({ currency: 'EUR', yearEnding: '2024' })
   })
 
+  it('clears a field with null and skips an undefined field in setValues', async () => {
+    const { query, navigate } = setup({ currency: 'USD', yearEnding: '2024' })
+    const store = createQueryStore({ schema, query, navigate })
+
+    store.setValues({ currency: null, yearEnding: undefined })
+    await flush()
+
+    expect(query.value).toEqual({ yearEnding: '2024' })
+  })
+
   it('clears all selected values', async () => {
     const { query, navigate } = setup({ currency: 'USD', other: 'keep' })
     const store = createQueryStore({ schema, query, navigate })
