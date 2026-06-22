@@ -1,36 +1,11 @@
 import type { MaybeRefOrGetter, WritableComputedRef } from 'vue'
-import type { QueryStateDefinition } from './define-query-state'
-import type { QueryStateSchema, QueryStateValueOf, QueryStateValues } from './schema'
-import type { ParsedQuery, ParsedQueryRaw } from './types'
-import { computed, ref, toValue, watch } from 'vue'
-import { buildQuery, parseQueryStates } from './schema'
+import type { QueryStateSchema, QueryStateValueOf } from './schema'
+import type { NavigateOptions, ParsedQuery, QueryStateNavigate } from './types'
+import { computed } from 'vue'
+import { createQueryStateEngine } from './engine'
+import { assertUniquePaths, buildQuery, parseQueryStates } from './schema'
 
-/**
- * Navigation options forwarded to the `navigate` adapter.
- *
- * @remarks
- * The adapter decides how to honor each option and may ignore ones it does not
- * support.
- */
-export interface NavigateOptions {
-  /** Replace the current history entry instead of pushing a new one. */
-  history?: 'replace' | 'push'
-  /** Whether the navigation should scroll. */
-  scroll?: boolean
-}
-
-/**
- * The route adapter that applies a query to the URL.
- *
- * @remarks
- * Receives the next parsed query and the resolved navigation options. It is
- * responsible for stringifying the query, for example with `qs`, and performing
- * the navigation. It may complete synchronously or return a promise.
- *
- * @param query - The next parsed query to write to the URL.
- * @param options - The resolved navigation options for this write.
- */
-export type QueryStateNavigate = (query: ParsedQueryRaw, options: NavigateOptions) => void | Promise<void>
+export type { NavigateOptions, QueryStateNavigate } from './types'
 
 /**
  * Options for {@link useQueryStates} and {@link useQueryState}.
@@ -110,141 +85,31 @@ export function useQueryStates<TSchema extends QueryStateSchema>(
 ): UseQueryStatesReturn<TSchema> {
   assertUniquePaths(schema)
 
-  const { navigate, throttleMs = 0, clearOnDefault = true } = options
-  const keys = Object.keys(schema) as Array<keyof TSchema & string>
-
-  const urlValues = computed(() => parseQueryStates(schema, toValue(options.query)))
-  const pending = ref<Record<string, unknown>>({})
-  const state = computed<Record<string, unknown>>(() => ({ ...urlValues.value, ...pending.value }))
-
-  // Committed model: drop a pending write once the URL reflects it. Entries the
-  // URL has not caught up to are kept, so an unrelated navigation cannot discard
-  // an in-flight write.
-  watch(urlValues, (parsed) => {
-    if (Object.keys(pending.value).length === 0) {
-      return
-    }
-
-    const remaining: Record<string, unknown> = {}
-
-    for (const [key, pendingValue] of Object.entries(pending.value)) {
-      if (!isReconciled(schema[key], pendingValue, (parsed as Record<string, unknown>)[key])) {
-        remaining[key] = pendingValue
-      }
-    }
-
-    if (Object.keys(remaining).length !== Object.keys(pending.value).length) {
-      pending.value = remaining
-    }
+  const engine = createQueryStateEngine({
+    schema,
+    query: options.query,
+    navigate: options.navigate,
+    parse: query => parseQueryStates(schema, query),
+    build: (currentQuery, values) => buildQuery(schema, currentQuery, values),
+    history: options.history,
+    scroll: options.scroll,
+    throttleMs: options.throttleMs,
+    clearOnDefault: options.clearOnDefault,
   })
-
-  let scheduled = false
-  let scheduledOptions: NavigateOptions = {}
-
-  function schedule(perCall: NavigateOptions | undefined): void {
-    if (perCall) {
-      scheduledOptions = { ...scheduledOptions, ...perCall }
-    }
-
-    if (scheduled) {
-      return
-    }
-
-    scheduled = true
-
-    const flush = (): void => {
-      scheduled = false
-      const navigateOptions = scheduledOptions
-      scheduledOptions = {}
-      commit(navigateOptions)
-    }
-
-    if (throttleMs > 0) {
-      setTimeout(flush, throttleMs)
-    }
-    else {
-      queueMicrotask(flush)
-    }
-  }
-
-  function commit(perCall: NavigateOptions): void {
-    const currentQuery = toValue(options.query)
-    const merged = { ...parseQueryStates(schema, currentQuery), ...pending.value } as Record<string, unknown>
-    const target: Record<string, unknown> = {}
-
-    for (const key of keys) {
-      const value = merged[key]
-
-      if (value === undefined) {
-        continue
-      }
-
-      const definition = schema[key]
-
-      if (clearOnDefault && definition.defaultValue !== undefined && definition.eq(value, definition.defaultValue)) {
-        continue
-      }
-
-      target[key] = value
-    }
-
-    const query = buildQuery(schema, currentQuery, target as QueryStateValues<TSchema>)
-
-    void navigate(query, {
-      history: perCall.history ?? options.history,
-      scroll: perCall.scroll ?? options.scroll,
-    })
-  }
-
-  function setField(key: string, value: unknown, perCall?: NavigateOptions): void {
-    pending.value = { ...pending.value, [key]: value }
-    schedule(perCall)
-  }
 
   const result: Record<string, QueryStateRef<unknown>> = {}
 
-  for (const key of keys) {
+  for (const key of Object.keys(schema) as Array<keyof TSchema & string>) {
     const fieldRef = computed<unknown>({
-      get: () => {
-        const value = state.value[key]
-
-        return value === undefined ? schema[key].defaultValue : value
-      },
-      set: value => setField(key, value),
+      get: () => (engine.values.value as Record<string, unknown>)[key],
+      set: value => engine.setValue(key, value),
     })
 
     result[key] = Object.assign(fieldRef, {
-      set: (value: unknown, perCall?: NavigateOptions) => setField(key, value, perCall),
-      clear: (perCall?: NavigateOptions) => setField(key, undefined, perCall),
+      set: (value: unknown, perCall?: NavigateOptions) => engine.setValue(key, value, perCall),
+      clear: (perCall?: NavigateOptions) => engine.setValue(key, undefined, perCall),
     }) as QueryStateRef<unknown>
   }
 
   return result as UseQueryStatesReturn<TSchema>
-}
-
-function isReconciled(
-  definition: QueryStateDefinition<any>,
-  pendingValue: unknown,
-  urlValue: unknown,
-): boolean {
-  if (pendingValue === undefined) {
-    return urlValue === undefined
-      || (definition.defaultValue !== undefined && definition.eq(urlValue, definition.defaultValue))
-  }
-
-  return urlValue !== undefined && definition.eq(pendingValue, urlValue)
-}
-
-function assertUniquePaths(schema: QueryStateSchema): void {
-  const seen = new Set<string>()
-
-  for (const key of Object.keys(schema)) {
-    for (const path of schema[key].paths) {
-      if (seen.has(path)) {
-        throw new Error(`[vuqs] duplicate query path "${path}" declared by multiple fields.`)
-      }
-
-      seen.add(path)
-    }
-  }
 }

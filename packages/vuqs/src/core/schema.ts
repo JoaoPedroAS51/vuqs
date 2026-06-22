@@ -168,3 +168,28 @@ export function buildQuery<TSchema extends QueryStateSchema>(
 function keysOf<TSchema extends QueryStateSchema>(schema: TSchema): Array<keyof TSchema & string> {
   return Object.keys(schema) as Array<keyof TSchema & string>
 }
+
+/**
+ * Asserts that no query path is declared by more than one field.
+ *
+ * @remarks
+ * Two fields sharing a path would let their reads and writes silently collide,
+ * with the last write winning, so this fails loudly instead.
+ *
+ * @typeParam TSchema - The schema to validate.
+ * @param schema - The schema to check.
+ * @throws {Error} When a path is declared by more than one field.
+ */
+export function assertUniquePaths<TSchema extends QueryStateSchema>(schema: TSchema): void {
+  const seen = new Set<string>()
+
+  for (const key of Object.keys(schema)) {
+    for (const path of schema[key].paths) {
+      if (seen.has(path)) {
+        throw new Error(`[vuqs] duplicate query path "${path}" declared by multiple fields.`)
+      }
+
+      seen.add(path)
+    }
+  }
+}

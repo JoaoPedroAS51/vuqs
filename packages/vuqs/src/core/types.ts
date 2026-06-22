@@ -31,3 +31,30 @@ export type ParsedQuery = Record<string, ParsedQueryValue>
  * adapter stringifies it.
  */
 export type ParsedQueryRaw = Record<string, ParsedQueryValue>
+
+/**
+ * Navigation options forwarded to the `navigate` adapter.
+ *
+ * @remarks
+ * The adapter decides how to honor each option and may ignore ones it does not
+ * support.
+ */
+export interface NavigateOptions {
+  /** Replace the current history entry instead of pushing a new one. */
+  history?: 'replace' | 'push'
+  /** Whether the navigation should scroll. */
+  scroll?: boolean
+}
+
+/**
+ * The route adapter that applies a query to the URL.
+ *
+ * @remarks
+ * Receives the next parsed query and the resolved navigation options. It is
+ * responsible for stringifying the query, for example with `qs`, and performing
+ * the navigation. It may complete synchronously or return a promise.
+ *
+ * @param query - The next parsed query to write to the URL.
+ * @param options - The resolved navigation options for this write.
+ */
+export type QueryStateNavigate = (query: ParsedQueryRaw, options: NavigateOptions) => void | Promise<void>
