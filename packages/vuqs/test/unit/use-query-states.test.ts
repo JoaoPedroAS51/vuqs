@@ -206,4 +206,18 @@ describe('useQueryState', () => {
 
     expect(query.value).toEqual({ q: 'sale' })
   })
+
+  it('binds a string with an implicit codec (no codec arg)', () => {
+    const { query, navigate } = setup({ q: 'lease' })
+    const q = useQueryState('q', { query, navigate })
+
+    expect(q.value).toBe('lease')
+  })
+
+  it('applies a string defaultValue without a codec', () => {
+    const { query, navigate } = setup()
+    const q = useQueryState('q', { defaultValue: 'all', query, navigate })
+
+    expect(q.value).toBe('all')
+  })
 })

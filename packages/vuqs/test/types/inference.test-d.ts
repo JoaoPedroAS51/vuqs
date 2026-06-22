@@ -1,10 +1,12 @@
 import type { Codec } from '../../src/core/codec'
 import type { QueryStateDefinition } from '../../src/core/define-query-state'
 import type { QueryStateValues } from '../../src/core/schema'
+import type { QueryStateRef } from '../../src/core/use-query-states'
 import { describe, expectTypeOf, it } from 'vitest'
 import { codecs } from '../../src/core/codec'
 import { defineQueryState } from '../../src/core/define-query-state'
 import { parseQueryStates } from '../../src/core/schema'
+import { useQueryState } from '../../src/core/use-query-state'
 
 describe('codec inference', () => {
   it('infers scalar value types', () => {
@@ -55,5 +57,23 @@ describe('schema value inference', () => {
       page?: number
       statuses?: string[]
     }>()
+  })
+})
+
+describe('useQueryState signatures', () => {
+  it('infers string for the implicit forms', () => {
+    expectTypeOf(useQueryState('q')).toEqualTypeOf<QueryStateRef<string | undefined>>()
+    expectTypeOf(useQueryState('q', { history: 'push' })).toEqualTypeOf<QueryStateRef<string | undefined>>()
+    expectTypeOf(useQueryState('q', { defaultValue: 'x' })).toEqualTypeOf<QueryStateRef<string>>()
+  })
+
+  it('keeps codec inference', () => {
+    expectTypeOf(useQueryState('q', codecs.string)).toEqualTypeOf<QueryStateRef<string | undefined>>()
+    expectTypeOf(useQueryState('page', codecs.integer.withDefault(1))).toEqualTypeOf<QueryStateRef<number>>()
+  })
+
+  it('rejects a non-string defaultValue without a codec', () => {
+    // @ts-expect-error a number default requires a codec, e.g. codecs.integer.withDefault(0)
+    useQueryState('count', { defaultValue: 0 })
   })
 })
