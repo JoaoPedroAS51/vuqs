@@ -35,6 +35,164 @@ describe('codecs.integer', () => {
   })
 })
 
+describe('codecs.index', () => {
+  it('parses a 1-based url value into a 0-based value', () => {
+    expect(codecs.index.parse('1')).toBe(0)
+    expect(codecs.index.parse('42')).toBe(41)
+  })
+
+  it('rejects non-integer values', () => {
+    expect(codecs.index.parse('abc')).toBeUndefined()
+    expect(codecs.index.parse('42abc')).toBeUndefined()
+    expect(codecs.index.parse('4.5')).toBeUndefined()
+    expect(codecs.index.parse(undefined)).toBeUndefined()
+  })
+
+  it('serializes a 0-based value into a 1-based string', () => {
+    expect(codecs.index.serialize(0)).toBe('1')
+    expect(codecs.index.serialize(41)).toBe('42')
+  })
+
+  it('round-trips', () => {
+    expect(codecs.index.parse(codecs.index.serialize(7))).toBe(7)
+  })
+})
+
+describe('codecs.hex', () => {
+  it('parses hexadecimal values', () => {
+    expect(codecs.hex.parse('ff')).toBe(255)
+    expect(codecs.hex.parse('FF')).toBe(255)
+    expect(codecs.hex.parse('10')).toBe(16)
+  })
+
+  it('rejects non-hex values', () => {
+    expect(codecs.hex.parse('gg')).toBeUndefined()
+    expect(codecs.hex.parse('0xff')).toBeUndefined()
+    expect(codecs.hex.parse(undefined)).toBeUndefined()
+  })
+
+  it('serializes and pads to even length', () => {
+    expect(codecs.hex.serialize(255)).toBe('ff')
+    expect(codecs.hex.serialize(10)).toBe('0a')
+  })
+
+  it('round-trips', () => {
+    expect(codecs.hex.parse(codecs.hex.serialize(4095))).toBe(4095)
+  })
+})
+
+describe('codecs.timestamp', () => {
+  it('parses milliseconds since the epoch into a Date', () => {
+    expect(codecs.timestamp.parse('0')).toEqual(new Date(0))
+    expect(codecs.timestamp.parse('1000')).toEqual(new Date(1000))
+  })
+
+  it('rejects non-integer values', () => {
+    expect(codecs.timestamp.parse('abc')).toBeUndefined()
+    expect(codecs.timestamp.parse('1.5')).toBeUndefined()
+    expect(codecs.timestamp.parse(undefined)).toBeUndefined()
+  })
+
+  it('serializes a Date into milliseconds', () => {
+    expect(codecs.timestamp.serialize(new Date(1000))).toBe('1000')
+  })
+
+  it('round-trips', () => {
+    const date = new Date(1_700_000_000_000)
+
+    expect(codecs.timestamp.parse(codecs.timestamp.serialize(date))).toEqual(date)
+  })
+
+  it('compares by instant', () => {
+    expect(codecs.timestamp.eq(new Date(1000), new Date(1000))).toBe(true)
+    expect(codecs.timestamp.eq(new Date(1000), new Date(2000))).toBe(false)
+  })
+})
+
+describe('codecs.isoDateTime', () => {
+  it('parses an ISO-8601 string into a Date', () => {
+    expect(codecs.isoDateTime.parse('2026-06-22T12:00:00.000Z')).toEqual(new Date('2026-06-22T12:00:00.000Z'))
+  })
+
+  it('rejects invalid values', () => {
+    expect(codecs.isoDateTime.parse('not-a-date')).toBeUndefined()
+    expect(codecs.isoDateTime.parse(undefined)).toBeUndefined()
+  })
+
+  it('serializes a Date into a full ISO-8601 string', () => {
+    expect(codecs.isoDateTime.serialize(new Date('2026-06-22T12:00:00.000Z'))).toBe('2026-06-22T12:00:00.000Z')
+  })
+
+  it('round-trips', () => {
+    const date = new Date('2026-06-22T12:34:56.789Z')
+
+    expect(codecs.isoDateTime.parse(codecs.isoDateTime.serialize(date))).toEqual(date)
+  })
+
+  it('compares by instant', () => {
+    expect(codecs.isoDateTime.eq(new Date('2026-06-22T12:00:00.000Z'), new Date('2026-06-22T12:00:00.000Z'))).toBe(true)
+    expect(codecs.isoDateTime.eq(new Date('2026-06-22T12:00:00.000Z'), new Date('2026-06-22T13:00:00.000Z'))).toBe(false)
+  })
+})
+
+describe('codecs.isoDate', () => {
+  it('parses a date-only string at midnight UTC', () => {
+    expect(codecs.isoDate.parse('2026-06-22')).toEqual(new Date('2026-06-22'))
+  })
+
+  it('truncates the time portion to the date', () => {
+    expect(codecs.isoDate.parse('2026-06-22T12:00:00.000Z')).toEqual(new Date('2026-06-22'))
+  })
+
+  it('rejects invalid values', () => {
+    expect(codecs.isoDate.parse('not-a-date')).toBeUndefined()
+    expect(codecs.isoDate.parse(undefined)).toBeUndefined()
+  })
+
+  it('rejects partial date strings that would not round-trip', () => {
+    expect(codecs.isoDate.parse('2026-06')).toBeUndefined()
+    expect(codecs.isoDate.parse('2026')).toBeUndefined()
+  })
+
+  it('serializes a Date into a date-only string', () => {
+    expect(codecs.isoDate.serialize(new Date('2026-06-22T12:00:00.000Z'))).toBe('2026-06-22')
+  })
+
+  it('round-trips', () => {
+    const date = new Date('2026-06-22')
+
+    expect(codecs.isoDate.parse(codecs.isoDate.serialize(date))).toEqual(date)
+  })
+
+  it('compares by instant', () => {
+    expect(codecs.isoDate.eq(new Date('2026-06-22'), new Date('2026-06-22'))).toBe(true)
+    expect(codecs.isoDate.eq(new Date('2026-06-22'), new Date('2026-06-23'))).toBe(false)
+  })
+})
+
+describe('codecs.numberLiteral', () => {
+  const level = codecs.numberLiteral([1, 2, 3])
+
+  it('parses values in the set', () => {
+    expect(level.parse('1')).toBe(1)
+    expect(level.parse('3')).toBe(3)
+  })
+
+  it('rejects values outside the set', () => {
+    expect(level.parse('4')).toBeUndefined()
+    expect(level.parse('abc')).toBeUndefined()
+    expect(level.parse(undefined)).toBeUndefined()
+  })
+
+  it('serializes', () => {
+    expect(level.serialize(2)).toBe('2')
+  })
+
+  it('round-trips', () => {
+    expect(level.parse(level.serialize(2))).toBe(2)
+  })
+})
+
 describe('codecs.float', () => {
   it('parses decimals and scientific notation', () => {
     expect(codecs.float.parse('4.5')).toBe(4.5)

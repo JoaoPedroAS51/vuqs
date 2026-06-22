@@ -130,6 +130,46 @@ export const codecs = {
     serialize: value => String(Math.trunc(value)),
   }),
 
+  /** Parses a 1-based index from the URL into a 0-based value. Non-integer input parses as absent. */
+  index: createCodec<number>({
+    parse: (raw) => {
+      const value = getQueryString(raw)
+
+      if (value === undefined) {
+        return undefined
+      }
+
+      if (!/^[+-]?\d+$/.test(value)) {
+        return undefined
+      }
+
+      return Number(value) - 1
+    },
+    serialize: value => String(value + 1),
+  }),
+
+  /** Parses a non-negative hexadecimal integer. Non-hex input parses as absent; serializing pads to even length. */
+  hex: createCodec<number>({
+    parse: (raw) => {
+      const value = getQueryString(raw)
+
+      if (value === undefined) {
+        return undefined
+      }
+
+      if (!/^[0-9a-f]+$/i.test(value)) {
+        return undefined
+      }
+
+      return Number.parseInt(value, 16)
+    },
+    serialize: (value) => {
+      const hex = value.toString(16)
+
+      return (hex.length & 1 ? '0' : '') + hex
+    },
+  }),
+
   /** Parses a floating-point number. Non-numeric input parses as absent. */
   float: createCodec<number>({
     parse: (raw) => {
@@ -162,6 +202,65 @@ export const codecs = {
       return undefined
     },
     serialize: value => (value ? 'true' : 'false'),
+  }),
+
+  /** Parses a `Date` from milliseconds since the epoch. Non-integer or invalid input parses as absent. */
+  timestamp: createCodec<Date>({
+    parse: (raw) => {
+      const value = getQueryString(raw)
+
+      if (value === undefined) {
+        return undefined
+      }
+
+      if (!/^[+-]?\d+$/.test(value)) {
+        return undefined
+      }
+
+      const date = new Date(Number(value))
+
+      return Number.isNaN(date.valueOf()) ? undefined : date
+    },
+    serialize: value => String(value.valueOf()),
+    eq: (a, b) => a.valueOf() === b.valueOf(),
+  }),
+
+  /** Parses a `Date` from a full ISO-8601 string. Invalid input parses as absent. */
+  isoDateTime: createCodec<Date>({
+    parse: (raw) => {
+      const value = getQueryString(raw)
+
+      if (value === undefined) {
+        return undefined
+      }
+
+      const date = new Date(value)
+
+      return Number.isNaN(date.valueOf()) ? undefined : date
+    },
+    serialize: value => value.toISOString(),
+    eq: (a, b) => a.valueOf() === b.valueOf(),
+  }),
+
+  /** Parses a `Date` from a date-only `YYYY-MM-DD` string at midnight UTC. Invalid input parses as absent. */
+  isoDate: createCodec<Date>({
+    parse: (raw) => {
+      const value = getQueryString(raw)
+
+      if (value === undefined) {
+        return undefined
+      }
+
+      if (!/^\d{4}-\d{2}-\d{2}/.test(value)) {
+        return undefined
+      }
+
+      const date = new Date(value.slice(0, 10))
+
+      return Number.isNaN(date.valueOf()) ? undefined : date
+    },
+    serialize: value => value.toISOString().slice(0, 10),
+    eq: (a, b) => a.valueOf() === b.valueOf(),
   }),
 
   /**
@@ -208,6 +307,35 @@ export const codecs = {
         return value !== undefined && allowed.has(value) ? (value as T) : undefined
       },
       serialize: value => value,
+    })
+  },
+
+  /**
+   * Builds a codec for a number constrained to one of `values`.
+   *
+   * @remarks
+   * Any value outside `values` parses as absent (`undefined`).
+   */
+  numberLiteral<const T extends number>(values: readonly T[]): Codec<T> {
+    const allowed = new Set<number>(values)
+
+    return createCodec<T>({
+      parse: (raw) => {
+        const value = getQueryString(raw)
+
+        if (value === undefined) {
+          return undefined
+        }
+
+        const parsed = Number(value)
+
+        if (!Number.isFinite(parsed)) {
+          return undefined
+        }
+
+        return allowed.has(parsed) ? (parsed as T) : undefined
+      },
+      serialize: value => String(value),
     })
   },
 
