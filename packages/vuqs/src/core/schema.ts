@@ -48,6 +48,22 @@ export type QueryStateValues<TSchema extends QueryStateSchema> = {
 }
 
 /**
+ * The write map for a schema: omit a field (or pass `undefined`) to leave it
+ * untouched, `null` to clear it from the URL, or a value to set it.
+ *
+ * @remarks
+ * `null` is the explicit clear command for batch and standalone writes, distinct
+ * from an absent field, which is skipped. Reads never yield `null`: a cleared
+ * field reads back `undefined` or its default. This three-state input is what
+ * lets a partial write preserve the fields it does not mention.
+ *
+ * @typeParam TSchema - The schema whose fields determine the value types.
+ */
+export type QueryStateWriteValues<TSchema extends QueryStateSchema> = {
+  [Key in keyof TSchema]?: QueryStateValueOf<TSchema[Key]> | null
+}
+
+/**
  * Parses every field in a schema out of a parsed query object.
  *
  * @remarks
