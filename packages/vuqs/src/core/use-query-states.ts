@@ -2,6 +2,7 @@ import type { MaybeRefOrGetter, WritableComputedRef } from 'vue'
 import type { QueryStateSchema, QueryStateValueOf } from './schema'
 import type { NavigateOptions, ParsedQuery, QueryStateNavigate } from './types'
 import { computed } from 'vue'
+import { useQueryAdapter } from './adapter'
 import { createQueryStateEngine } from './engine'
 import { assertUniquePaths, buildQuery, parseQueryStates } from './schema'
 
@@ -15,10 +16,10 @@ export type { NavigateOptions, QueryStateNavigate } from './types'
  * applied to every navigation unless a per-call write overrides them.
  */
 export interface UseQueryStatesOptions extends NavigateOptions {
-  /** The current parsed query, as a ref, getter, or plain value. */
-  query: MaybeRefOrGetter<ParsedQuery>
-  /** Applies the next query to the URL. */
-  navigate: QueryStateNavigate
+  /** The current parsed query. Falls back to the provided {@link provideQueryAdapter | adapter}. */
+  query?: MaybeRefOrGetter<ParsedQuery>
+  /** Applies the next query to the URL. Falls back to the provided adapter. */
+  navigate?: QueryStateNavigate
   /** Coalesce writes within this many ms into one navigation. Defaults to a microtask. */
   throttleMs?: number
   /** Drop a value from the URL when it equals its codec default. Defaults to `true`. */
@@ -65,8 +66,10 @@ export type UseQueryStatesReturn<TSchema extends QueryStateSchema> = {
  * @typeParam TSchema - The schema mapping field names to definitions.
  * @param schema - The fields to bind, keyed by logical name.
  * @param options - The query source, navigate adapter, and navigation defaults.
+ * Optional: omitted parts fall back to a provided {@link provideQueryAdapter | adapter}.
  * @returns One {@link QueryStateRef} per schema field.
  * @throws {Error} When two fields declare the same query path.
+ * @throws {Error} When neither `options` nor a provided adapter supplies `query` and `navigate`.
  *
  * @example
  * ```ts
@@ -81,20 +84,32 @@ export type UseQueryStatesReturn<TSchema extends QueryStateSchema> = {
  */
 export function useQueryStates<TSchema extends QueryStateSchema>(
   schema: TSchema,
-  options: UseQueryStatesOptions,
+  options: UseQueryStatesOptions = {},
 ): UseQueryStatesReturn<TSchema> {
   assertUniquePaths(schema)
 
+  const adapter = useQueryAdapter()
+  const querySource = options.query ?? adapter?.query
+  const navigate = options.navigate ?? adapter?.navigate
+
+  if (querySource === undefined || navigate === undefined) {
+    throw new Error(
+      '[vuqs] no query source: pass `query` and `navigate` in options, or call provideQueryAdapter().',
+    )
+  }
+
+  const adapterDefaults = adapter?.defaultOptions
+
   const engine = createQueryStateEngine({
     schema,
-    query: options.query,
-    navigate: options.navigate,
+    query: querySource,
+    navigate,
     parse: query => parseQueryStates(schema, query),
     build: (currentQuery, values) => buildQuery(schema, currentQuery, values),
-    history: options.history,
-    scroll: options.scroll,
-    throttleMs: options.throttleMs,
-    clearOnDefault: options.clearOnDefault,
+    history: options.history ?? adapterDefaults?.history,
+    scroll: options.scroll ?? adapterDefaults?.scroll,
+    throttleMs: options.throttleMs ?? adapterDefaults?.throttleMs,
+    clearOnDefault: options.clearOnDefault ?? adapterDefaults?.clearOnDefault,
   })
 
   const result: Record<string, QueryStateRef<unknown>> = {}
