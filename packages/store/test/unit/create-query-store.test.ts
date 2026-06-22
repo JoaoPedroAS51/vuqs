@@ -25,7 +25,7 @@ describe('createQueryStore (no context)', () => {
     const { query, navigate } = setup({ currency: 'USD' })
     const store = createQueryStore({ schema, query, navigate })
 
-    expect(store.selected.value).toEqual({ currency: 'USD' })
+    expect(store.selected).toEqual({ currency: 'USD' })
   })
 
   it('writes selected to the URL', async () => {
@@ -36,7 +36,7 @@ describe('createQueryStore (no context)', () => {
     await flush()
 
     expect(query.value).toEqual({ currency: 'EUR' })
-    expect(store.selected.value).toEqual({ currency: 'EUR' })
+    expect(store.selected).toEqual({ currency: 'EUR' })
   })
 
   it('shows defaults in effective but never in the URL', async () => {
@@ -46,8 +46,8 @@ describe('createQueryStore (no context)', () => {
     store.setDefaults({ currency: 'USD' })
     await flush()
 
-    expect(store.effective.value).toEqual({ currency: 'USD' })
-    expect(store.selected.value).toEqual({})
+    expect(store.effective).toEqual({ currency: 'USD' })
+    expect(store.selected).toEqual({})
     expect(query.value).toEqual({})
     expect(navigate).not.toHaveBeenCalled()
   })
@@ -60,7 +60,7 @@ describe('createQueryStore (no context)', () => {
     store.setValue('currency', 'EUR')
     await flush()
 
-    expect(store.effective.value).toEqual({ currency: 'EUR' })
+    expect(store.effective).toEqual({ currency: 'EUR' })
     expect(query.value).toEqual({ currency: 'EUR' })
   })
 
@@ -71,7 +71,7 @@ describe('createQueryStore (no context)', () => {
     store.setDefaults({ currency: 'USD' })
     store.clearDefaults()
 
-    expect(store.effective.value).toEqual({})
+    expect(store.effective).toEqual({})
   })
 
   it('coalesces setValues into one navigation', async () => {
@@ -108,7 +108,7 @@ describe('createQueryStore (no context)', () => {
     query.value = { keep: 'other', currency: 'EUR' }
     await flush()
 
-    expect(store.selected.value).toEqual({ currency: 'EUR' })
+    expect(store.selected).toEqual({ currency: 'EUR' })
   })
 
   it('clears all selected values', async () => {
@@ -119,7 +119,7 @@ describe('createQueryStore (no context)', () => {
     await flush()
 
     expect(query.value).toEqual({ other: 'keep' })
-    expect(store.selected.value).toEqual({})
+    expect(store.selected).toEqual({})
   })
 
   it('builds a query for the current selection without navigating', () => {
@@ -151,8 +151,8 @@ describe('createQueryStore (with context)', () => {
   it('drops a field invalid in the active context from selected and effective', () => {
     const { store } = setupContextStore({ yearEnding: '2024' })
 
-    expect(store.selected.value).toEqual({})
-    expect(store.effective.value).toEqual({})
+    expect(store.selected).toEqual({})
+    expect(store.effective).toEqual({})
   })
 
   it('includes the field once its context is active', () => {
@@ -160,7 +160,7 @@ describe('createQueryStore (with context)', () => {
 
     active.value = 'annual'
 
-    expect(store.selected.value).toEqual({ yearEnding: '2024' })
+    expect(store.selected).toEqual({ yearEnding: '2024' })
   })
 
   it('does not write a field invalid in the active context', async () => {
@@ -170,7 +170,7 @@ describe('createQueryStore (with context)', () => {
     await flush()
 
     expect(query.value).toEqual({ currency: 'USD' })
-    expect(store.selected.value).toEqual({ currency: 'USD' })
+    expect(store.selected).toEqual({ currency: 'USD' })
   })
 
   it('does not surface invalid-context fields in selected when clearing', () => {
@@ -178,7 +178,7 @@ describe('createQueryStore (with context)', () => {
 
     store.clear()
 
-    expect(Object.keys(store.selected.value)).not.toContain('yearEnding')
+    expect(Object.keys(store.selected)).not.toContain('yearEnding')
   })
 
   it('filters invalid-context defaults out of effective', () => {
@@ -186,7 +186,7 @@ describe('createQueryStore (with context)', () => {
 
     store.setDefaults({ currency: 'USD', yearEnding: '2024' })
 
-    expect(store.effective.value).toEqual({ currency: 'USD' })
+    expect(store.effective).toEqual({ currency: 'USD' })
   })
 
   it('exposes the active context', () => {
@@ -237,10 +237,10 @@ describe('createQueryStore (context navigation)', () => {
     const { active, store } = setupNav()
 
     store.setDefaults({ currency: 'USD' })
-    expect(store.defaults.value).toEqual({ currency: 'USD' })
+    expect(store.defaults).toEqual({ currency: 'USD' })
 
     active.value = 'monthly'
 
-    expect(store.defaults.value).toEqual({})
+    expect(store.defaults).toEqual({})
   })
 })

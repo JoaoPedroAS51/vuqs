@@ -8,13 +8,28 @@ import type {
   QueryStateValues,
   QueryStateWriteValues,
 } from 'vuqs'
-import { computed, ref, toValue, watch } from 'vue'
+import { computed, reactive, readonly, ref, toValue, watch } from 'vue'
 import {
   assertUniquePaths,
   buildQuery as buildQueryCore,
   createQueryStateEngine,
   parseQueryStates,
 } from 'vuqs'
+
+/**
+ * Exposes a computed record as a readonly reactive object. Reimplements VueUse's
+ * `toReactive` (a Proxy over the ref) since the store has no VueUse dependency.
+ */
+function toReadonlyState<T extends object>(source: ComputedRef<T>): Readonly<T> {
+  const proxy = new Proxy({} as T, {
+    get: (_, key) => Reflect.get(source.value, key),
+    has: (_, key) => Reflect.has(source.value, key),
+    ownKeys: () => Reflect.ownKeys(source.value),
+    getOwnPropertyDescriptor: () => ({ enumerable: true, configurable: true }),
+  })
+
+  return readonly(reactive(proxy)) as Readonly<T>
+}
 
 /**
  * Context configuration for a query store.
@@ -78,11 +93,11 @@ export interface CreateQueryStoreOptions<TSchema extends QueryStateSchema, TCont
  */
 export interface QueryStore<TSchema extends QueryStateSchema, TContext extends string = string> {
   /** Explicit user selections, mirrored from the URL and filtered by the active context. */
-  selected: ComputedRef<QueryStateValues<TSchema>>
+  selected: Readonly<QueryStateValues<TSchema>>
   /** Defaults supplied by an API/loader. Never serialized to the URL. */
-  defaults: ComputedRef<QueryStateValues<TSchema>>
+  defaults: Readonly<QueryStateValues<TSchema>>
   /** `selected` layered over `defaults`, filtered by the active context. */
-  effective: ComputedRef<QueryStateValues<TSchema>>
+  effective: Readonly<QueryStateValues<TSchema>>
   /** The active context, or `undefined` when the store has no context. */
   activeContext: ComputedRef<TContext | undefined>
   /** Sets one field. Passing `undefined` clears it, reverting to its default; the batch {@link QueryStore.setValues} instead uses `null` to clear. */
@@ -245,9 +260,9 @@ export function createQueryStore<TSchema extends QueryStateSchema, TContext exte
   }
 
   return {
-    selected,
-    defaults,
-    effective,
+    selected: toReadonlyState(selected),
+    defaults: toReadonlyState(defaults),
+    effective: toReadonlyState(effective),
     activeContext,
     setValue,
     setValues,

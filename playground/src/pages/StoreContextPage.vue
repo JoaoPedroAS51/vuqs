@@ -78,7 +78,7 @@ function setField(key: 'q' | 'category' | 'status' | 'sort', event: Event) {
     <div class="row">
       <span class="k">q</span>
       <div class="control">
-        <input type="text" placeholder="search (survives switch)…" :value="store.selected.value.q ?? ''" @input="setField('q', $event)">
+        <input type="text" placeholder="search (survives switch)…" :value="store.selected.q ?? ''" @input="setField('q', $event)">
       </div>
       <span class="type">preserved</span>
     </div>
@@ -86,7 +86,7 @@ function setField(key: 'q' | 'category' | 'status' | 'sort', event: Event) {
     <div class="row">
       <span class="k">sort</span>
       <div class="control">
-        <select :value="store.selected.value.sort ?? ''" @change="setField('sort', $event)">
+        <select :value="store.selected.sort ?? ''" @change="setField('sort', $event)">
           <option value="">—</option>
           <option value="newest">newest</option>
           <option value="oldest">oldest</option>
@@ -98,7 +98,7 @@ function setField(key: 'q' | 'category' | 'status' | 'sort', event: Event) {
     <div v-if="tab === 'products'" class="row">
       <span class="k">category</span>
       <div class="control">
-        <select :value="store.selected.value.category ?? ''" @change="setField('category', $event)">
+        <select :value="store.selected.category ?? ''" @change="setField('category', $event)">
           <option value="">—</option>
           <option value="cpu">cpu</option>
           <option value="gpu">gpu</option>
@@ -111,7 +111,7 @@ function setField(key: 'q' | 'category' | 'status' | 'sort', event: Event) {
     <div v-else class="row">
       <span class="k">status</span>
       <div class="control">
-        <select :value="store.selected.value.status ?? ''" @change="setField('status', $event)">
+        <select :value="store.selected.status ?? ''" @change="setField('status', $event)">
           <option value="">—</option>
           <option value="open">open</option>
           <option value="shipped">shipped</option>
@@ -124,8 +124,8 @@ function setField(key: 'q' | 'category' | 'status' | 'sort', event: Event) {
     <template #panel>
       <div class="panel-label accent">active context</div>
       <div class="url-preview" style="margin-bottom: 4px;">{{ store.activeContext.value }}</div>
-      <StateBlock label="selected" :value="store.selected.value" />
-      <StateBlock label="effective" :value="store.effective.value" />
+      <StateBlock label="selected" :value="store.selected" />
+      <StateBlock label="effective" :value="store.effective" />
     </template>
   </PageLayout>
 </template>

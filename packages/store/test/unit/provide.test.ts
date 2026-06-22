@@ -38,7 +38,7 @@ describe('provideQueryStore / useQueryStore', () => {
     await renderToString(createSSRApp(Parent))
 
     expect(injected).toBeDefined()
-    expect(injected!.selected.value).toEqual({ currency: 'USD' })
+    expect(injected!.selected).toEqual({ currency: 'USD' })
   })
 
   it('throws when used without a provider', async () => {

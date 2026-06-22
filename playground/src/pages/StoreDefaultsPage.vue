@@ -64,7 +64,7 @@ function setPerPage(event: Event) {
         <input
           type="text"
           placeholder="search…"
-          :value="store.selected.value.q ?? ''"
+          :value="store.selected.q ?? ''"
           @input="store.setValue('q', ($event.target as HTMLInputElement).value || undefined)"
         >
         <button class="clear-btn" type="button" @click="store.setValue('q', undefined)">clear</button>
@@ -75,7 +75,7 @@ function setPerPage(event: Event) {
     <div class="row">
       <span class="k">status</span>
       <div class="control">
-        <select :value="store.selected.value.status ?? ''" @change="setStatus">
+        <select :value="store.selected.status ?? ''" @change="setStatus">
           <option value="">— (default)</option>
           <option value="active">active</option>
           <option value="archived">archived</option>
@@ -88,7 +88,7 @@ function setPerPage(event: Event) {
     <div class="row">
       <span class="k">perPage</span>
       <div class="control">
-        <select :value="store.selected.value.perPage ?? ''" @change="setPerPage">
+        <select :value="store.selected.perPage ?? ''" @change="setPerPage">
           <option value="">— (default)</option>
           <option value="10">10</option>
           <option value="20">20</option>
@@ -112,9 +112,9 @@ function setPerPage(event: Event) {
     </div>
 
     <template #panel>
-      <StateBlock label="selected → URL" :value="store.selected.value" accent />
-      <StateBlock label="defaults · API" :value="store.defaults.value" />
-      <StateBlock label="effective · read" :value="store.effective.value" />
+      <StateBlock label="selected → URL" :value="store.selected" accent />
+      <StateBlock label="defaults · API" :value="store.defaults" />
+      <StateBlock label="effective · read" :value="store.effective" />
     </template>
   </PageLayout>
 </template>
