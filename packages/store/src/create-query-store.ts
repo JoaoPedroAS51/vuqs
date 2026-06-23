@@ -17,6 +17,24 @@ import {
 } from 'vuqs'
 
 /**
+ * Returns a copy without `undefined`-valued keys, so a cleared field reads as
+ * absent rather than overwriting a default when layered.
+ */
+function definedOnly<T extends object>(values: T): T {
+  const result: Record<string, unknown> = {}
+
+  for (const key of Object.keys(values)) {
+    const value = (values as Record<string, unknown>)[key]
+
+    if (value !== undefined) {
+      result[key] = value
+    }
+  }
+
+  return result as T
+}
+
+/**
  * Exposes a computed record as a readonly reactive object. Reimplements VueUse's
  * `toReactive` (a Proxy over the ref) since the store has no VueUse dependency.
  */
@@ -190,7 +208,9 @@ export function createQueryStore<TSchema extends QueryStateSchema, TContext exte
 
   const defaultsRef = ref<QueryStateValues<TSchema>>({})
 
-  const selected = engine.values
+  // Drop optimistic `undefined` entries (a cleared field): they must read as absent
+  // so they never overwrite a default in `effective`.
+  const selected = computed<QueryStateValues<TSchema>>(() => definedOnly(engine.values.value))
   const defaults = computed(() => defaultsRef.value)
   const effective = computed<QueryStateValues<TSchema>>(() =>
     filterValid({ ...defaultsRef.value, ...selected.value } as QueryStateValues<TSchema>),

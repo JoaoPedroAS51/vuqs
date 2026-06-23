@@ -1,6 +1,6 @@
 import type { ParsedQuery, ParsedQueryRaw } from 'vuqs'
 import { describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
+import { effectScope, nextTick, ref, watchEffect } from 'vue'
 import { codecs, defineQueryState } from 'vuqs'
 import { createQueryStore } from '../../src/create-query-store'
 
@@ -72,6 +72,26 @@ describe('createQueryStore (no context)', () => {
     store.clearDefaults()
 
     expect(store.effective).toEqual({})
+  })
+
+  it('keeps the default in effective through a clear, with no undefined transient', async () => {
+    const { query, navigate } = setup({ currency: 'EUR' })
+    const store = createQueryStore({ schema, query, navigate })
+    store.setDefaults({ currency: 'USD' })
+
+    const seen: Array<string | undefined> = []
+    const scope = effectScope()
+    scope.run(() => {
+      watchEffect(() => seen.push(store.effective.currency))
+    })
+
+    store.clear()
+    await flush()
+    await nextTick()
+
+    expect(store.effective).toEqual({ currency: 'USD' })
+    expect(seen).not.toContain(undefined)
+    scope.stop()
   })
 
   it('coalesces setValues into one navigation', async () => {
