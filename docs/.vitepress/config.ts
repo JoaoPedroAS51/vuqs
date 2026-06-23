@@ -25,6 +25,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/introduction', activeMatch: '/guide/' },
       { text: 'Store', link: '/store/introduction', activeMatch: '/store/' },
+      { text: 'Nuxt', link: '/nuxt/introduction', activeMatch: '/nuxt/' },
       { text: 'API', link: '/api/', activeMatch: '/api/' },
       {
         text: 'v0',
@@ -79,6 +80,15 @@ export default defineConfig({
         },
       ],
 
+      '/nuxt/': [
+        {
+          text: '@vuqs/nuxt',
+          items: [
+            { text: 'Introduction', link: '/nuxt/introduction' },
+          ],
+        },
+      ],
+
       '/api/': [
         {
           text: 'API reference',
@@ -89,6 +99,7 @@ export default defineConfig({
             { text: 'Adapters', link: '/api/adapters' },
             { text: 'Serializer & pure functions', link: '/api/serializer' },
             { text: '@vuqs/store', link: '/api/store' },
+            { text: '@vuqs/nuxt', link: '/api/nuxt' },
             { text: 'Types', link: '/api/types' },
           ],
         },

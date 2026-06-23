@@ -11,6 +11,7 @@ walkthroughs, see the [Guide](/guide/introduction) and
 | `vuqs` | `import { … } from 'vuqs'` | The core: codecs, composables, adapters, serializer. |
 | `vuqs/adapters/vue-router` | `import { … } from 'vuqs/adapters/vue-router'` | The vue-router adapter. |
 | `@vuqs/store` | `import { … } from '@vuqs/store'` | The three-state, context-aware store. |
+| `@vuqs/nuxt` | `modules: ['@vuqs/nuxt']` | The Nuxt module: auto-imports + the adapter out of the box. |
 
 ## Reference pages
 
@@ -19,6 +20,7 @@ walkthroughs, see the [Guide](/guide/introduction) and
 - **[Adapters](/api/adapters)** — `createVueRouterAdapter`, `provideVueRouterAdapter`, `QueryAdapter`.
 - **[Serializer & pure functions](/api/serializer)** — `createSerializer` and the framework-free helpers.
 - **[@vuqs/store](/api/store)** — `createQueryStore`, provide/inject, `QueryStore`.
+- **[@vuqs/nuxt](/api/nuxt)** — the Nuxt module and its `ModuleOptions`.
 - **[Types](/api/types)** — the exported type surface.
 
 ## Full export list
@@ -28,7 +30,7 @@ walkthroughs, see the [Guide](/guide/introduction) and
 ```ts
 // Composables
 export { useQueryState, useQueryStates }
-export { provideQueryAdapter, useQueryAdapter }
+export { installQueryAdapter, provideQueryAdapter, useQueryAdapter }
 
 // Fields & codecs
 export { codecs, createCodec }
@@ -105,4 +107,11 @@ export type {
   QueryStoreContext,
   QueryStoreKey,
 }
+```
+
+### `@vuqs/nuxt`
+
+```ts
+// Registered in nuxt.config: modules: ['@vuqs/nuxt']
+export type { AdapterOptions, AutoImportsOptions, ModuleOptions }
 ```

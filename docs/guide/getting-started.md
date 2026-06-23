@@ -53,6 +53,11 @@ provideVueRouterAdapter()
 That's all the setup most apps need. Skip ahead to [your first query
 state](#your-first-query-state).
 
+::: tip Using Nuxt?
+The [`@vuqs/nuxt`](/nuxt/introduction) module provides this adapter app-wide and
+auto-imports the composables.
+:::
+
 ::: details Using nested keys like `filters.sort`? Configure qs.
 By default `vue-router` parses the query as a flat map, so dotted keys such as
 `filters.sort` won't round-trip. To use [nested keys](/guide/nested-keys), tell

@@ -53,6 +53,9 @@ Nuxt's router **is** `vue-router`. The same adapter covers a Nuxt app — call
 `provideVueRouterAdapter()` from a layout or a top-level component (or a plugin),
 and `useRouter()` resolves Nuxt's router.
 
+The [`@vuqs/nuxt`](/nuxt/introduction) module auto-imports the composables and
+provides this adapter app-wide.
+
 ### Nested keys need qs
 
 `vue-router`'s default query parser is flat, so dotted keys like `filters.sort`

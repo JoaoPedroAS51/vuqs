@@ -127,6 +127,19 @@ function provideQueryAdapter(adapter: QueryAdapter): void
 Provides a [`QueryAdapter`](/api/adapters#queryadapter) to descendants, so their
 composables resolve `query`/`navigate` automatically. Call from `setup`.
 
+## `installQueryAdapter`
+
+```ts
+function installQueryAdapter(app: App, adapter: QueryAdapter): void
+```
+
+The app-level counterpart to `provideQueryAdapter`: it provides the adapter on
+the Vue [`App`](https://vuejs.org/api/application.html) rather than the current
+component instance, so it can run where there is no active instance — most
+notably a Nuxt plugin (`installQueryAdapter(nuxtApp.vueApp, adapter)`). Every
+descendant then resolves it through `useQueryAdapter`. This is what the
+[Nuxt module](/nuxt/introduction) uses under the hood.
+
 ## `useQueryAdapter`
 
 ```ts

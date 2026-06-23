@@ -1,4 +1,4 @@
-import type { InjectionKey, MaybeRefOrGetter } from 'vue'
+import type { App, InjectionKey, MaybeRefOrGetter } from 'vue'
 import type { NavigateOptions, ParsedQuery, QueryStateNavigate } from './types'
 import { hasInjectionContext, inject, provide } from 'vue'
 
@@ -50,6 +50,23 @@ const QUERY_ADAPTER_KEY: InjectionKey<QueryAdapter> = Symbol('vuqs-query-adapter
  */
 export function provideQueryAdapter(adapter: QueryAdapter): void {
   provide(QUERY_ADAPTER_KEY, adapter)
+}
+
+/**
+ * Installs a query adapter at the application level.
+ *
+ * @remarks
+ * The app-level counterpart to {@link provideQueryAdapter}: it provides the
+ * adapter on the Vue `App` rather than the current component instance, so it can
+ * be called where there is no active instance, such as application setup or a
+ * plugin (`installQueryAdapter(app, adapter)`). Every descendant then resolves it
+ * through {@link useQueryAdapter}.
+ *
+ * @param app - The Vue application to provide the adapter on.
+ * @param adapter - The query source, navigate adapter, and optional defaults.
+ */
+export function installQueryAdapter(app: App, adapter: QueryAdapter): void {
+  app.provide(QUERY_ADAPTER_KEY, adapter)
 }
 
 /**

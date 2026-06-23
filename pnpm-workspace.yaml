@@ -2,6 +2,14 @@ shellEmulator: true
 
 trustPolicy: no-downgrade
 
+# Old, well-known packages whose provenance attestation predates npm's signing
+# support. Pulled transitively by the @vuqs/nuxt dev toolchain (nuxt); the trust
+# downgrade is a historical gap, not a takeover signal.
+trustPolicyExclude:
+  - semver@6.3.1
+  - chokidar@4.0.3
+  - undici-types@6.21.0
+
 packages:
   - packages/*
   - docs
@@ -10,4 +18,5 @@ packages:
 confirmModulesPurge: false
 
 allowBuilds:
+  '@parcel/watcher': false
   esbuild: true

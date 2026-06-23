@@ -3,7 +3,7 @@ import type { UseQueryStatesReturn } from '../../src/core/use-query-states'
 import { describe, expect, it, vi } from 'vitest'
 import { createSSRApp, defineComponent, h, ref } from 'vue'
 import { renderToString } from 'vue/server-renderer'
-import { provideQueryAdapter } from '../../src/core/adapter'
+import { installQueryAdapter, provideQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
 import { defineQueryState } from '../../src/core/define-query-state'
 import { useQueryState } from '../../src/core/use-query-state'
@@ -151,6 +151,32 @@ describe('provideQueryAdapter', () => {
     })
 
     expect(value).toBe('lease')
+  })
+
+  it('resolves an adapter installed at the app level via installQueryAdapter', async () => {
+    const query = ref<ParsedQuery>({ q: 'lease' })
+    const navigate = vi.fn((next: ParsedQueryRaw) => {
+      query.value = next
+    })
+    let states: UseQueryStatesReturn<typeof schema> | undefined
+
+    const Child = defineComponent({
+      setup() {
+        states = useQueryStates(schema)
+        return () => h('div')
+      },
+    })
+
+    const app = createSSRApp(Child)
+    installQueryAdapter(app, { query: () => query.value, navigate })
+    await renderToString(app)
+
+    expect(states!.values.q).toBe('lease')
+
+    states!.values.q = 'sale'
+    await flush()
+
+    expect(query.value).toEqual({ q: 'sale' })
   })
 
   it('passes adapter defaultOptions (clearOnDefault) through to the engine', async () => {

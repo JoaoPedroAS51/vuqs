@@ -1,4 +1,4 @@
-export { provideQueryAdapter, useQueryAdapter } from './core/adapter'
+export { installQueryAdapter, provideQueryAdapter, useQueryAdapter } from './core/adapter'
 export type { QueryAdapter, QueryAdapterDefaultOptions } from './core/adapter'
 export { codecs, createCodec } from './core/codec'
 export type { Codec, CodecInput, CodecWithDefault } from './core/codec'
