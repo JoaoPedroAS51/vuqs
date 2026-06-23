@@ -39,7 +39,8 @@ export function createVueRouterAdapter(options: VueRouterAdapterOptions = {}): Q
     query: () => router.currentRoute.value.query as ParsedQuery,
     navigate: (query, navigateOptions) => {
       // `scroll` has no per-call equivalent in vue-router (it is `scrollBehavior`), so it is ignored.
-      const location = { query: query as LocationQueryRaw }
+      // Carry the current hash forward: a location object without `hash` resets it to `''`.
+      const location = { query: query as LocationQueryRaw, hash: router.currentRoute.value.hash }
       const result = navigateOptions.history === 'push' ? router.push(location) : router.replace(location)
 
       // Fire-and-forget: navigation guard errors surface via `router.onError`,

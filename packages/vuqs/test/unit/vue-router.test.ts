@@ -51,6 +51,17 @@ describe('createVueRouterAdapter', () => {
     expect(router.currentRoute.value.query).toEqual({ q: 'x' })
   })
 
+  it('preserves the current hash on navigation', async () => {
+    const router = makeRouter()
+    await router.push({ path: '/', hash: '#section' })
+
+    const adapter = createVueRouterAdapter({ router })
+    await adapter.navigate({ q: 'sale' }, {})
+
+    expect(router.currentRoute.value.hash).toBe('#section')
+    expect(router.currentRoute.value.query).toEqual({ q: 'sale' })
+  })
+
   it('carries defaultOptions', () => {
     const router = makeRouter()
 
