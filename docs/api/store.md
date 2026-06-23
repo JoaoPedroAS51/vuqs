@@ -29,8 +29,8 @@ interface CreateQueryStoreOptions<TSchema, TContext> {
 ```
 
 ::: warning Plain codecs in store schemas
-Defaults come from `setDefaults` (the API), not the codec. A codec
-`.withDefault()` would shadow the API defaults in `effective`. Use bare codecs.
+Defaults come from `setDefaults`, not the codec. A codec `.withDefault()` would
+shadow the runtime defaults in `effective`. Use bare codecs.
 :::
 
 Must run inside a Vue effect scope (it creates a `watch`).
@@ -82,7 +82,7 @@ interface QueryStore<TSchema, TContext = string> {
 
 - `selected` — explicit selections, mirrored from the URL, filtered by the active
   context. The only state serialized.
-- `defaults` — API-supplied, never serialized.
+- `defaults` — supplied at runtime, never serialized.
 - `effective` — `{ ...defaults, ...selected }`, filtered by context. The read
   model.
 

@@ -2,7 +2,7 @@
   "name": "@vuqs/store",
   "type": "module",
   "version": "0.0.0",
-  "description": "Opinionated query-state store for Vue 3 — async API defaults and context-aware reset, built on vuqs.",
+  "description": "Opinionated query-state store for Vue 3 — runtime defaults and context-aware reset, built on vuqs.",
   "sideEffects": false,
   "exports": {
     ".": {

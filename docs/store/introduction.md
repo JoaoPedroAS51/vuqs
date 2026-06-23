@@ -4,8 +4,8 @@ The [core](/guide/introduction) solves one problem: a typed value ⇄ the URL.
 That's enough for most apps. But real filtering UIs often have two more needs the
 core deliberately leaves out:
 
-1. **Defaults loaded asynchronously** — the user's saved preferences come from an
-   API, layer *under* their explicit selections, but must never end up in the URL.
+1. **Defaults supplied at runtime** — saved preferences or computed defaults
+   layer *under* explicit selections, but must never end up in the URL.
 2. **Context-aware reset** — switching tabs, stepping through a wizard, or changing
    route should preserve some filters and reset others.
 
@@ -25,7 +25,7 @@ Instead of one value per field, the store tracks three layers
 | State | Source | In the URL? |
 | --- | --- | --- |
 | `selected` | the user's explicit choices, mirrored from the URL | ✅ yes |
-| `defaults` | loaded from an API via `setDefaults` | ❌ never |
+| `defaults` | supplied via `setDefaults` | ❌ never |
 | `effective` | `selected` layered over `defaults` — the read model | derived |
 
 Your UI reads `effective`; only `selected` is serialized. Clearing a field reverts
@@ -50,7 +50,7 @@ context: {
 
 ## When you *don't* need the store
 
-If you only sync state to the URL — no API defaults, no context reset — stay with
+If you only sync state to the URL — no runtime defaults, no context reset — stay with
 [`useQueryState`](/guide/use-query-state) /
 [`useQueryStates`](/guide/use-query-states). The store is additive; it doesn't
 replace the core, it builds on it (`store → core`). You can always adopt it later

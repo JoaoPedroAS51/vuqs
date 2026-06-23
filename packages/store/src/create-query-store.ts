@@ -82,7 +82,7 @@ export interface CreateQueryStoreOptions<TSchema extends QueryStateSchema, TCont
    *
    * @remarks
    * Use plain codecs: the store supplies defaults via `setDefaults`, so a codec
-   * `.withDefault()` would shadow the API defaults in `effective`.
+   * `.withDefault()` would shadow the runtime defaults in `effective`.
    */
   schema: TSchema
   /** The current parsed query, as a ref, getter, or plain value. */
@@ -112,7 +112,7 @@ export interface CreateQueryStoreOptions<TSchema extends QueryStateSchema, TCont
 export interface QueryStore<TSchema extends QueryStateSchema, TContext extends string = string> {
   /** Explicit user selections, mirrored from the URL and filtered by the active context. */
   selected: Readonly<QueryStateValues<TSchema>>
-  /** Defaults supplied by an API/loader. Never serialized to the URL. */
+  /** Defaults supplied at runtime. Never serialized to the URL. */
   defaults: Readonly<QueryStateValues<TSchema>>
   /** `selected` layered over `defaults`, filtered by the active context. */
   effective: Readonly<QueryStateValues<TSchema>>
@@ -128,7 +128,7 @@ export interface QueryStore<TSchema extends QueryStateSchema, TContext extends s
   setValues: (values: QueryStateWriteValues<TSchema>, options?: NavigateOptions) => void
   /** Clears every selected value (reverting each to its default). */
   clear: (options?: NavigateOptions) => void
-  /** Replaces the defaults with a snapshot, for example from an API response. */
+  /** Replaces the defaults with a runtime snapshot. */
   setDefaults: (values: QueryStateValues<TSchema>) => void
   /** Removes all defaults. */
   clearDefaults: () => void
@@ -139,7 +139,7 @@ export interface QueryStore<TSchema extends QueryStateSchema, TContext extends s
 }
 
 /**
- * Creates a query store: URL-synced `selected`, API-supplied `defaults`, and a
+ * Creates a query store: URL-synced `selected`, runtime `defaults`, and a
  * derived `effective`, with optional context-based field validity.
  *
  * @remarks
@@ -271,7 +271,7 @@ export function createQueryStore<TSchema extends QueryStateSchema, TContext exte
     return buildQueryCore(schema, currentQuery, kept as QueryStateValues<TSchema>)
   }
 
-  // Defaults are per-context (re-supplied by the next context's API), so drop
+  // Defaults are per-context (re-supplied for the next context), so drop
   // them when the context changes to avoid showing stale defaults.
   if (context) {
     watch(activeContext, () => {

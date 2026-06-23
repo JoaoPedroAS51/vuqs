@@ -51,7 +51,7 @@ binds many keys at once and coalesces multi-field writes into a single navigatio
 | Package | What it does |
 | --- | --- |
 | [`vuqs`](https://JoaoPedroAS51.github.io/vuqs/guide/introduction) | The core — codecs, `useQueryState`/`useQueryStates`, adapters, serializer. |
-| [`@vuqs/store`](https://JoaoPedroAS51.github.io/vuqs/store/introduction) | An opinionated store — async API defaults and context-aware reset for tabs and wizards. |
+| [`@vuqs/store`](https://JoaoPedroAS51.github.io/vuqs/store/introduction) | An opinionated store — runtime defaults and context-aware reset for tabs and wizards. |
 
 ## Features
 
@@ -92,7 +92,7 @@ pnpm --filter @vuqs/docs dev         # docs site
 ## Acknowledgements
 
 Inspired by [nuqs](https://nuqs.47ng.com/), the type-safe query state library for
-React. vuqs is a ground-up Vue implementation, adding its own async-default and
+React. vuqs is a ground-up Vue implementation, adding its own runtime defaults and
 context-aware store on top.
 
 ## License

@@ -25,7 +25,7 @@ If you use `vue-router` (most apps do), you already have the only optional peer
 dependency the built-in adapter needs.
 
 ::: tip
-Want the async-defaults and context features too? Add the store alongside the
+Want runtime defaults and context features too? Add the store alongside the
 core: `pnpm add @vuqs/store`. See the [store guide](/store/introduction).
 :::
 

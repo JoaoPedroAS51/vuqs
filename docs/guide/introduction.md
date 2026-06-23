@@ -44,7 +44,7 @@ The "nuqs for Vue" layer. It solves one problem well: **a typed value ⇄ the UR
 - [`useQueryStates`](/guide/use-query-states) — bind a group of keys to a reactive map.
 - [Adapters](/guide/adapters) — plug in `vue-router`, Nuxt, or your own.
 
-The core is pure URL state. It has no concept of "loading defaults from an API"
+The core is pure URL state. It has no concept of "loading runtime defaults"
 or "resetting filters when you change tabs" — that is the store's job.
 
 ### `@vuqs/store` — the opinionated store
@@ -52,7 +52,7 @@ or "resetting filters when you change tabs" — that is the store's job.
 Layered on top of the core for apps with richer needs:
 
 - **[Three states](/store/three-states)** — `selected` (the URL), `defaults`
-  (loaded asynchronously from an API), and a derived `effective` read model.
+  (supplied at runtime), and a derived `effective` read model.
 - **[Context-aware reset](/store/context)** — preserve some filters and reset
   others when the user switches tabs, steps through a wizard, or changes route.
 
@@ -67,11 +67,11 @@ ground-up Vue implementation, not a port:
 | --- | --- | --- |
 | Reactivity | hooks / `useState` | refs & reactive maps |
 | Value ⇄ URL | ✅ parsers | ✅ codecs |
-| Async API defaults | — | ✅ `@vuqs/store` |
+| Runtime defaults | — | ✅ `@vuqs/store` |
 | Context-aware reset | — | ✅ `@vuqs/store` |
 | Adapter | required | optional |
 
-The async-default layer and context machinery are vuqs's own — they grew out of
+The runtime defaults layer and context machinery are vuqs's own — they grew out of
 real Vue app filtering needs.
 
 ## Requirements

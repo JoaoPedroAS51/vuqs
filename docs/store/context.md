@@ -140,8 +140,8 @@ the query and steps back.
 
 ## Defaults reset on context change
 
-[Defaults](/store/three-states) are per-context — the next context's API supplies
-its own. So when `activeContext` changes, the store **automatically clears
+[Defaults](/store/three-states) are per-context — the next context supplies its
+own. So when `activeContext` changes, the store **automatically clears
 defaults** to avoid showing stale ones. Re-call `setDefaults` after the switch
 (typically when the new context's data loads).
 

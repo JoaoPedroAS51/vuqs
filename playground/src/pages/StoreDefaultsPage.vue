@@ -24,7 +24,7 @@ const store = createQueryStore({
 
 const loading = ref(false)
 
-// Pretend an API hands us the user's saved defaults. These feed `effective` and
+// Pretend saved preferences are loaded at runtime. These feed `effective` and
 // the UI, but are NEVER written to the URL — only explicit selections are.
 function loadDefaults() {
   loading.value = true
@@ -53,7 +53,7 @@ function setPerPage(event: Event) {
       <h2>Store: the three states</h2>
       <p>
         <code>@vuqs/store</code> separates <code>selected</code> (mirrors the URL),
-        <code>defaults</code> (loaded from an API, never serialized), and the derived
+        <code>defaults</code> (supplied at runtime, never serialized), and the derived
         <code>effective</code> read model. Clearing a value reverts it to its default.
       </p>
     </div>
@@ -113,7 +113,7 @@ function setPerPage(event: Event) {
 
     <template #panel>
       <StateBlock label="selected → URL" :value="store.selected" accent />
-      <StateBlock label="defaults · API" :value="store.defaults" />
+      <StateBlock label="defaults · runtime" :value="store.defaults" />
       <StateBlock label="effective · read" :value="store.effective" />
     </template>
   </PageLayout>

@@ -31,7 +31,7 @@ features:
     details: The core knows nothing about your router. A tiny adapter plugs in vue-router or Nuxt — or anything that can read and write a query.
   - icon: 🗂️
     title: A store when you need one
-    details: "@vuqs/store adds three states — selected, async defaults, and a derived effective — plus context-aware reset for tabs and wizards."
+    details: "@vuqs/store adds three states — selected, runtime defaults, and a derived effective — plus context-aware reset for tabs and wizards."
   - icon: 🧩
     title: Tiny and tree-shakeable
     details: No runtime dependencies, side-effect free, and built for Vue 3.5+. Pay only for the codecs and helpers you import.

@@ -6,7 +6,7 @@ whole point of `@vuqs/store`.
 | State | What it is | Serialized to URL? |
 | --- | --- | --- |
 | **`selected`** | the user's explicit choices, mirrored from the URL | ✅ yes — and *only* this |
-| **`defaults`** | values loaded from an API/loader via `setDefaults` | ❌ never |
+| **`defaults`** | values supplied via `setDefaults` | ❌ never |
 | **`effective`** | `selected` layered over `defaults` — what the UI reads | derived, not stored |
 
 ```
@@ -38,8 +38,8 @@ const store = createQueryStore({
 ```
 
 ::: warning Use plain codecs, not `.withDefault()`
-In a store, defaults come from `setDefaults` (the API), not the codec. A codec
-`.withDefault()` would shadow those API defaults in `effective`. So store schemas
+In a store, defaults come from `setDefaults`, not the codec. A codec
+`.withDefault()` would shadow those runtime defaults in `effective`. So store schemas
 use **bare** codecs — `codecs.integer`, not `codecs.integer.withDefault(20)`.
 :::
 
@@ -87,7 +87,7 @@ Writes go through the same [committed model](/guide/concepts#the-commit-cycle) a
 clears with `undefined`; `setValues` (batch) clears with `null` — see
 [null vs undefined](/guide/null-vs-undefined).
 
-## Load defaults from an API
+## Load defaults
 
 `setDefaults` replaces the defaults with a snapshot. These feed `effective` and
 the UI but are **never** written to the URL:
@@ -96,8 +96,8 @@ the UI but are **never** written to the URL:
 import { onMounted } from 'vue'
 
 onMounted(async () => {
-  const prefs = await fetchUserPreferences()
-  store.setDefaults({ q: '', status: 'active', perPage: 20 })
+  const defaults = await loadUserPreferences()
+  store.setDefaults(defaults)
 })
 ```
 
@@ -105,7 +105,7 @@ Now, with no `?status` in the URL:
 
 ```ts
 store.selected.status  // undefined  (the user hasn't chosen)
-store.defaults.status  // 'active'   (from the API)
+store.defaults.status  // 'active'   (from defaults)
 store.effective.status // 'active'   (what the UI shows)
 ```
 
@@ -123,7 +123,7 @@ Two reasons:
 1. **Clean, honest links.** The URL should capture what the user *chose*, not what
    their account happens to default to. A shared link reproduces the *selection*,
    and the recipient's own defaults fill the rest.
-2. **Defaults can change.** If the API default for `perPage` changes from 20 to 50,
+2. **Defaults can change.** If the runtime default for `perPage` changes from 20 to 50,
    every user immediately sees 50 — without stale `?perPage=20` baked into a
    thousand bookmarks.
 
@@ -161,7 +161,7 @@ const store = createQueryStore({
 })
 
 onMounted(() => {
-  // Pretend an API hands us the saved defaults.
+  // Pretend saved preferences are available at runtime.
   store.setDefaults({ q: '', status: 'active', perPage: 20 })
 })
 </script>

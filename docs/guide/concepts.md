@@ -122,6 +122,6 @@ navigates; `values.tags.push(x)` does not. Always replace the value.
 
 ## The store, in one sentence
 
-When URL state alone isn't enough — when you also have **defaults loaded from an
-API** and **filters that should reset on a tab change** — [`@vuqs/store`](/store/introduction)
+When URL state alone isn't enough — when you also have **runtime defaults** and
+**filters that should reset on a tab change** — [`@vuqs/store`](/store/introduction)
 adds exactly those two things on top of everything above, and nothing more.
