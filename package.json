@@ -17,7 +17,11 @@
     "test:types": "pnpm --filter './packages/*' test:types",
     "typecheck": "pnpm --recursive typecheck",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "playground": "pnpm --filter vuqs build && pnpm --filter @vuqs/playground dev",
+    "playground:build": "pnpm --filter vuqs build && pnpm --filter @vuqs/playground build",
+    "docs:dev": "pnpm --filter vuqs build && pnpm --filter @vuqs/docs dev",
+    "docs:build": "pnpm --filter vuqs build && pnpm --filter @vuqs/docs build"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^6.0.0",
