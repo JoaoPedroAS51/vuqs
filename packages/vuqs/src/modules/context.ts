@@ -69,9 +69,10 @@ export interface ContextApi<TContext extends string> {
  * TypeScript rejects keys that are not present in the schema.
  *
  * The module taps a `read`/`write` pipeline transform that drops params invalid
- * in the active context, so such a param never enters `values`, the URL, or
- * derived module state. Invalid params from a pasted stale link are dropped on
- * the next write.
+ * in the active context, so such a param never enters `values` or derived module
+ * state, and a write to one is dropped. An invalid param already in the URL (a
+ * pasted stale link) stays hidden from reads and is cleared on the next context
+ * switch via `switchTo` or `buildContextQuery`.
  *
  * On a context change the module emits the `'context:change'` hook (so modules
  * such as {@link withEffective} clear per-context state) and the read/write

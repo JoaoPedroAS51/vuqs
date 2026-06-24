@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['test/unit/**/*.test.ts'],
+    setupFiles: ['test/setup.ts'],
     typecheck: {
       enabled: true,
       checker: 'tsc',

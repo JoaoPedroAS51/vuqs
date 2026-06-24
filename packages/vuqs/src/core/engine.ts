@@ -1,35 +1,32 @@
-import type { ComputedRef, MaybeRefOrGetter } from 'vue'
-import type { QueryParamDefinition } from './define-query-param'
-import type { QueryPipelineBus } from './pipeline'
+import type { ComputedRef } from 'vue'
+import type { QueryPipelineBus, QueryValues } from './pipeline'
+import type { Overlay, UpdateQueueAdapterContext } from './queues/throttle'
 import type { QueryStateSchema, QueryStateValues } from './schema'
-import type { NavigateOptions, ParsedQuery, ParsedQueryRaw, QueryStateNavigate } from './types'
-import { computed, ref, toValue, watch } from 'vue'
-import { getPath } from './path'
+import type { NavigateOptions, ParsedQuery } from './types'
+import { computed, toValue, watch } from 'vue'
+import { structuralEq } from './equality'
+import { deletePath, getPath, pruneEmptyAncestors, setPath } from './path'
 import { createQueryPipeline } from './pipeline'
-import { dropDefaults } from './schema'
+import { cloneQuery } from './query-object'
+import { globalThrottleQueue } from './queues/throttle'
+import { dropDefaults, getManagedKeys, parseQueryStates, serializeQueryStates } from './schema'
 
 /**
  * Options for {@link createQueryStateEngine}.
  *
  * @remarks
- * `parse` and `build` are injected so a caller can make reads and writes
- * context-aware, for example filtering params by an active context, while the
- * engine owns the reactive machinery: the optimistic overlay, reconciliation,
- * write coalescing, and navigation.
+ * Extends {@link NavigateOptions}, so `history` and `scroll` set the navigation
+ * defaults applied to every write unless a per-call write overrides them. `schema`
+ * and `adapter` are required; `throttleMs` and `clearOnDefault` are behavior knobs
+ * with their own defaults.
  *
  * @typeParam TSchema - The schema whose params the engine tracks.
  */
 export interface QueryStateEngineOptions<TSchema extends QueryStateSchema> extends NavigateOptions {
   /** The tracked params, used for per-param equality, defaults, and keys. */
   schema: TSchema
-  /** The current parsed query, as a ref, getter, or plain value. */
-  query: MaybeRefOrGetter<ParsedQuery>
-  /** Applies the next query to the URL. */
-  navigate: QueryStateNavigate
-  /** Reads param values from a query (the caller may make this context-aware). */
-  parse: (query: ParsedQuery) => QueryStateValues<TSchema>
-  /** Builds the next query from the values to commit (the caller may make this context-aware). */
-  build: (currentQuery: ParsedQuery, values: QueryStateValues<TSchema>) => ParsedQueryRaw
+  /** The query source and navigate function, resolved from the provided adapter. */
+  adapter: UpdateQueueAdapterContext
   /** Coalesce writes within this many ms into one navigation. Defaults to a microtask. */
   throttleMs?: number
   /** Drop a value from the URL when it equals its codec default. Defaults to `true`. */
@@ -49,7 +46,7 @@ export interface QueryStateEngine<TSchema extends QueryStateSchema> {
   rawValues: ComputedRef<QueryStateValues<TSchema>>
   /** Optimistically sets a param and schedules a coalesced navigation. */
   setValue: (key: keyof TSchema & string, value: unknown, options?: NavigateOptions) => void
-  /** The transform pipeline applied to reads, writes, and the navigation boundary. */
+  /** The transform pipeline applied to reads and writes. */
   pipeline: QueryPipelineBus
   /** The resolved `clearOnDefault` rule, so modules building queries match the engine's write behavior. */
   clearOnDefault: boolean
@@ -59,143 +56,144 @@ export interface QueryStateEngine<TSchema extends QueryStateSchema> {
  * Creates the reactive engine behind URL-bound state.
  *
  * @remarks
- * Committed model: the URL is the source of truth. Writes apply to an optimistic
- * overlay and flush to `navigate` as one coalesced navigation (per microtask, or
- * per `throttleMs`). Once the URL reflects a write, that param's overlay entry is
- * reconciled away; entries the URL has not caught up to are kept so an unrelated
- * navigation cannot discard an in-flight write.
+ * Committed model: the URL is the source of truth. A write serializes to raw
+ * deltas and lands in a single optimistic overlay shared by every engine, so
+ * concurrent writes from different engines coalesce into one navigation instead
+ * of racing.
+ * Once the URL reflects a delta that param's overlay entry is reconciled away;
+ * entries the URL has not caught up to are kept, so an unrelated navigation cannot
+ * discard an in-flight write.
  *
  * Creates a `watch` owned by the active Vue effect scope. Call it inside a
  * component `setup` (or an `effectScope().run()`) so the watch is disposed with
  * its owner; calling it with no active scope leaks the watcher.
  *
  * @typeParam TSchema - The schema whose params the engine tracks.
- * @param options - Schema, query source, navigate adapter, and the `parse`/`build` hooks.
+ * @param options - Schema, resolved adapter, and the coalescing and default rules.
  * @returns The engine: resolved `values` and `rawValues`, a `setValue` writer,
  * the `pipeline`, and the resolved `clearOnDefault`.
  */
 export function createQueryStateEngine<TSchema extends QueryStateSchema>(
   options: QueryStateEngineOptions<TSchema>,
 ): QueryStateEngine<TSchema> {
-  const { schema, navigate, parse, build, throttleMs = 0, clearOnDefault = true } = options
+  const { schema, adapter, throttleMs = 0, clearOnDefault = true } = options
   const keys = Object.keys(schema) as Array<keyof TSchema & string>
+  const managedPaths = getManagedKeys(schema)
 
   const pipeline = createQueryPipeline()
+  const overlay = globalThrottleQueue.overlay
 
-  const urlValues = computed(() => parse(toValue(options.query)))
-  const pending = ref<Record<string, unknown>>({})
+  // The live URL with this engine's pending overlay deltas applied. The optimistic
+  // overlay is one ref shared by every engine, so reading it here re-derives this
+  // engine whenever any engine writes.
+  const optimisticQuery = computed<ParsedQuery>(() => {
+    const next = cloneQuery(toValue(adapter.query))
+    const current = overlay.value
 
-  // The explicit selection: parsed values for params actually present in the URL
-  // (or written optimistically), WITHOUT codec defaults — a param that fell back
-  // to its codec default is treated as absent, not selected.
-  const rawValues = computed<QueryStateValues<TSchema>>(() => {
-    const query = toValue(options.query)
-    const merged = { ...urlValues.value, ...pending.value } as Record<string, unknown>
-
-    for (const key of keys) {
-      if (Object.hasOwn(pending.value, key)) {
+    for (const path of managedPaths) {
+      if (!(path in current)) {
         continue
       }
 
-      if (!schema[key].paths.some(path => getPath(query, path) !== undefined)) {
-        delete merged[key]
+      const delta = current[path]
+
+      if (delta === null) {
+        deletePath(next, path)
+        pruneEmptyAncestors(next, path)
+      }
+      else {
+        setPath(next, path, delta)
       }
     }
 
-    return pipeline.run('read', merged) as QueryStateValues<TSchema>
+    return next
   })
 
   const values = computed<QueryStateValues<TSchema>>(() => {
-    const merged = { ...urlValues.value, ...pending.value } as Record<string, unknown>
+    const parsed = parseQueryStates(schema, optimisticQuery.value) as Record<string, unknown>
 
     for (const key of keys) {
-      if (merged[key] === undefined && schema[key].defaultValue !== undefined) {
-        merged[key] = schema[key].defaultValue
+      if (parsed[key] === undefined && schema[key].defaultValue !== undefined) {
+        parsed[key] = schema[key].defaultValue
       }
     }
 
-    return pipeline.run('read', merged) as QueryStateValues<TSchema>
+    return pipeline.run('read', parsed) as QueryStateValues<TSchema>
   })
 
-  // Committed model: drop a pending write once the URL reflects it. Entries the
-  // URL has not caught up to are kept, so an unrelated navigation cannot discard
-  // an in-flight write.
-  watch(urlValues, (parsed) => {
-    if (Object.keys(pending.value).length === 0) {
-      return
-    }
+  // The explicit selection: params actually present in the URL (or written
+  // optimistically), WITHOUT codec defaults. A defaulted param that fell back to
+  // its default parses as present, so it is dropped unless one of its paths exists.
+  const rawValues = computed<QueryStateValues<TSchema>>(() => {
+    const query = optimisticQuery.value
+    const parsed = parseQueryStates(schema, query) as Record<string, unknown>
 
-    const remaining: Record<string, unknown> = {}
-
-    for (const [key, pendingValue] of Object.entries(pending.value)) {
-      if (!isReconciled(schema[key], pendingValue, (parsed as Record<string, unknown>)[key])) {
-        remaining[key] = pendingValue
+    for (const key of keys) {
+      if (!schema[key].paths.some(path => getPath(query, path) !== undefined)) {
+        delete parsed[key]
       }
     }
 
-    if (Object.keys(remaining).length !== Object.keys(pending.value).length) {
-      pending.value = remaining
-    }
+    return pipeline.run('read', parsed) as QueryStateValues<TSchema>
   })
 
-  let scheduled = false
-  let scheduledOptions: NavigateOptions = {}
+  // Committed model: drop a pending delta once the URL reflects it. Idempotent and
+  // raw-compared, so any engine can reconcile any of its managed paths.
+  watch(() => toValue(adapter.query), (url) => {
+    const current = overlay.value
+    const reflected: string[] = []
 
-  function schedule(perCall: NavigateOptions | undefined): void {
-    if (perCall) {
-      scheduledOptions = { ...scheduledOptions, ...perCall }
+    for (const path of managedPaths) {
+      if (!(path in current)) {
+        continue
+      }
+
+      const delta = current[path]
+      const urlValue = getPath(url, path)
+      const settled = delta === null ? urlValue === undefined : structuralEq(urlValue, delta)
+
+      if (settled) {
+        reflected.push(path)
+      }
     }
 
-    if (scheduled) {
-      return
+    globalThrottleQueue.settle(reflected)
+  }, { immediate: true })
+
+  function serializeParam(key: keyof TSchema & string, value: unknown): Overlay {
+    const definition = schema[key]
+    const single: QueryStateSchema = { [key]: definition }
+
+    let map: QueryStateValues<QueryStateSchema> = value === undefined ? {} : { [key]: value }
+
+    if (clearOnDefault) {
+      map = dropDefaults(single, map)
     }
 
-    scheduled = true
+    map = pipeline.run('write', map as QueryValues) as QueryStateValues<QueryStateSchema>
 
-    const flush = (): void => {
-      scheduled = false
-      const navigateOptions = scheduledOptions
-      scheduledOptions = {}
-      commit(navigateOptions)
+    const raw = serializeQueryStates(single, map)
+    const deltas: Overlay = {}
+
+    for (const path of definition.paths) {
+      const written = getPath(raw, path)
+      deltas[path] = written === undefined ? null : written
     }
 
-    if (throttleMs > 0) {
-      setTimeout(flush, throttleMs)
-    }
-    else {
-      queueMicrotask(flush)
-    }
-  }
-
-  function commit(perCall: NavigateOptions): void {
-    const currentQuery = toValue(options.query)
-    const merged = { ...parse(currentQuery), ...pending.value } as QueryStateValues<TSchema>
-    const target = pipeline.run('write', clearOnDefault ? dropDefaults(schema, merged) : merged) as QueryStateValues<TSchema>
-    const query = pipeline.run('navigate', build(currentQuery, target))
-
-    void navigate(query, {
-      history: perCall.history ?? options.history,
-      scroll: perCall.scroll ?? options.scroll,
-    })
+    return deltas
   }
 
   function setValue(key: keyof TSchema & string, value: unknown, perCall?: NavigateOptions): void {
-    pending.value = { ...pending.value, [key]: value }
-    schedule(perCall)
+    globalThrottleQueue.push(
+      serializeParam(key, value),
+      {
+        history: perCall?.history ?? options.history,
+        scroll: perCall?.scroll ?? options.scroll,
+      },
+      adapter,
+      throttleMs,
+    )
   }
 
   return { values, rawValues, setValue, pipeline, clearOnDefault }
-}
-
-function isReconciled(
-  definition: QueryParamDefinition<any>,
-  pendingValue: unknown,
-  urlValue: unknown,
-): boolean {
-  if (pendingValue === undefined) {
-    return urlValue === undefined
-      || (definition.defaultValue !== undefined && definition.eq(urlValue, definition.defaultValue))
-  }
-
-  return urlValue !== undefined && definition.eq(pendingValue, urlValue)
 }

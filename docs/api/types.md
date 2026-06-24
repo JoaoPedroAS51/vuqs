@@ -173,7 +173,7 @@ interface ContextApi<TContext> { activeContext; buildContextQuery; switchTo }
 `import type { … } from 'vuqs'`
 
 ```ts
-interface QueryCore<TSchema> { schema; selected; setValue; navigate; currentQuery; hooks; pipeline; clearOnDefault }
+interface QueryCore<TSchema> { schema; selected; setValue; currentQuery; hooks; pipeline; clearOnDefault }
 type QueryModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
 
 interface QueryHooks {} // augment via `declare module 'vuqs'`

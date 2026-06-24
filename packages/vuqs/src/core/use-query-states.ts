@@ -3,12 +3,12 @@ import type { QueryStateEngine } from './engine'
 import type { QueryHookBus } from './hooks'
 import type { QueryPipelineBus } from './pipeline'
 import type { QueryStateRefValue, QueryStateSchema, QueryStateValues, QueryStateWriteValues } from './schema'
-import type { NavigateOptions, ParsedQuery, ParsedQueryRaw, QueryStateNavigate } from './types'
+import type { NavigateOptions, ParsedQuery } from './types'
 import { computed, reactive, toValue } from 'vue'
 import { useQueryAdapter } from './adapter'
 import { createQueryStateEngine } from './engine'
 import { createQueryHooks } from './hooks'
-import { assertUniquePaths, buildQuery, parseQueryStates } from './schema'
+import { assertUniquePaths } from './schema'
 
 export type { NavigateOptions, QueryStateNavigate } from './types'
 
@@ -101,9 +101,6 @@ export function createQueryStateRefs<TSchema extends QueryStateSchema>(
   engine: QueryStateEngine<TSchema>
   refs: Record<string, WritableComputedRef<unknown>>
   query: MaybeRefOrGetter<ParsedQuery>
-  navigate: QueryStateNavigate
-  history: NavigateOptions['history']
-  scroll: NavigateOptions['scroll']
 } {
   assertUniquePaths(schema)
 
@@ -117,17 +114,11 @@ export function createQueryStateRefs<TSchema extends QueryStateSchema>(
 
   const { query: querySource, navigate, defaultOptions: adapterDefaults } = adapter
 
-  const history = options.history ?? adapterDefaults?.history
-  const scroll = options.scroll ?? adapterDefaults?.scroll
-
   const engine = createQueryStateEngine({
     schema,
-    query: querySource,
-    navigate,
-    parse: query => parseQueryStates(schema, query),
-    build: (currentQuery, values) => buildQuery(schema, currentQuery, values),
-    history,
-    scroll,
+    adapter: { query: querySource, navigate },
+    history: options.history ?? adapterDefaults?.history,
+    scroll: options.scroll ?? adapterDefaults?.scroll,
     throttleMs: options.throttleMs ?? adapterDefaults?.throttleMs,
     clearOnDefault: options.clearOnDefault ?? adapterDefaults?.clearOnDefault,
   })
@@ -141,7 +132,7 @@ export function createQueryStateRefs<TSchema extends QueryStateSchema>(
     })
   }
 
-  return { engine, refs, query: querySource, navigate, history, scroll }
+  return { engine, refs, query: querySource }
 }
 
 /**
@@ -149,9 +140,9 @@ export function createQueryStateRefs<TSchema extends QueryStateSchema>(
  *
  * @remarks
  * Modules use this object to derive state from the current URL selection,
- * contribute pipeline transforms, navigate with resolved defaults, and
- * coordinate with other modules through `hooks`. Treat it as an implementation
- * surface for module authors, not as app-facing state.
+ * contribute pipeline transforms, write params through `setValue`, and coordinate
+ * with other modules through `hooks`. Treat it as an implementation surface for
+ * module authors, not as app-facing state.
  *
  * @typeParam TSchema - The schema being managed.
  */
@@ -165,8 +156,6 @@ export interface QueryCore<TSchema extends QueryStateSchema> {
   selected: ComputedRef<QueryStateValues<TSchema>>
   /** Optimistically sets one param. */
   setValue: (key: keyof TSchema & string, value: unknown, options?: NavigateOptions) => void
-  /** Applies a full query to the URL, running the `navigate` pipeline stage and resolving the default navigation options. */
-  navigate: (query: ParsedQueryRaw, options?: NavigateOptions) => void
   /** Reads the current parsed query. */
   currentQuery: () => ParsedQuery
   /** The notification bus: one module emits an event, others react. */
@@ -252,7 +241,7 @@ export function useQueryStates<TSchema extends QueryStateSchema>(
   schema: TSchema,
   options: UseQueryStatesOptions = {},
 ): QueryComposable<TSchema, UseQueryStatesReturn<TSchema>> {
-  const { engine, refs, query, navigate, history, scroll } = createQueryStateRefs(schema, options)
+  const { engine, refs, query } = createQueryStateRefs(schema, options)
 
   const values = reactive(refs) as QueryStatesValues<TSchema>
 
@@ -282,10 +271,6 @@ export function useQueryStates<TSchema extends QueryStateSchema>(
     schema,
     selected: engine.rawValues,
     setValue: (key, value, perCall) => engine.setValue(key, value, perCall),
-    navigate: (next, perCall) => {
-      const query = engine.pipeline.run('navigate', next)
-      void navigate(query, { history: perCall?.history ?? history, scroll: perCall?.scroll ?? scroll })
-    },
     currentQuery: () => toValue(query),
     hooks: createQueryHooks(),
     pipeline: engine.pipeline,

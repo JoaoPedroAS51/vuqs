@@ -32,7 +32,6 @@ does.
 | `schema` | The schema being managed. |
 | `selected` | `ComputedRef` of explicit URL selections plus the optimistic overlay, with the `read` pipeline applied and no codec defaults. Derive read state from this. |
 | `setValue(key, value, options?)` | Optimistically write one param. |
-| `navigate(query, options?)` | Apply a full query to the URL — runs the `navigate` stage and resolves the default navigation options. |
 | `currentQuery()` | Read the current parsed query. |
 | `hooks` | The notification bus for module-to-module coordination. |
 | `pipeline` | The transform pipeline for reshaping reads and writes. |
