@@ -1,5 +1,5 @@
 import type { QueryStateSchema, QueryStateValues } from '../core/schema'
-import type { QueryCore } from '../core/use-query-states'
+import type { QueryCore, QueryStatesValues } from '../core/use-query-states'
 import { computed, onScopeDispose, ref } from 'vue'
 import { definedOnly, toReadonlyState } from '../shared'
 
@@ -18,7 +18,7 @@ export interface EffectiveApi<TSchema extends QueryStateSchema> {
   /** Fallback values: runtime defaults from `setDefaults` over codec defaults. */
   defaults: Readonly<QueryStateValues<TSchema>>
   /** The resolved read model: `selected` layered over `defaults`. */
-  effective: Readonly<QueryStateValues<TSchema>>
+  effective: Readonly<QueryStatesValues<TSchema>>
   /** Replaces runtime defaults with a snapshot. */
   setDefaults: (values: QueryStateValues<TSchema>) => void
   /** Removes runtime defaults, leaving codec defaults in place. */
@@ -68,8 +68,8 @@ export function withEffective(): <TSchema extends QueryStateSchema>(core: QueryC
     const defaults = computed<QueryStateValues<TSchema>>(
       () => core.pipeline.run('read', { ...codecDefaults, ...definedOnly(provided.value) }) as QueryStateValues<TSchema>,
     )
-    const effective = computed<QueryStateValues<TSchema>>(
-      () => ({ ...defaults.value, ...selected.value }) as QueryStateValues<TSchema>,
+    const effective = computed<QueryStatesValues<TSchema>>(
+      () => ({ ...defaults.value, ...selected.value }) as QueryStatesValues<TSchema>,
     )
 
     const stopReset = core.hooks.on('context:change', () => {
