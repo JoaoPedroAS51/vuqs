@@ -27,8 +27,9 @@ export interface QueryParamDefinition<T> {
 }
 
 /**
- * A {@link QueryParamDefinition} whose codec declared a default, so its value is
- * never absent: a missing key reads back as {@link QueryParamDefinition.defaultValue}.
+ * A {@link QueryParamDefinition} whose codec or definition declared a default, so
+ * its value is never absent: a missing key reads back as
+ * {@link QueryParamDefinition.defaultValue}.
  *
  * @remarks
  * Carrying this as a distinct type lets {@link useQueryStates} narrow a defaulted
@@ -99,6 +100,29 @@ export function defineQueryParam<T>(path: string, codec: CodecWithDefault<T>): Q
  * ```
  */
 export function defineQueryParam<T>(path: string, codec: Codec<T>): QueryParamDefinition<T>
+/**
+ * Defines a composite or custom param spanning one or more keys, with a default value.
+ *
+ * @remarks
+ * Because the definition carries a `default`, the returned definition is a
+ * {@link QueryParamDefinitionWithDefault}, so a missing key reads back as that
+ * default instead of `undefined`.
+ *
+ * @typeParam T - The decoded value type.
+ * @param definition - The paths, parse, serialize, default, and optional equality.
+ * @returns A definition that manages the declared `paths` and never reads absent.
+ *
+ * @example
+ * ```ts
+ * defineQueryParam({
+ *   paths: ['from', 'to'],
+ *   parse: q => buildRange(q),
+ *   serialize: v => ({ from: v.from, to: v.to }),
+ *   default: { from: '2024-01-01', to: '2024-12-31' },
+ * })
+ * ```
+ */
+export function defineQueryParam<T>(definition: QueryParamDefinitionInput<T> & { default: T }): QueryParamDefinitionWithDefault<T>
 /**
  * Defines a composite or custom param spanning one or more keys.
  *
