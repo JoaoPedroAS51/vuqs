@@ -80,8 +80,8 @@ both rely on it.
 ### Create without providing
 
 `createVueRouterAdapter()` returns the adapter object without injecting it —
-handy when you want to pass `adapter.query` / `adapter.navigate` explicitly, for
-example to the [store](/store/three-states):
+handy when you want to pass `adapter.query` / `adapter.navigate` explicitly into a
+[`useQueryStates`](/guide/use-query-states) call:
 
 ```ts
 import { createVueRouterAdapter } from 'vuqs/adapters/vue-router'

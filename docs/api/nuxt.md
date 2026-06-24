@@ -30,8 +30,8 @@ interface AutoImportsOptions {
   composables?: boolean
   // the `codecs` namespace and `createCodec`
   codecs?: boolean
-  // @vuqs/store APIs, only when the package is installed
-  store?: boolean
+  // the composable modules from `vuqs/modules`
+  modules?: boolean
 }
 ```
 
@@ -39,9 +39,8 @@ interface AutoImportsOptions {
 - `autoImports: false` registers no auto-imports.
 - An object enables the listed groups; omitted groups default to `true`.
 
-The `store` group is registered only when `@vuqs/store` resolves from the
-project root. If you set `store: true` explicitly and the package is missing, the
-module logs a warning and skips it.
+The `modules` group registers every module exported from `vuqs/modules`. Because
+modules ship with `vuqs`, the group is always available — no extra install.
 
 ### `AdapterOptions`
 
@@ -70,5 +69,5 @@ be overridden per environment like any public runtime config.
 | --- | --- |
 | `autoImports.composables` | Auto-imports the core composables and `defineQueryState`, `createSerializer` from `vuqs`. |
 | `autoImports.codecs` | Auto-imports `codecs` and `createCodec` from `vuqs`. |
-| `autoImports.store` + `@vuqs/store` installed | Auto-imports the store APIs from `@vuqs/store`. |
+| `autoImports.modules` | Auto-imports the composable modules from `vuqs/modules`. |
 | `adapter` not `false` | Adds a plugin that calls `installQueryAdapter(nuxtApp.vueApp, createVueRouterAdapter(...))`. |

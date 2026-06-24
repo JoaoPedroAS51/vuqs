@@ -33,9 +33,9 @@ reactive. vuqs is that plumbing, done once and typed end to end.
 
 ## Two layers
 
-vuqs ships as two packages so you take only what you need.
+vuqs is built in two layers so you take only what you need.
 
-### `vuqs` — the core
+### The core
 
 The "nuqs for Vue" layer. It solves one problem well: **a typed value ⇄ the URL**.
 
@@ -45,18 +45,20 @@ The "nuqs for Vue" layer. It solves one problem well: **a typed value ⇄ the UR
 - [Adapters](/guide/adapters) — plug in `vue-router`, Nuxt, or your own.
 
 The core is pure URL state. It has no concept of "loading runtime defaults"
-or "resetting filters when you change tabs" — that is the store's job.
+or "resetting filters when you change tabs" — those are [modules](/modules/introduction).
 
-### `@vuqs/store` — the opinionated store
+### Modules
 
-Layered on top of the core for apps with richer needs:
+Opt-in behavior you compose onto `useQueryStates` with `.use()`, imported from the
+[`vuqs/modules`](/modules/introduction) subpath of the same package:
 
-- **[Three states](/store/three-states)** — `selected` (the URL), `defaults`
-  (supplied at runtime), and a derived `effective` read model.
-- **[Context-aware reset](/store/context)** — preserve some filters and reset
-  others when the user switches tabs, steps through a wizard, or changes route.
+- **[`withEffective`](/modules/effective)** — three states: `selected` (the URL),
+  `defaults` (supplied at runtime), and a derived `effective` read model.
+- **[`withContext`](/modules/context)** — preserve some filters and reset others
+  when the user switches tabs, steps through a wizard, or changes route.
 
-If you only need URL ⇄ state, you never have to touch the store.
+The set is open-ended — more modules ship over time. If you only need URL ⇄ state,
+you never have to touch them.
 
 ## How it compares
 
@@ -67,12 +69,12 @@ ground-up Vue implementation, not a port:
 | --- | --- | --- |
 | Reactivity | hooks / `useState` | refs & reactive maps |
 | Value ⇄ URL | ✅ parsers | ✅ codecs |
-| Runtime defaults | — | ✅ `@vuqs/store` |
-| Context-aware reset | — | ✅ `@vuqs/store` |
+| Runtime defaults | — | ✅ [`withEffective`](/modules/effective) |
+| Context-aware reset | — | ✅ [`withContext`](/modules/context) |
 | Adapter | required | optional |
 
 The runtime defaults layer and context machinery are vuqs's own — they grew out of
-real Vue app filtering needs.
+real Vue app filtering needs, packaged as composable [modules](/modules/introduction).
 
 ## Requirements
 

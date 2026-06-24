@@ -1,16 +1,17 @@
 # API reference
 
-A complete, hand-curated reference for both packages. For task-oriented
+A complete, hand-curated reference for every entry point. For task-oriented
 walkthroughs, see the [Guide](/guide/introduction) and
-[Store](/store/introduction) sections.
+[Modules](/modules/introduction) sections.
 
-## Packages
+## Entry points
 
-| Package | Import | Purpose |
+| Entry point | Import | Purpose |
 | --- | --- | --- |
 | `vuqs` | `import { … } from 'vuqs'` | The core: codecs, composables, adapters, serializer. |
 | `vuqs/adapters/vue-router` | `import { … } from 'vuqs/adapters/vue-router'` | The vue-router adapter. |
-| `@vuqs/store` | `import { … } from '@vuqs/store'` | The three-state, context-aware store. |
+| `vuqs/modules` | `import { … } from 'vuqs/modules'` | Composable modules applied with `.use()`. |
+| `vuqs/shared` | `import { … } from 'vuqs/shared'` | Helpers for [writing your own module](/modules/authoring). |
 | `@vuqs/nuxt` | `modules: ['@vuqs/nuxt']` | The Nuxt module: auto-imports + the adapter out of the box. |
 
 ## Reference pages
@@ -19,7 +20,7 @@ walkthroughs, see the [Guide](/guide/introduction) and
 - **[Composables](/api/composables)** — `useQueryState`, `useQueryStates`, `defineQueryState`, the adapter.
 - **[Adapters](/api/adapters)** — `createVueRouterAdapter`, `provideVueRouterAdapter`, `QueryAdapter`.
 - **[Serializer & pure functions](/api/serializer)** — `createSerializer` and the framework-free helpers.
-- **[@vuqs/store](/api/store)** — `createQueryStore`, provide/inject, `QueryStore`.
+- **[Modules](/api/modules)** — `.use()`, `withEffective`, `withContext`, and the [authoring](/api/modules#authoring) surface.
 - **[@vuqs/nuxt](/api/nuxt)** — the Nuxt module and its `ModuleOptions`.
 - **[Types](/api/types)** — the exported type surface.
 
@@ -73,6 +74,16 @@ export type {
   QueryStatesActions,
   UseQueryStatesOptions,
   UseQueryStatesReturn,
+  QueryComposable,
+  QueryCore,
+  QueryModule,
+  QueryHooks,
+  QueryHookBus,
+  QueryPipeline,
+  QueryPipelineBus,
+  QueryPipelineStage,
+  QueryValues,
+  Enforce,
   QueryAdapter,
   QueryAdapterDefaultOptions,
   NavigateOptions,
@@ -96,17 +107,19 @@ export { createVueRouterAdapter, provideVueRouterAdapter }
 export type { VueRouterAdapterOptions }
 ```
 
-### `@vuqs/store`
+### `vuqs/modules`
 
 ```ts
-export { createQueryStore }
-export { createQueryStoreKey, provideQueryStore, useQueryStore }
-export type {
-  CreateQueryStoreOptions,
-  QueryStore,
-  QueryStoreContext,
-  QueryStoreKey,
-}
+export { withContext, withEffective }
+export type { ContextApi, ContextOptions, EffectiveApi }
+```
+
+### `vuqs/shared`
+
+```ts
+// Helpers for writing your own module
+export { pickBy, omitBy, definedOnly, toReadonlyState }
+export type { NoInferType }
 ```
 
 ### `@vuqs/nuxt`

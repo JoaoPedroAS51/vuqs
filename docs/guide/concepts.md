@@ -42,7 +42,8 @@ const page = defineQueryState('page', codecs.integer)
 The field owns its key (`paths`), so when a value is cleared, vuqs removes exactly
 that key and leaves unmanaged params untouched. Fields are pure data — the same
 definition works in `useQueryState`, `useQueryStates`, the
-[serializer](/guide/serializer), and the [store](/store/introduction).
+[serializer](/guide/serializer), and any [modules](/modules/introduction) applied
+to it.
 
 When you call `useQueryState('page', codecs.integer)`, vuqs creates the field for
 you. `defineQueryState` is for when you want to name and reuse a field, or build a
@@ -111,17 +112,18 @@ vuqs follows one rule for what it hands back:
 - **A map of values → a reactive object** (dot-access). `useQueryStates` returns a
   reactive `values` where `values.q` *is* the value.
 
-The store follows the same rule: `selected` / `defaults` / `effective` are
-reactive objects (`store.selected.q`), while `activeContext` — a single scalar —
-is a ref (`store.activeContext.value`).
+[Modules](/modules/introduction) follow the same rule: `withEffective`'s
+`selected` / `defaults` / `effective` are reactive objects (`selected.q`), while
+`withContext`'s `activeContext` — a single scalar — is a ref (`activeContext.value`).
 
 ::: warning Replace, don't mutate
 Reactive maps track *assignment*, not in-place mutation. `values.tags = [...next]`
 navigates; `values.tags.push(x)` does not. Always replace the value.
 :::
 
-## The store, in one sentence
+## Modules, in one sentence
 
-When URL state alone isn't enough — when you also have **runtime defaults** and
-**filters that should reset on a tab change** — [`@vuqs/store`](/store/introduction)
-adds exactly those two things on top of everything above, and nothing more.
+When URL state alone isn't enough — when you also have **runtime defaults** or
+**filters that should reset on a tab change** — [modules](/modules/introduction)
+compose those behaviors onto `useQueryStates` with `.use()`, and you pull in only
+the ones you need.

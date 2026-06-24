@@ -28,8 +28,7 @@ setValues({ q: 'laptop', sort: null })
 //          set q ──┘      └── clear sort, page untouched
 ```
 
-This applies to [`setValues`](/guide/use-query-states#setvalues) (on both
-`useQueryStates` and the [store](/store/three-states)) and to the
+This applies to [`setValues`](/guide/use-query-states#setvalues) and to the
 [serializer](/guide/serializer#write-semantics).
 
 ## Single fields don't use null
@@ -86,7 +85,7 @@ ref.value = x          // set
 ref.value = undefined  // clear
 ref.clear()            // clear
 
-// Batch (setValues, store, serializer)
+// Batch (setValues, serializer)
 setValues({ a: x })           // set a
 setValues({ a: null })        // clear a
 setValues({ /* a absent */ }) // leave a untouched

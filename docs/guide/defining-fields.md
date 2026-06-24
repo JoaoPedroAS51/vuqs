@@ -14,7 +14,8 @@ const page = defineQueryState('page', codecs.integer.withDefault(1))
 A field is **pure data**. The same definition works everywhere a field is
 accepted: [`useQueryState`](/guide/use-query-state),
 [`useQueryStates`](/guide/use-query-states), the
-[serializer](/guide/serializer), and the [store](/store/introduction).
+[serializer](/guide/serializer), and any [modules](/modules/introduction) applied
+to it.
 
 ## Why name a field?
 

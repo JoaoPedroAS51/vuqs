@@ -1,8 +1,11 @@
 import type { ComputedRef, MaybeRefOrGetter } from 'vue'
 import type { QueryStateDefinition } from './define-query-state'
+import type { QueryPipelineBus } from './pipeline'
 import type { QueryStateSchema, QueryStateValues } from './schema'
 import type { NavigateOptions, ParsedQuery, ParsedQueryRaw, QueryStateNavigate } from './types'
 import { computed, ref, toValue, watch } from 'vue'
+import { getPath } from './path'
+import { createQueryPipeline } from './pipeline'
 import { dropDefaults } from './schema'
 
 /**
@@ -40,10 +43,16 @@ export interface QueryStateEngineOptions<TSchema extends QueryStateSchema> exten
  * @typeParam TSchema - The schema whose fields the engine tracks.
  */
 export interface QueryStateEngine<TSchema extends QueryStateSchema> {
-  /** Current values: parsed from the URL with the optimistic overlay applied. */
+  /** Current values: parsed from the URL with the optimistic overlay, codec defaults, and the read pipeline applied. */
   values: ComputedRef<QueryStateValues<TSchema>>
+  /** Explicit selections plus the optimistic overlay, with the read pipeline applied and without codec defaults. */
+  rawValues: ComputedRef<QueryStateValues<TSchema>>
   /** Optimistically sets a field and schedules a coalesced navigation. */
   setValue: (key: keyof TSchema & string, value: unknown, options?: NavigateOptions) => void
+  /** The transform pipeline applied to reads, writes, and the navigation boundary. */
+  pipeline: QueryPipelineBus
+  /** The resolved `clearOnDefault` rule, so modules building queries match the engine's write behavior. */
+  clearOnDefault: boolean
 }
 
 /**
@@ -62,7 +71,8 @@ export interface QueryStateEngine<TSchema extends QueryStateSchema> {
  *
  * @typeParam TSchema - The schema whose fields the engine tracks.
  * @param options - Schema, query source, navigate adapter, and the `parse`/`build` hooks.
- * @returns The resolved `values` and a `setValue` writer.
+ * @returns The engine: resolved `values` and `rawValues`, a `setValue` writer,
+ * the `pipeline`, and the resolved `clearOnDefault`.
  */
 export function createQueryStateEngine<TSchema extends QueryStateSchema>(
   options: QueryStateEngineOptions<TSchema>,
@@ -70,8 +80,30 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
   const { schema, navigate, parse, build, throttleMs = 0, clearOnDefault = true } = options
   const keys = Object.keys(schema) as Array<keyof TSchema & string>
 
+  const pipeline = createQueryPipeline()
+
   const urlValues = computed(() => parse(toValue(options.query)))
   const pending = ref<Record<string, unknown>>({})
+
+  // The explicit selection: parsed values for fields actually present in the URL
+  // (or written optimistically), WITHOUT codec defaults — a field that fell back
+  // to its codec default is treated as absent, not selected.
+  const rawValues = computed<QueryStateValues<TSchema>>(() => {
+    const query = toValue(options.query)
+    const merged = { ...urlValues.value, ...pending.value } as Record<string, unknown>
+
+    for (const key of keys) {
+      if (Object.hasOwn(pending.value, key)) {
+        continue
+      }
+
+      if (!schema[key].paths.some(path => getPath(query, path) !== undefined)) {
+        delete merged[key]
+      }
+    }
+
+    return pipeline.run('read', merged) as QueryStateValues<TSchema>
+  })
 
   const values = computed<QueryStateValues<TSchema>>(() => {
     const merged = { ...urlValues.value, ...pending.value } as Record<string, unknown>
@@ -82,7 +114,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
       }
     }
 
-    return merged as QueryStateValues<TSchema>
+    return pipeline.run('read', merged) as QueryStateValues<TSchema>
   })
 
   // Committed model: drop a pending write once the URL reflects it. Entries the
@@ -138,9 +170,10 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
   function commit(perCall: NavigateOptions): void {
     const currentQuery = toValue(options.query)
     const merged = { ...parse(currentQuery), ...pending.value } as QueryStateValues<TSchema>
-    const target = clearOnDefault ? dropDefaults(schema, merged) : merged
+    const target = pipeline.run('write', clearOnDefault ? dropDefaults(schema, merged) : merged) as QueryStateValues<TSchema>
+    const query = pipeline.run('navigate', build(currentQuery, target))
 
-    void navigate(build(currentQuery, target), {
+    void navigate(query, {
       history: perCall.history ?? options.history,
       scroll: perCall.scroll ?? options.scroll,
     })
@@ -151,7 +184,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     schedule(perCall)
   }
 
-  return { values, setValue }
+  return { values, rawValues, setValue, pipeline, clearOnDefault }
 }
 
 function isReconciled(

@@ -56,7 +56,7 @@ Builds a `QueryAdapter` backed by `vue-router`. Reads
 call it inside `setup` unless you pass `router` explicitly.
 
 Returns the adapter **without** providing it — pass `adapter.query` /
-`adapter.navigate` where needed (e.g. to the [store](/api/store)).
+`adapter.navigate` where needed (e.g. into a `useQueryStates` call).
 
 ::: tip Nested keys
 Dotted keys (`filters.sort`) and array values require `vue-router` configured with

@@ -1,7 +1,5 @@
 import type { QueryAdapterDefaultOptions } from 'vuqs'
-import { createRequire } from 'node:module'
-import { join } from 'node:path'
-import { addImports, addPlugin, createResolver, defineNuxtModule, useLogger } from '@nuxt/kit'
+import { addImports, addPlugin, createResolver, defineNuxtModule } from '@nuxt/kit'
 import { defu } from 'defu'
 
 /**
@@ -25,13 +23,12 @@ export interface AutoImportsOptions {
    */
   codecs?: boolean
   /**
-   * The `@vuqs/store` APIs (`createQueryStore`, `provideQueryStore`,
-   * `useQueryStore`, `createQueryStoreKey`), registered only when the package is
-   * installed.
+   * The composable modules from `vuqs/modules`. Each module adds one global
+   * name, so the set grows as new modules ship.
    *
    * @default true
    */
-  store?: boolean
+  modules?: boolean
 }
 
 /**
@@ -86,36 +83,18 @@ const COMPOSABLE_IMPORTS = [
 
 const CODEC_IMPORTS = ['codecs', 'createCodec'] as const
 
-const STORE_IMPORTS = [
-  'createQueryStore',
-  'provideQueryStore',
-  'useQueryStore',
-  'createQueryStoreKey',
-] as const
+const MODULE_IMPORTS = ['withEffective', 'withContext'] as const
 
 function resolveAutoImports(option: ModuleOptions['autoImports']): Required<AutoImportsOptions> {
   if (option === false) {
-    return { composables: false, codecs: false, store: false }
+    return { composables: false, codecs: false, modules: false }
   }
 
   if (option === true || option === undefined) {
-    return { composables: true, codecs: true, store: true }
+    return { composables: true, codecs: true, modules: true }
   }
 
-  return { composables: true, codecs: true, store: true, ...option }
-}
-
-function isInstalled(id: string, fromDir: string): boolean {
-  try {
-    createRequire(join(fromDir, 'package.json')).resolve(id)
-    return true
-  }
-  catch (error) {
-    // An ESM-only package (no `require` condition in its `exports`) resolves to
-    // `ERR_PACKAGE_PATH_NOT_EXPORTED` rather than the entry path — it is still
-    // installed. Only a missing module means it is absent.
-    return (error as { code?: string }).code === 'ERR_PACKAGE_PATH_NOT_EXPORTED'
-  }
+  return { composables: true, codecs: true, modules: true, ...option }
 }
 
 export default defineNuxtModule<ModuleOptions>({
@@ -129,7 +108,6 @@ export default defineNuxtModule<ModuleOptions>({
     adapter: true,
   },
   setup(options, nuxt) {
-    const logger = useLogger('vuqs')
     const { resolve } = createResolver(import.meta.url)
 
     const autoImports = resolveAutoImports(options.autoImports)
@@ -143,13 +121,8 @@ export default defineNuxtModule<ModuleOptions>({
       imports.push(...CODEC_IMPORTS.map(name => ({ name, from: 'vuqs' })))
     }
 
-    if (autoImports.store) {
-      if (isInstalled('@vuqs/store', nuxt.options.rootDir)) {
-        imports.push(...STORE_IMPORTS.map(name => ({ name, from: '@vuqs/store' })))
-      }
-      else if (typeof options.autoImports === 'object' && options.autoImports.store === true) {
-        logger.warn('`autoImports.store` is enabled but `@vuqs/store` is not installed; skipping its auto-imports.')
-      }
+    if (autoImports.modules) {
+      imports.push(...MODULE_IMPORTS.map(name => ({ name, from: 'vuqs/modules' })))
     }
 
     if (imports.length > 0) {

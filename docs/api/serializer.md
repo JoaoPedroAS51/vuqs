@@ -114,7 +114,7 @@ function assertUniquePaths<TSchema>(schema: TSchema): void
 ```
 
 Throws if any query path is declared by more than one field. Called internally by
-the composables and store.
+the composables.
 
 ## Path helpers
 
@@ -146,6 +146,6 @@ function createQueryStateEngine<TSchema>(options: QueryStateEngineOptions<TSchem
 
 The reactive core behind `useQueryStates` — the optimistic overlay,
 reconciliation, write coalescing, and navigation — with injectable `parse`/`build`
-hooks so a caller can make reads/writes context-aware (this is how
-[`@vuqs/store`](/api/store) adds context). Most apps never call this directly; it's
-exposed for building higher layers. Must run inside a Vue effect scope.
+hooks so a caller can make reads/writes context-aware. Most apps never call this
+directly; it's exposed for building higher layers. Must run inside a Vue effect
+scope.

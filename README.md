@@ -50,8 +50,8 @@ binds many keys at once and coalesces multi-field writes into a single navigatio
 
 | Package | What it does |
 | --- | --- |
-| [`vuqs`](https://JoaoPedroAS51.github.io/vuqs/guide/introduction) | The core — codecs, `useQueryState`/`useQueryStates`, adapters, serializer. |
-| [`@vuqs/store`](https://JoaoPedroAS51.github.io/vuqs/store/introduction) | An opinionated store — runtime defaults and context-aware reset for tabs and wizards. |
+| [`vuqs`](https://JoaoPedroAS51.github.io/vuqs/guide/introduction) | The core — codecs, `useQueryState`/`useQueryStates`, adapters, serializer, and the [`vuqs/modules`](https://JoaoPedroAS51.github.io/vuqs/modules/introduction) subpath. |
+| [`@vuqs/nuxt`](https://JoaoPedroAS51.github.io/vuqs/nuxt/introduction) | The Nuxt module — auto-imports and the vue-router adapter out of the box. |
 
 ## Features
 
@@ -59,7 +59,7 @@ binds many keys at once and coalesces multi-field writes into a single navigatio
 - 🧬 **Codecs, not strings** — strings, numbers, booleans, dates, arrays, enums, JSON, or your own.
 - 🪝 **Reactive** — `useQueryState` returns a writable ref; `useQueryStates` a reactive map. `v-model` just works.
 - 🧭 **Router-agnostic** — a tiny adapter plugs in vue-router, Nuxt, or anything.
-- 🗂️ **A store when you need one** — three states (`selected` / `defaults` / `effective`) and context reset.
+- 🗂️ **Modules when you need them** — compose runtime defaults (`selected` / `defaults` / `effective`) and context-aware reset with `.use()`.
 - 🧩 **Tiny & tree-shakeable** — no runtime dependencies, built for Vue 3.5+.
 
 ## Documentation
@@ -69,7 +69,7 @@ binds many keys at once and coalesces multi-field writes into a single navigatio
 - [Getting started](https://JoaoPedroAS51.github.io/vuqs/guide/getting-started)
 - [Core concepts](https://JoaoPedroAS51.github.io/vuqs/guide/concepts)
 - [Codecs](https://JoaoPedroAS51.github.io/vuqs/guide/codecs)
-- [@vuqs/store](https://JoaoPedroAS51.github.io/vuqs/store/introduction)
+- [Modules](https://JoaoPedroAS51.github.io/vuqs/modules/introduction)
 - [API reference](https://JoaoPedroAS51.github.io/vuqs/api/)
 
 ## Requirements
@@ -93,7 +93,7 @@ pnpm --filter @vuqs/docs dev         # docs site
 
 Inspired by [nuqs](https://nuqs.47ng.com/), the type-safe query state library for
 React. vuqs is a ground-up Vue implementation, adding its own runtime defaults and
-context-aware store on top.
+context-aware modules on top.
 
 ## License
 

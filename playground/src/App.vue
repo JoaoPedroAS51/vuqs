@@ -62,7 +62,7 @@ function setMode(next: Mode) {
       <RouterLink to="/">Overview</RouterLink>
       <RouterLink to="/single">Single + codecs</RouterLink>
       <RouterLink to="/grouped">Grouped</RouterLink>
-      <RouterLink to="/store">Store</RouterLink>
+      <RouterLink to="/store">Effective</RouterLink>
       <RouterLink to="/context">Context</RouterLink>
     </nav>
     <div class="theme-switch" role="radiogroup" aria-label="Theme">

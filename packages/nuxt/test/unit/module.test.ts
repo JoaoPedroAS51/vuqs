@@ -63,14 +63,21 @@ describe('@vuqs/nuxt module', () => {
     expect(names).toContain('createCodec')
   })
 
-  it('detects @vuqs/store and registers its APIs (it is a workspace dependency here)', async () => {
+  it('registers the composable modules from vuqs/modules by default', async () => {
     await run({})
 
     const names = importedNames()
-    expect(names).toContain('createQueryStore')
-    expect(names).toContain('provideQueryStore')
-    expect(names).toContain('useQueryStore')
-    expect(names).toContain('createQueryStoreKey')
+    expect(names).toContain('withEffective')
+    expect(names).toContain('withContext')
+  })
+
+  it('omits the modules when that group is disabled', async () => {
+    await run({ autoImports: { modules: false } })
+
+    const names = importedNames()
+    expect(names).toContain('useQueryState')
+    expect(names).not.toContain('withEffective')
+    expect(names).not.toContain('withContext')
   })
 
   it('omits codecs when that group is disabled', async () => {

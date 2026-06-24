@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { codecs, useQueryState } from 'vuqs'
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import PageLayout from '../components/PageLayout.vue'
 import StateBlock from '../components/StateBlock.vue'
 
@@ -21,12 +21,18 @@ const dateInput = computed({
   set: (value: string) => (value ? date.set(new Date(value)) : date.clear()),
 })
 
-const tagsInput = computed({
-  get: () => tags.value.join(', '),
-  set: (value: string) => {
-    const parsed = value.split(',').map(item => item.trim()).filter(Boolean)
-    tags.value = parsed
-  },
+// A free-text mirror of the array. Re-deriving the text from the parsed array on
+// every keystroke would erase a comma the moment it is typed, so the text is held
+// locally and only re-synced from `tags` when the change is external (URL, clear).
+const parseTags = (value: string): string[] => value.split(',').map(item => item.trim()).filter(Boolean)
+const tagsText = ref(tags.value.join(', '))
+
+watch(tagsText, value => (tags.value = parseTags(value)))
+
+watch(tags, (value) => {
+  if (value.join(' ') !== parseTags(tagsText.value).join(' ')) {
+    tagsText.value = value.join(', ')
+  }
 })
 
 // In templates Vue auto-unwraps a top-level ref, so the augmented `.clear()` is
@@ -116,7 +122,7 @@ const value = computed(() => ({
     <div class="row">
       <span class="k">tags</span>
       <div class="control">
-        <input v-model="tagsInput" type="text" placeholder="comma, separated">
+        <input v-model="tagsText" type="text" placeholder="comma, separated">
         <button class="clear-btn" type="button" @click="clear.tags()">clear</button>
       </div>
       <span class="type">arrayOf</span>

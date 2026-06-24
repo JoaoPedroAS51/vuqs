@@ -38,9 +38,7 @@ const search = useQueryState('q', codecs.string.withDefault(''))
 - Codecs: `codecs`, `createCodec` — `codecs` is a single namespace object
   (`codecs.string`, `codecs.integer`, …), so it's one auto-imported name, not one
   per codec
-- Store (only when [`@vuqs/store`](https://github.com/JoaoPedroAS51/vuqs) is
-  installed): `createQueryStore`, `provideQueryStore`, `useQueryStore`,
-  `createQueryStoreKey`
+- Modules: the composable modules from `vuqs/modules`
 
 **Adapter:** a plugin provides `createVueRouterAdapter()` on the Vue app via
 vuqs's `installQueryAdapter`, so the composables resolve the router app-wide.
@@ -57,7 +55,7 @@ export default defineNuxtConfig({
     autoImports: {
       composables: true,
       codecs: true,
-      store: true,
+      modules: true,
     },
     // Adapter defaults; per-call/per-composable options still win
     adapter: {

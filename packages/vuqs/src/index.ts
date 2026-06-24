@@ -7,7 +7,9 @@ export type { QueryStateDefinition, QueryStateDefinitionInput, QueryStateDefinit
 export { createQueryStateEngine } from './core/engine'
 export type { QueryStateEngine, QueryStateEngineOptions } from './core/engine'
 export { structuralEq } from './core/equality'
+export type { QueryHookBus, QueryHooks } from './core/hooks'
 export { deletePath, getPath, getQueryString, getQueryStringArray, setPath } from './core/path'
+export type { Enforce, QueryPipeline, QueryPipelineBus, QueryPipelineStage, QueryValues } from './core/pipeline'
 export { assertUniquePaths, buildQuery, dropDefaults, getManagedKeys, omitManagedKeys, parseQueryStates, serializeQueryStates } from './core/schema'
 export type { QueryStateRefValue, QueryStateSchema, QueryStateValueOf, QueryStateValues, QueryStateWriteValues } from './core/schema'
 export { createSerializer } from './core/serializer'
@@ -17,6 +19,9 @@ export { useQueryState } from './core/use-query-state'
 export { useQueryStates } from './core/use-query-states'
 export type {
   NavigateOptions,
+  QueryComposable,
+  QueryCore,
+  QueryModule,
   QueryStateNavigate,
   QueryStateRef,
   QueryStatesActions,

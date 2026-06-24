@@ -37,12 +37,13 @@ const search = useQueryState('q', codecs.string.withDefault(''))
 | --- | --- | --- |
 | Composables | `useQueryState`, `useQueryStates`, `useQueryAdapter`, `provideQueryAdapter`, `defineQueryState`, `createSerializer` | `vuqs` |
 | Codecs | `codecs`, `createCodec` | `vuqs` |
-| Store *(when installed)* | `createQueryStore`, `provideQueryStore`, `useQueryStore`, `createQueryStoreKey` | `@vuqs/store` |
+| Modules | the composable [modules](/modules/introduction) | `vuqs/modules` |
 
 `codecs` is a single namespace object, so it's one auto-imported name
 (`codecs.string`, `codecs.integer`, …), not one per codec.
 
-The `@vuqs/store` group is registered only when the package is installed.
+The Modules group registers every module exported from `vuqs/modules`, so new
+modules become available without changing your config.
 
 ### The adapter
 
@@ -67,7 +68,7 @@ export default defineNuxtConfig({
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `autoImports` | `boolean \| { composables?, codecs?, store? }` | `true` | Register vuqs APIs as auto-imports. `false` registers none; an object toggles each group. |
+| `autoImports` | `boolean \| { composables?, codecs?, modules? }` | `true` | Register vuqs APIs as auto-imports. `false` registers none; an object toggles each group. |
 | `adapter` | `boolean \| { defaultOptions? }` | `true` | Provide the vue-router adapter app-wide. `false` disables it so you can provide your own. |
 
 See the [API reference](/api/nuxt) for the exact types.
@@ -81,7 +82,7 @@ export default defineNuxtConfig({
     autoImports: {
       composables: true,
       codecs: false, // import `codecs` manually instead
-      store: true,
+      modules: true,
     },
   },
 })

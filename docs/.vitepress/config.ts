@@ -4,7 +4,7 @@ const repo = 'https://github.com/JoaoPedroAS51/vuqs'
 
 export default defineConfig({
   title: 'vuqs',
-  description: 'Type-safe query state for Vue 3 — composable codecs, URL sync, and a context-aware store.',
+  description: 'Type-safe query state for Vue 3 — composable codecs, URL sync, and opt-in modules.',
   lang: 'en-US',
 
   // GitHub Pages serves the project site under /vuqs/. Set to '/' for a root
@@ -24,7 +24,7 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: 'Guide', link: '/guide/introduction', activeMatch: '/guide/' },
-      { text: 'Store', link: '/store/introduction', activeMatch: '/store/' },
+      { text: 'Modules', link: '/modules/introduction', activeMatch: '/modules/' },
       { text: 'Nuxt', link: '/nuxt/introduction', activeMatch: '/nuxt/' },
       { text: 'API', link: '/api/', activeMatch: '/api/' },
       {
@@ -68,14 +68,19 @@ export default defineConfig({
         },
       ],
 
-      '/store/': [
+      '/modules/': [
         {
-          text: '@vuqs/store',
+          text: 'Modules',
           items: [
-            { text: 'Introduction', link: '/store/introduction' },
-            { text: 'The three states', link: '/store/three-states' },
-            { text: 'Context switching', link: '/store/context' },
-            { text: 'Provide / inject', link: '/store/provide-inject' },
+            { text: 'Overview', link: '/modules/introduction' },
+            { text: 'Writing a module', link: '/modules/authoring' },
+          ],
+        },
+        {
+          text: 'Available modules',
+          items: [
+            { text: 'withEffective', link: '/modules/effective' },
+            { text: 'withContext', link: '/modules/context' },
           ],
         },
       ],
@@ -98,7 +103,7 @@ export default defineConfig({
             { text: 'Composables', link: '/api/composables' },
             { text: 'Adapters', link: '/api/adapters' },
             { text: 'Serializer & pure functions', link: '/api/serializer' },
-            { text: '@vuqs/store', link: '/api/store' },
+            { text: 'Modules', link: '/api/modules' },
             { text: '@vuqs/nuxt', link: '/api/nuxt' },
             { text: 'Types', link: '/api/types' },
           ],

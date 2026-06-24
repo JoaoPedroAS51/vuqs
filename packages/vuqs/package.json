@@ -12,6 +12,14 @@
     "./adapters/vue-router": {
       "types": "./dist/adapters/vue-router.d.ts",
       "import": "./dist/adapters/vue-router.mjs"
+    },
+    "./modules": {
+      "types": "./dist/modules/index.d.ts",
+      "import": "./dist/modules/index.mjs"
+    },
+    "./shared": {
+      "types": "./dist/shared/index.d.ts",
+      "import": "./dist/shared/index.mjs"
     }
   },
   "main": "./dist/index.mjs",

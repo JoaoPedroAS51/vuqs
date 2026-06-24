@@ -1,10 +1,13 @@
-import type { MaybeRefOrGetter, WritableComputedRef } from 'vue'
+import type { ComputedRef, MaybeRefOrGetter, WritableComputedRef } from 'vue'
 import type { QueryStateEngine } from './engine'
-import type { QueryStateRefValue, QueryStateSchema, QueryStateWriteValues } from './schema'
-import type { NavigateOptions, ParsedQuery, QueryStateNavigate } from './types'
-import { computed, reactive } from 'vue'
+import type { QueryHookBus } from './hooks'
+import type { QueryPipelineBus } from './pipeline'
+import type { QueryStateRefValue, QueryStateSchema, QueryStateValues, QueryStateWriteValues } from './schema'
+import type { NavigateOptions, ParsedQuery, ParsedQueryRaw, QueryStateNavigate } from './types'
+import { computed, reactive, toValue } from 'vue'
 import { useQueryAdapter } from './adapter'
 import { createQueryStateEngine } from './engine'
+import { createQueryHooks } from './hooks'
 import { assertUniquePaths, buildQuery, parseQueryStates } from './schema'
 
 export type { NavigateOptions, QueryStateNavigate } from './types'
@@ -95,7 +98,14 @@ export interface UseQueryStatesReturn<TSchema extends QueryStateSchema> extends 
 export function createQueryStateRefs<TSchema extends QueryStateSchema>(
   schema: TSchema,
   options: UseQueryStatesOptions,
-): { engine: QueryStateEngine<TSchema>, refs: Record<string, WritableComputedRef<unknown>> } {
+): {
+  engine: QueryStateEngine<TSchema>
+  refs: Record<string, WritableComputedRef<unknown>>
+  query: MaybeRefOrGetter<ParsedQuery>
+  navigate: QueryStateNavigate
+  history: NavigateOptions['history']
+  scroll: NavigateOptions['scroll']
+} {
   assertUniquePaths(schema)
 
   const adapter = useQueryAdapter()
@@ -109,6 +119,8 @@ export function createQueryStateRefs<TSchema extends QueryStateSchema>(
   }
 
   const adapterDefaults = adapter?.defaultOptions
+  const history = options.history ?? adapterDefaults?.history
+  const scroll = options.scroll ?? adapterDefaults?.scroll
 
   const engine = createQueryStateEngine({
     schema,
@@ -116,8 +128,8 @@ export function createQueryStateRefs<TSchema extends QueryStateSchema>(
     navigate,
     parse: query => parseQueryStates(schema, query),
     build: (currentQuery, values) => buildQuery(schema, currentQuery, values),
-    history: options.history ?? adapterDefaults?.history,
-    scroll: options.scroll ?? adapterDefaults?.scroll,
+    history,
+    scroll,
     throttleMs: options.throttleMs ?? adapterDefaults?.throttleMs,
     clearOnDefault: options.clearOnDefault ?? adapterDefaults?.clearOnDefault,
   })
@@ -131,7 +143,69 @@ export function createQueryStateRefs<TSchema extends QueryStateSchema>(
     })
   }
 
-  return { engine, refs }
+  return { engine, refs, query: querySource, navigate, history, scroll }
+}
+
+/**
+ * The shared core passed to a {@link QueryModule}.
+ *
+ * @remarks
+ * Modules use this object to derive state from the current URL selection,
+ * contribute pipeline transforms, navigate with resolved defaults, and
+ * coordinate with other modules through `hooks`. Treat it as an implementation
+ * surface for module authors, not as app-facing state.
+ *
+ * @typeParam TSchema - The schema being managed.
+ */
+export interface QueryCore<TSchema extends QueryStateSchema> {
+  /** The schema being managed. */
+  schema: TSchema
+  /**
+   * Explicit URL selections plus the optimistic overlay, with the read pipeline
+   * applied and without codec defaults.
+   */
+  selected: ComputedRef<QueryStateValues<TSchema>>
+  /** Optimistically sets one field. */
+  setValue: (key: keyof TSchema & string, value: unknown, options?: NavigateOptions) => void
+  /** Applies a full query to the URL, running the `navigate` pipeline stage and resolving the default navigation options. */
+  navigate: (query: ParsedQueryRaw, options?: NavigateOptions) => void
+  /** Reads the current parsed query. */
+  currentQuery: () => ParsedQuery
+  /** The notification bus: one module emits an event, others react. */
+  hooks: QueryHookBus
+  /** The transform pipeline: `tap` to contribute, `run` to shape a derived value map. */
+  pipeline: QueryPipelineBus
+  /** The resolved `clearOnDefault` rule, so modules building queries match the engine's write behavior. */
+  clearOnDefault: boolean
+}
+
+/**
+ * A unit of functionality composed with {@link QueryComposable.use}.
+ *
+ * @remarks
+ * A module receives the {@link QueryCore} and returns the API it contributes to
+ * the composable. It may derive state from the core, contribute pipeline
+ * transforms, subscribe to hooks, or set up watchers. The returned object is
+ * merged into the composable and widens its type.
+ *
+ * @typeParam TSchema - The schema being managed.
+ * @typeParam TAdded - The API this module adds.
+ */
+export type QueryModule<TSchema extends QueryStateSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
+
+/**
+ * The object returned by {@link useQueryStates}: the current API plus `use`.
+ *
+ * @remarks
+ * Each `use(module)` call runs the module against the same {@link QueryCore},
+ * merges the contributed API into this object, and widens the return type with
+ * that API.
+ *
+ * @typeParam TSchema - The schema being managed.
+ * @typeParam TApi - The API accumulated so far.
+ */
+export type QueryComposable<TSchema extends QueryStateSchema, TApi> = TApi & {
+  use: <TAdded>(module: QueryModule<TSchema, TAdded>) => QueryComposable<TSchema, TApi & TAdded>
 }
 
 /**
@@ -158,7 +232,7 @@ export function createQueryStateRefs<TSchema extends QueryStateSchema>(
  * @param schema - The fields to bind, keyed by logical name.
  * @param options - The query source, navigate adapter, and navigation defaults.
  * Optional: omitted parts fall back to a provided {@link provideQueryAdapter | adapter}.
- * @returns The reactive `values` map plus the `setValues` and `clear` writers.
+ * @returns The reactive `values` map, batch writers, and `use` for module composition.
  * @throws {Error} When two fields declare the same query path.
  * @throws {Error} When neither `options` nor a provided adapter supplies `query` and `navigate`.
  *
@@ -179,8 +253,8 @@ export function createQueryStateRefs<TSchema extends QueryStateSchema>(
 export function useQueryStates<TSchema extends QueryStateSchema>(
   schema: TSchema,
   options: UseQueryStatesOptions = {},
-): UseQueryStatesReturn<TSchema> {
-  const { engine, refs } = createQueryStateRefs(schema, options)
+): QueryComposable<TSchema, UseQueryStatesReturn<TSchema>> {
+  const { engine, refs, query, navigate, history, scroll } = createQueryStateRefs(schema, options)
 
   const values = reactive(refs) as QueryStatesValues<TSchema>
 
@@ -206,5 +280,35 @@ export function useQueryStates<TSchema extends QueryStateSchema>(
     }
   }
 
-  return { values, setValues, clear }
+  const core: QueryCore<TSchema> = {
+    schema,
+    selected: engine.rawValues,
+    setValue: (key, value, perCall) => engine.setValue(key, value, perCall),
+    navigate: (next, perCall) => {
+      const query = engine.pipeline.run('navigate', next)
+      void navigate(query, { history: perCall?.history ?? history, scroll: perCall?.scroll ?? scroll })
+    },
+    currentQuery: () => toValue(query),
+    hooks: createQueryHooks(),
+    pipeline: engine.pipeline,
+    clearOnDefault: engine.clearOnDefault,
+  }
+
+  const composable = { values, setValues, clear } as QueryComposable<TSchema, UseQueryStatesReturn<TSchema>>
+
+  composable.use = <TAdded>(module: QueryModule<TSchema, TAdded>) => {
+    const added = module(core)
+
+    for (const key of Object.keys(added as Record<string, unknown>)) {
+      if (key in composable) {
+        throw new Error(`[vuqs] module key "${key}" is already provided by an earlier module`)
+      }
+    }
+
+    Object.assign(composable, added)
+
+    return composable as QueryComposable<TSchema, UseQueryStatesReturn<TSchema> & TAdded>
+  }
+
+  return composable
 }

@@ -13,8 +13,8 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: 'vuqs/adapters/vue-router', replacement: src('../packages/vuqs/src/adapters/vue-router.ts') },
+      { find: 'vuqs/modules', replacement: src('../packages/vuqs/src/modules/index.ts') },
       { find: 'vuqs', replacement: src('../packages/vuqs/src/index.ts') },
-      { find: '@vuqs/store', replacement: src('../packages/store/src/index.ts') },
     ],
     dedupe: ['vue', 'vue-router'],
   },

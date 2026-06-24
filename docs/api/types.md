@@ -78,6 +78,13 @@ interface UseQueryStatesOptions extends NavigateOptions {
 type QueryStatesValues<TSchema>  // the reactive values map type
 interface QueryStatesActions<TSchema> { setValues; clear }
 interface UseQueryStatesReturn<TSchema> extends QueryStatesActions<TSchema> { values }
+
+// Module composition (see Modules)
+type QueryComposable<TSchema, TApi> = TApi & {
+  use: <TAdded>(module: QueryModule<TSchema, TAdded>) => QueryComposable<TSchema, TApi & TAdded>
+}
+type QueryModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
+interface QueryCore<TSchema> { /* the shared core passed to a module */ }
 ```
 
 ## Adapter & navigation types
@@ -151,15 +158,32 @@ interface QueryStateEngine<TSchema> {
 }
 ```
 
-## Store types
+## Module types
 
-`import type { … } from '@vuqs/store'`
+`import type { … } from 'vuqs/modules'`
 
 ```ts
-interface CreateQueryStoreOptions<TSchema, TContext> { /* see API: store */ }
-interface QueryStoreContext<TSchema, TContext> { active; preserve?; only? }
-interface QueryStore<TSchema, TContext> { /* states + writers */ }
-type QueryStoreKey<TSchema, TContext> = InjectionKey<QueryStore<TSchema, TContext>>
+interface EffectiveApi<TSchema> { selected; defaults; effective; setDefaults; clearDefaults }
+interface ContextOptions<TSchema, TContext> { active; preserve?; only?; navigate? }
+interface ContextApi<TContext> { activeContext; buildContextQuery; switchTo }
 ```
 
-See [API: @vuqs/store](/api/store) for the full shapes.
+## Module authoring types
+
+`import type { … } from 'vuqs'`
+
+```ts
+interface QueryCore<TSchema> { schema; selected; setValue; navigate; currentQuery; hooks; pipeline; clearOnDefault }
+type QueryModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
+
+interface QueryHooks {} // augment via `declare module 'vuqs'`
+interface QueryHookBus { on; emit }
+
+interface QueryPipeline { read; write; navigate }
+type QueryPipelineStage = keyof QueryPipeline
+type Enforce = 'pre' | 'default' | 'post'
+interface QueryPipelineBus { tap; run }
+type QueryValues = Record<string, unknown>
+```
+
+See [API: Modules](/api/modules#authoring) for the full shapes.

@@ -1,5 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "vuqs": ["./src/index.ts"]
+    }
+  },
   "include": [
     "src",
     "test",

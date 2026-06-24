@@ -5,7 +5,7 @@
     "paths": {
       "vuqs": ["../packages/vuqs/src/index.ts"],
       "vuqs/adapters/vue-router": ["../packages/vuqs/src/adapters/vue-router.ts"],
-      "@vuqs/store": ["../packages/store/src/index.ts"]
+      "vuqs/modules": ["../packages/vuqs/src/modules/index.ts"]
     },
     "types": ["vite/client"]
   },

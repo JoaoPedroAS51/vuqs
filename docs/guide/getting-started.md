@@ -25,8 +25,9 @@ If you use `vue-router` (most apps do), you already have the only optional peer
 dependency the built-in adapter needs.
 
 ::: tip
-Want runtime defaults and context features too? Add the store alongside the
-core: `pnpm add @vuqs/store`. See the [store guide](/store/introduction).
+Want runtime defaults and context features too? Compose them onto
+`useQueryStates` with [modules](/modules/introduction) from `vuqs/modules` — no
+extra package.
 :::
 
 ## Provide an adapter
@@ -169,4 +170,4 @@ component.
 - **[Core concepts](/guide/concepts)** — the mental model behind codecs, fields, and the commit cycle.
 - **[Codecs](/guide/codecs)** — every built-in type and how to build your own.
 - **[Navigation options](/guide/navigation-options)** — `push` vs `replace`, throttling, and defaults.
-- **[@vuqs/store](/store/introduction)** — when URL state alone isn't enough.
+- **[Modules](/modules/introduction)** — runtime defaults and context-aware reset, when URL state alone isn't enough.
