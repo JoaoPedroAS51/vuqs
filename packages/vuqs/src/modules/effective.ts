@@ -34,7 +34,7 @@ export interface EffectiveApi<TSchema extends QueryStateSchema> {
  * layered over `defaults`.
  *
  * Runtime defaults from `setDefaults` override codec defaults. Explicit URL
- * selections override both. A field with neither falls back to its codec default
+ * selections override both. A param with neither falls back to its codec default
  * when one exists.
  *
  * Pipeline `read` transforms apply to all three states. Runtime defaults reset

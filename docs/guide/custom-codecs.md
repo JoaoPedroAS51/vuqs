@@ -135,7 +135,7 @@ codec.
 ## Reuse it
 
 A custom codec is a plain value — export it from a module and use it across your
-app, or wrap it in a named [field](/guide/defining-fields):
+app, or wrap it in a named [param](/guide/defining-params):
 
 ```ts
 // codecs.ts

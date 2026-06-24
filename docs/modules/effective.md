@@ -1,6 +1,6 @@
 # withEffective
 
-Separates a field's value into three layers so runtime defaults can sit *under*
+Separates a param's value into three layers so runtime defaults can sit *under*
 explicit selections without ever reaching the URL.
 
 ```ts
@@ -9,7 +9,7 @@ import { withEffective } from 'vuqs/modules'
 
 ## What it adds
 
-Instead of one value per field, `withEffective` exposes three read models plus two
+Instead of one value per param, `withEffective` exposes three read models plus two
 writers for the runtime defaults:
 
 | State | Source | In the URL? |
@@ -25,7 +25,7 @@ defaults  = { ...codecDefaults, ...runtimeDefaults }
 
 Precedence runs **selection → runtime default → codec default**. A user selection
 always wins; clearing it reveals the runtime default, and clearing the runtime
-default reveals the codec default (if the field has one). Your UI reads
+default reveals the codec default (if the param has one). Your UI reads
 `effective`; only `selected` is serialized.
 
 All three are readonly reactive objects — dot access, no `.value`:
@@ -69,14 +69,14 @@ Writes still go through the base composable: assign `values.field` or call
 
 ```vue
 <script setup lang="ts">
-import { codecs, defineQueryState, useQueryStates } from 'vuqs'
+import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
 import { withEffective } from 'vuqs/modules'
 import { onMounted } from 'vue'
 
 const { values, selected, defaults, effective, setDefaults, clear } = useQueryStates({
-  q: defineQueryState('q', codecs.string),
-  status: defineQueryState('status', codecs.literal(['active', 'archived'] as const)),
-  perPage: defineQueryState('perPage', codecs.integer),
+  q: defineQueryParam('q', codecs.string),
+  status: defineQueryParam('status', codecs.literal(['active', 'archived'] as const)),
+  perPage: defineQueryParam('perPage', codecs.integer),
 }).use(withEffective())
 
 onMounted(async () => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { codecs, defineQueryState, useQueryStates } from 'vuqs'
+import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
 import { computed, ref } from 'vue'
 import PageLayout from '../components/PageLayout.vue'
 import StateBlock from '../components/StateBlock.vue'
@@ -26,9 +26,9 @@ const PAGE_SIZE = 3
 // batch `setValues`/`clear` writers. Assigning several `values.*` in a row
 // coalesces into a single navigation (one microtask).
 const { values, setValues } = useQueryStates({
-  q: defineQueryState('q', codecs.string.withDefault('')),
-  sort: defineQueryState('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
-  page: defineQueryState('page', codecs.index.withDefault(0)),
+  q: defineQueryParam('q', codecs.string.withDefault('')),
+  sort: defineQueryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
+  page: defineQueryParam('page', codecs.index.withDefault(0)),
 })
 
 const historyMode = ref<'replace' | 'push'>('replace')

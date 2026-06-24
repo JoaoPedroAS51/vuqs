@@ -193,7 +193,7 @@ export function getQueryStringArray(value: ParsedQueryValue): string[] {
  *
  * @remarks
  * Arrays are treated as leaf values and not traversed into. Used by the
- * {@link defineQueryState} serialize guard to validate which keys were written.
+ * {@link defineQueryParam} serialize guard to validate which keys were written.
  *
  * @param value - The query value to walk.
  * @param prefix - The accumulated dot-path prefix, used during recursion.

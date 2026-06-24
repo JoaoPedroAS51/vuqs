@@ -3,7 +3,7 @@ import { reactive, readonly } from 'vue'
 
 /**
  * Exposes a computed record as a readonly reactive object, so consumers read
- * `state.field` instead of `state.value.field`. Keys mirror the underlying
+ * `state.page` instead of `state.value.page`. Keys mirror the underlying
  * computed live. Reimplements VueUse's `toReactive` (a Proxy over the ref) since
  * the lib has no VueUse dependency.
  *

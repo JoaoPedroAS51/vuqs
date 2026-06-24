@@ -1,37 +1,37 @@
 import { describe, expect, it } from 'vitest'
 import { codecs } from '../../src/core/codec'
-import { defineQueryState } from '../../src/core/define-query-state'
+import { defineQueryParam } from '../../src/core/define-query-param'
 
-describe('defineQueryState (path form)', () => {
+describe('defineQueryParam (path form)', () => {
   it('derives paths from the path', () => {
-    expect(defineQueryState('currency', codecs.string).paths).toEqual(['currency'])
+    expect(defineQueryParam('currency', codecs.string).paths).toEqual(['currency'])
   })
 
   it('parses from the path', () => {
-    const currency = defineQueryState('currency', codecs.string)
+    const currency = defineQueryParam('currency', codecs.string)
 
     expect(currency.parse({ currency: 'USD' })).toBe('USD')
     expect(currency.parse({})).toBeUndefined()
   })
 
   it('serializes into the path', () => {
-    expect(defineQueryState('currency', codecs.string).serialize('USD')).toEqual({ currency: 'USD' })
+    expect(defineQueryParam('currency', codecs.string).serialize('USD')).toEqual({ currency: 'USD' })
   })
 
   it('supports nested dot-paths', () => {
-    const sort = defineQueryState('filters.sort', codecs.string)
+    const sort = defineQueryParam('filters.sort', codecs.string)
 
     expect(sort.parse({ filters: { sort: 'name' } })).toBe('name')
     expect(sort.serialize('name')).toEqual({ filters: { sort: 'name' } })
   })
 
   it('propagates the codec default', () => {
-    expect(defineQueryState('page', codecs.integer.withDefault(1)).defaultValue).toBe(1)
+    expect(defineQueryParam('page', codecs.integer.withDefault(1)).defaultValue).toBe(1)
   })
 })
 
-describe('defineQueryState (composite form)', () => {
-  const dateRange = defineQueryState<{ from: string, to: string }>({
+describe('defineQueryParam (composite form)', () => {
+  const dateRange = defineQueryParam<{ from: string, to: string }>({
     paths: ['from', 'to'],
     parse: (query) => {
       const from = codecs.string.parse(query.from)
@@ -63,7 +63,7 @@ describe('defineQueryState (composite form)', () => {
 
 describe('serialize dev guard', () => {
   it('throws when serialize writes outside the declared paths', () => {
-    const broken = defineQueryState<{ from: string, to: string }>({
+    const broken = defineQueryParam<{ from: string, to: string }>({
       paths: ['from'],
       parse: () => undefined,
       serialize: value => ({ from: value.from, to: value.to }),
@@ -73,14 +73,14 @@ describe('serialize dev guard', () => {
   })
 
   it('allows serialize that stays within the declared paths', () => {
-    const ok = defineQueryState('filters.sort', codecs.string)
+    const ok = defineQueryParam('filters.sort', codecs.string)
 
     expect(() => ok.serialize('name')).not.toThrow()
   })
 
   it('checks every call, not only the first', () => {
     let mode: 'empty' | 'leak' = 'empty'
-    const field = defineQueryState<string>({
+    const field = defineQueryParam<string>({
       paths: ['from'],
       parse: () => undefined,
       serialize: () => (mode === 'empty' ? {} : { from: 'x', leaked: 'y' }),
@@ -94,7 +94,7 @@ describe('serialize dev guard', () => {
   })
 
   it('allows a composite serialize that stays within the declared paths', () => {
-    const dateRange = defineQueryState<{ from: string, to: string }>({
+    const dateRange = defineQueryParam<{ from: string, to: string }>({
       paths: ['from', 'to'],
       parse: () => undefined,
       serialize: value => ({ from: value.from, to: value.to }),

@@ -26,7 +26,7 @@ interface ModuleOptions {
 ```ts
 interface AutoImportsOptions {
   // useQueryState, useQueryStates, useQueryAdapter, provideQueryAdapter,
-  // defineQueryState, createSerializer
+  // defineQueryParam, createSerializer
   composables?: boolean
   // the `codecs` namespace and `createCodec`
   codecs?: boolean
@@ -67,7 +67,7 @@ be overridden per environment like any public runtime config.
 
 | When | Effect |
 | --- | --- |
-| `autoImports.composables` | Auto-imports the core composables and `defineQueryState`, `createSerializer` from `vuqs`. |
+| `autoImports.composables` | Auto-imports the core composables and `defineQueryParam`, `createSerializer` from `vuqs`. |
 | `autoImports.codecs` | Auto-imports `codecs` and `createCodec` from `vuqs`. |
 | `autoImports.modules` | Auto-imports the composable modules from `vuqs/modules`. |
 | `adapter` not `false` | Adds a plugin that calls `installQueryAdapter(nuxtApp.vueApp, createVueRouterAdapter(...))`. |

@@ -1,14 +1,14 @@
 import { describe, expectTypeOf, it } from 'vitest'
 import { ref } from 'vue'
 import { codecs } from '../../src/core/codec'
-import { defineQueryState } from '../../src/core/define-query-state'
+import { defineQueryParam } from '../../src/core/define-query-param'
 import { useQueryStates } from '../../src/core/use-query-states'
 import { withContext } from '../../src/modules/context'
 import { withEffective } from '../../src/modules/effective'
 
 const schema = {
-  q: defineQueryState('q', codecs.string),
-  category: defineQueryState('category', codecs.literal(['cpu', 'gpu'] as const)),
+  q: defineQueryParam('q', codecs.string),
+  category: defineQueryParam('category', codecs.literal(['cpu', 'gpu'] as const)),
 }
 
 describe('module composition', () => {

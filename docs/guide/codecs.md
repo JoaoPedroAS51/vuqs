@@ -156,9 +156,9 @@ const priceRange = useQueryState('price', codecs.json({ validate: range.parse })
 ```
 
 ::: warning Keep JSON small
-JSON values are URL-encoded and can get long quickly. For a couple of fields it's
+JSON values are URL-encoded and can get long quickly. For a couple of params it's
 fine; for a large object, prefer several scalar keys or a
-[composite field](/guide/nested-keys#composite-fields).
+[composite param](/guide/nested-keys#composite-params).
 :::
 
 ## Defaults: `.withDefault()`

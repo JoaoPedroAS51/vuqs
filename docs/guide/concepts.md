@@ -27,42 +27,42 @@ builds your own.
 rule is why a garbage URL never crashes your app: `?page=banana` parses to
 `undefined`, which falls back to the default.
 
-## Field: a codec bound to a key
+## Param: a codec bound to a key
 
-A **field** is a codec wired to a concrete query path, produced by
-[`defineQueryState`](/guide/defining-fields):
+A **param** is a codec wired to a concrete query path, produced by
+[`defineQueryParam`](/guide/defining-params):
 
 ```ts
-import { codecs, defineQueryState } from 'vuqs'
+import { codecs, defineQueryParam } from 'vuqs'
 
-const page = defineQueryState('page', codecs.integer)
+const page = defineQueryParam('page', codecs.integer)
 //    binds codecs.integer to the `page` key
 ```
 
-The field owns its key (`paths`), so when a value is cleared, vuqs removes exactly
-that key and leaves unmanaged params untouched. Fields are pure data — the same
+The param owns its key (`paths`), so when a value is cleared, vuqs removes exactly
+that key and leaves unmanaged params untouched. Params are pure data — the same
 definition works in `useQueryState`, `useQueryStates`, the
 [serializer](/guide/serializer), and any [modules](/modules/introduction) applied
 to it.
 
-When you call `useQueryState('page', codecs.integer)`, vuqs creates the field for
-you. `defineQueryState` is for when you want to name and reuse a field, or build a
-[composite one](/guide/nested-keys#composite-fields).
+When you call `useQueryState('page', codecs.integer)`, vuqs creates the param for
+you. `defineQueryParam` is for when you want to name and reuse a param, or build a
+[composite one](/guide/nested-keys#composite-params).
 
-## Schema: a map of fields
+## Schema: a map of params
 
-A **schema** is just an object mapping logical names to fields:
+A **schema** is just an object mapping logical names to params:
 
 ```ts
 const schema = {
-  q: defineQueryState('q', codecs.string),
-  sort: defineQueryState('sort', codecs.literal(['asc', 'desc'] as const)),
+  q: defineQueryParam('q', codecs.string),
+  sort: defineQueryParam('sort', codecs.literal(['asc', 'desc'] as const)),
 }
 ```
 
 The map key (`q`) is the name *you* read and write. The query key it controls
-lives inside the field. They're usually the same, but they don't have to be —
-`{ lat: defineQueryState('latitude', codecs.float) }` reads `values.lat` while the
+lives inside the param. They're usually the same, but they don't have to be —
+`{ lat: defineQueryParam('latitude', codecs.float) }` reads `values.lat` while the
 URL says `?latitude=…`.
 
 ## Default value: not the same as "empty"
@@ -76,7 +76,7 @@ URL says `?latitude=…`.
    on by default). So a "page 1 of N" view shows a clean `/products`, not
    `/products?page=1`.
 
-Clearing a field means *revert to its default*, not *set to empty*.
+Clearing a param means *revert to its default*, not *set to empty*.
 
 ## The commit cycle
 

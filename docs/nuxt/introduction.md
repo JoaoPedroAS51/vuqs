@@ -35,7 +35,7 @@ const search = useQueryState('q', codecs.string.withDefault(''))
 
 | Group | Names | From |
 | --- | --- | --- |
-| Composables | `useQueryState`, `useQueryStates`, `useQueryAdapter`, `provideQueryAdapter`, `defineQueryState`, `createSerializer` | `vuqs` |
+| Composables | `useQueryState`, `useQueryStates`, `useQueryAdapter`, `provideQueryAdapter`, `defineQueryParam`, `createSerializer` | `vuqs` |
 | Codecs | `codecs`, `createCodec` | `vuqs` |
 | Modules | the composable [modules](/modules/introduction) | `vuqs/modules` |
 

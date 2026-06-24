@@ -55,7 +55,7 @@ const page = useQueryState('page', codecs.integer.withDefault(1))
 </template>
 ```
 
-Each field is a typed, writable ref bound to a query key: assigning it writes the
+Each param is a typed, writable ref bound to a query key: assigning it writes the
 URL, and the URL writes it back.
 
 <div class="vp-doc" style="margin-top: 2rem">

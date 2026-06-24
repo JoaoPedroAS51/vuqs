@@ -110,7 +110,7 @@ The ref is a normal Vue ref bound to the `q` key, so `v-model`, `computed`, and
 absent key yields `''` instead of `undefined`), and it keeps the default *out* of
 the URL — `?q=` never appears when the value equals the default.
 
-## A group of related fields
+## A group of related params
 
 Most filter UIs have several keys that change together. [`useQueryStates`](/guide/use-query-states)
 binds a whole group at once and returns a reactive `values` map plus batch
@@ -118,12 +118,12 @@ writers:
 
 ```vue
 <script setup lang="ts">
-import { codecs, defineQueryState, useQueryStates } from 'vuqs'
+import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
 
 const { values, setValues, clear } = useQueryStates({
-  q: defineQueryState('q', codecs.string.withDefault('')),
-  sort: defineQueryState('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
-  page: defineQueryState('page', codecs.integer.withDefault(1)),
+  q: defineQueryParam('q', codecs.string.withDefault('')),
+  sort: defineQueryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
+  page: defineQueryParam('page', codecs.integer.withDefault(1)),
 })
 </script>
 
@@ -145,7 +145,7 @@ Assigning several `values.*` in a row coalesces into **one** navigation, so a
 
 ## Next steps
 
-- **[Core concepts](/guide/concepts)** — the mental model behind codecs, fields, and the commit cycle.
+- **[Core concepts](/guide/concepts)** — the mental model behind codecs, params, and the commit cycle.
 - **[Codecs](/guide/codecs)** — every built-in type and how to build your own.
 - **[Navigation options](/guide/navigation-options)** — `push` vs `replace`, throttling, and defaults.
 - **[Modules](/modules/introduction)** — runtime defaults and context-aware reset, when URL state alone isn't enough.

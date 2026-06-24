@@ -1,8 +1,8 @@
 # withContext
 
 Makes one schema behave differently across **contexts** — tabs, wizard steps, view
-modes. Switching to a context preserves some fields, resets the rest, and drops
-fields that don't exist there — reconciled into a single navigation you trigger.
+modes. Switching to a context preserves some params, resets the rest, and drops
+params that don't exist there — reconciled into a single navigation you trigger.
 
 ```ts
 import { withContext } from 'vuqs/modules'
@@ -38,9 +38,9 @@ interface ContextApi<TContext extends string> {
   query and hands it to your [`navigate`](#navigate-how-to-switch) option. Throws
   if `navigate` isn't configured.
 
-It also filters fields by the active context, so a field invalid there never
+It also filters params by the active context, so a param invalid there never
 enters `values`, the URL, or any module's derived state — and a stale link that
-pastes an invalid field has it dropped on the next write.
+pastes an invalid param has it dropped on the next write.
 
 ## Options
 
@@ -65,19 +65,19 @@ active: () => route.params.tab  // a getter
 
 ### `preserve` — what survives a switch
 
-Fields kept when the context changes. **Everything not listed resets.** The split
-is irreducible — two fields can both be valid in both contexts yet one should
+Params kept when the context changes. **Everything not listed resets.** The split
+is irreducible — two params can both be valid in both contexts yet one should
 persist and the other shouldn't.
 
 ```ts
 preserve: ['q'] // q carries over; everything else resets
 ```
 
-### `only` — field validity per context
+### `only` — param validity per context
 
-Restricts which contexts a field **exists in**. An invalid field never enters
+Restricts which contexts a param **exists in**. An invalid param never enters
 `values`/URL/derived state, is dropped when you switch away from its context, and
-is auto-dropped if a stale link pastes it into the wrong context. Omit a field to
+is auto-dropped if a stale link pastes it into the wrong context. Omit a param to
 make it valid everywhere.
 
 ```ts
@@ -107,13 +107,13 @@ Omit it and `switchTo` throws; you can still drive navigation yourself with
 ## Switching context
 
 The module **never navigates on its own** — `active` is yours. Changing it (setting
-the ref, or navigating so a route-derived getter updates) makes field validity
+the ref, or navigating so a route-derived getter updates) makes param validity
 follow the new context and signals [`withEffective`](#pairing-with-witheffective)
 to clear its per-context defaults. Reconciling the URL is a separate, explicit
 step — that split is what keeps the switch a single navigation you control.
 
 `switchTo` is the ergonomic path: it reconciles the query and hands it to your
-`navigate` option, so the route change and the field reset land together.
+`navigate` option, so the route change and the param reset land together.
 
 ```ts
 const { switchTo, buildContextQuery } = useQueryStates(schema)
@@ -141,7 +141,7 @@ const query = buildContextQuery(route.query, 'orders')
 
 ## Typing `preserve` and `only`
 
-`withContext` has two overloads, so the field keys in `preserve`/`only` are always
+`withContext` has two overloads, so the param keys in `preserve`/`only` are always
 type-checked:
 
 ```ts
@@ -158,7 +158,7 @@ Either way, TypeScript rejects a `preserve` or `only` key that isn't in the sche
 
 ```vue
 <script setup lang="ts">
-import { codecs, defineQueryState, useQueryStates } from 'vuqs'
+import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
 import { withContext, withEffective } from 'vuqs/modules'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -168,10 +168,10 @@ const route = useRoute()
 const router = useRouter()
 
 const schema = {
-  q: defineQueryState('q', codecs.string),
-  sort: defineQueryState('sort', codecs.literal(['newest', 'oldest'] as const)),
-  category: defineQueryState('category', codecs.literal(['cpu', 'gpu', 'ram'] as const)),
-  status: defineQueryState('status', codecs.literal(['open', 'shipped'] as const)),
+  q: defineQueryParam('q', codecs.string),
+  sort: defineQueryParam('sort', codecs.literal(['newest', 'oldest'] as const)),
+  category: defineQueryParam('category', codecs.literal(['cpu', 'gpu', 'ram'] as const)),
+  status: defineQueryParam('status', codecs.literal(['open', 'shipped'] as const)),
 }
 
 const { values, selected, activeContext, switchTo } = useQueryStates(schema, { history: 'replace' })

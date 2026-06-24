@@ -1,79 +1,79 @@
-import type { QueryStateDefinition, QueryStateDefinitionWithDefault } from './define-query-state'
+import type { QueryParamDefinition, QueryParamDefinitionWithDefault } from './define-query-param'
 import type { ParsedQuery, ParsedQueryRaw } from './types'
 import { deletePath, pruneEmptyAncestors } from './path'
 import { cloneQuery, compactQuery, mergeQueries } from './query-object'
 
 /**
- * A map of field name to its {@link QueryStateDefinition}.
+ * A map of param name to its {@link QueryParamDefinition}.
  *
  * @remarks
  * The keys are the logical names a consumer reads and writes. The query keys a
- * field owns live inside its definition, not in these map keys.
+ * param owns live inside its definition, not in these map keys.
  */
-export type QueryStateSchema = Record<string, QueryStateDefinition<any>>
+export type QueryStateSchema = Record<string, QueryParamDefinition<any>>
 
 /**
- * Extracts the decoded value type from a single {@link QueryStateDefinition}.
+ * Extracts the decoded value type from a single {@link QueryParamDefinition}.
  *
  * @typeParam TDefinition - The definition to read the value type from.
  */
 export type QueryStateValueOf<TDefinition>
-  = TDefinition extends QueryStateDefinition<infer TValue> ? TValue : never
+  = TDefinition extends QueryParamDefinition<infer TValue> ? TValue : never
 
 /**
- * The value a field's reactive ref exposes: `T` when the field declares a
+ * The value a param's reactive ref exposes: `T` when the param declares a
  * default, otherwise `T | undefined`.
  *
  * @remarks
- * A defaulted field never reads back absent, so its ref drops `undefined`. This
- * mirrors the single-field {@link useQueryState} overloads at the schema level.
+ * A defaulted param never reads back absent, so its ref drops `undefined`. This
+ * mirrors the single-param {@link useQueryState} overloads at the schema level.
  *
- * @typeParam TDefinition - The field definition to read the ref value type from.
+ * @typeParam TDefinition - The param definition to read the ref value type from.
  */
-export type QueryStateRefValue<TDefinition extends QueryStateDefinition<any>>
-  = TDefinition extends QueryStateDefinitionWithDefault<any>
+export type QueryStateRefValue<TDefinition extends QueryParamDefinition<any>>
+  = TDefinition extends QueryParamDefinitionWithDefault<any>
     ? QueryStateValueOf<TDefinition>
     : QueryStateValueOf<TDefinition> | undefined
 
 /**
- * The value map for a schema, with every field optional.
+ * The value map for a schema, with every param optional.
  *
  * @remarks
- * Each field is optional because its value may be absent from the query.
+ * Each param is optional because its value may be absent from the query.
  *
- * @typeParam TSchema - The schema whose fields determine the value types.
+ * @typeParam TSchema - The schema whose params determine the value types.
  */
 export type QueryStateValues<TSchema extends QueryStateSchema> = {
   [Key in keyof TSchema]?: QueryStateValueOf<TSchema[Key]>
 }
 
 /**
- * The write map for a schema: omit a field (or pass `undefined`) to leave it
+ * The write map for a schema: omit a param (or pass `undefined`) to leave it
  * untouched, `null` to clear it from the URL, or a value to set it.
  *
  * @remarks
  * `null` is the explicit clear command for batch and standalone writes, distinct
- * from an absent field, which is skipped. Reads never yield `null`: a cleared
- * field reads back `undefined` or its default. This three-state input is what
- * lets a partial write preserve the fields it does not mention.
+ * from an absent param, which is skipped. Reads never yield `null`: a cleared
+ * param reads back `undefined` or its default. This three-state input is what
+ * lets a partial write preserve the params it does not mention.
  *
- * @typeParam TSchema - The schema whose fields determine the value types.
+ * @typeParam TSchema - The schema whose params determine the value types.
  */
 export type QueryStateWriteValues<TSchema extends QueryStateSchema> = {
   [Key in keyof TSchema]?: QueryStateValueOf<TSchema[Key]> | null
 }
 
 /**
- * Parses every field in a schema out of a parsed query object.
+ * Parses every param in a schema out of a parsed query object.
  *
  * @remarks
- * A field whose value is absent is omitted from the result rather than set to
+ * A param whose value is absent is omitted from the result rather than set to
  * `undefined`.
  *
- * @typeParam TSchema - The schema describing the fields to parse.
- * @param schema - The field definitions to parse with.
+ * @typeParam TSchema - The schema describing the params to parse.
+ * @param schema - The param definitions to parse with.
  * @param query - The parsed query object to read from.
- * @returns A value map holding only the fields present in `query`.
+ * @returns A value map holding only the params present in `query`.
  */
 export function parseQueryStates<TSchema extends QueryStateSchema>(
   schema: TSchema,
@@ -96,15 +96,15 @@ export function parseQueryStates<TSchema extends QueryStateSchema>(
  * Serializes a value map into a nested query object.
  *
  * @remarks
- * Pass selected values only: a field equal to its default should be omitted so
- * the default does not reach the URL. Fields with an absent value are skipped,
- * and each remaining field's keys are merged into the result. The result is
- * compacted, so a field that serializes to a blank or empty value leaves no key.
+ * Pass selected values only: a param equal to its default should be omitted so
+ * the default does not reach the URL. Params with an absent value are skipped,
+ * and each remaining param's keys are merged into the result. The result is
+ * compacted, so a param that serializes to a blank or empty value leaves no key.
  *
- * @typeParam TSchema - The schema describing the fields to serialize.
- * @param schema - The field definitions to serialize with.
- * @param values - The values to write, keyed by field name.
- * @returns A compacted query object combining the keys of every present field.
+ * @typeParam TSchema - The schema describing the params to serialize.
+ * @param schema - The param definitions to serialize with.
+ * @param values - The values to write, keyed by param name.
+ * @returns A compacted query object combining the keys of every present param.
  */
 export function serializeQueryStates<TSchema extends QueryStateSchema>(
   schema: TSchema,
@@ -124,12 +124,12 @@ export function serializeQueryStates<TSchema extends QueryStateSchema>(
 }
 
 /**
- * Returns every query key the schema manages, across all fields.
+ * Returns every query key the schema manages, across all params.
  *
  * @typeParam TSchema - The schema to inspect.
- * @param schema - The schema whose field paths are gathered.
- * @returns The managed query keys, gathered from each field's `paths` in
- * field-declaration order.
+ * @param schema - The schema whose param paths are gathered.
+ * @returns The managed query keys, gathered from each param's `paths` in
+ * declaration order.
  */
 export function getManagedKeys<TSchema extends QueryStateSchema>(schema: TSchema): string[] {
   return Object.values(schema).flatMap(definition => definition.paths)
@@ -176,10 +176,10 @@ export function omitManagedKeys<TSchema extends QueryStateSchema>(
  * Unmanaged params are preserved, and a managed key absent from `values` is
  * dropped.
  *
- * @typeParam TSchema - The schema describing the managed fields.
- * @param schema - The field definitions.
+ * @typeParam TSchema - The schema describing the managed params.
+ * @param schema - The param definitions.
  * @param currentQuery - The query to update.
- * @param values - The new values for the schema's fields.
+ * @param values - The new values for the schema's params.
  * @returns A new query merging the preserved unmanaged params with the
  * serialized values.
  */
@@ -192,19 +192,19 @@ export function buildQuery<TSchema extends QueryStateSchema>(
 }
 
 /**
- * Drops fields whose value equals their codec default, so a default never
+ * Drops params whose value equals their codec default, so a default never
  * reaches the URL.
  *
  * @remarks
- * Absent (`undefined`) fields are dropped too. A field with no default, or whose
+ * Absent (`undefined`) params are dropped too. A param with no default, or whose
  * value differs from its default, is kept. This is the `clearOnDefault` rule as a
  * reusable function, so a caller building a query without the reactive engine,
  * for example to render a link, applies it identically.
  *
- * @typeParam TSchema - The schema describing the fields.
- * @param schema - The field definitions, used for per-field equality and defaults.
+ * @typeParam TSchema - The schema describing the params.
+ * @param schema - The param definitions, used for per-param equality and defaults.
  * @param values - The values to filter.
- * @returns A new value map without absent or default-valued fields.
+ * @returns A new value map without absent or default-valued params.
  */
 export function dropDefaults<TSchema extends QueryStateSchema>(
   schema: TSchema,
@@ -232,7 +232,7 @@ export function dropDefaults<TSchema extends QueryStateSchema>(
 }
 
 /**
- * Returns a schema's field names typed as a string-key array.
+ * Returns a schema's param names typed as a string-key array.
  *
  * @internal
  */
@@ -241,15 +241,15 @@ function keysOf<TSchema extends QueryStateSchema>(schema: TSchema): Array<keyof 
 }
 
 /**
- * Asserts that no query path is declared by more than one field.
+ * Asserts that no query path is declared by more than one param.
  *
  * @remarks
- * Two fields sharing a path would let their reads and writes silently collide,
+ * Two params sharing a path would let their reads and writes silently collide,
  * with the last write winning, so this fails loudly instead.
  *
  * @typeParam TSchema - The schema to validate.
  * @param schema - The schema to check.
- * @throws {Error} When a path is declared by more than one field.
+ * @throws {Error} When a path is declared by more than one param.
  */
 export function assertUniquePaths<TSchema extends QueryStateSchema>(schema: TSchema): void {
   const seen = new Set<string>()
@@ -257,7 +257,7 @@ export function assertUniquePaths<TSchema extends QueryStateSchema>(schema: TSch
   for (const key of Object.keys(schema)) {
     for (const path of schema[key].paths) {
       if (seen.has(path)) {
-        throw new Error(`[vuqs] duplicate query path "${path}" declared by multiple fields.`)
+        throw new Error(`[vuqs] duplicate query path "${path}" declared by multiple params.`)
       }
 
       seen.add(path)

@@ -5,7 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { renderToString } from 'vue/server-renderer'
 import { createVueRouterAdapter, provideVueRouterAdapter } from '../../src/adapters/vue-router'
 import { codecs } from '../../src/core/codec'
-import { defineQueryState } from '../../src/core/define-query-state'
+import { defineQueryParam } from '../../src/core/define-query-param'
 import { useQueryStates } from '../../src/core/use-query-states'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
@@ -77,7 +77,7 @@ describe('provideVueRouterAdapter', () => {
     await router.push({ path: '/', query: { q: 'lease' } })
     await router.isReady()
 
-    const schema = { q: defineQueryState('q', codecs.string) }
+    const schema = { q: defineQueryParam('q', codecs.string) }
     let states: UseQueryStatesReturn<typeof schema> | undefined
 
     const Child = defineComponent({
@@ -105,7 +105,7 @@ describe('provideVueRouterAdapter', () => {
     await router.push('/')
     await router.isReady()
 
-    const schema = { q: defineQueryState('q', codecs.string) }
+    const schema = { q: defineQueryParam('q', codecs.string) }
     let states: UseQueryStatesReturn<typeof schema> | undefined
 
     const Child = defineComponent({

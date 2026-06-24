@@ -2,7 +2,7 @@
 
 The [core](/guide/introduction) solves one problem: a typed value ⇄ the URL.
 That's enough for most apps. Richer filtering UIs often need more — runtime
-defaults that never reach the URL, fields that reset when a tab changes — without
+defaults that never reach the URL, params that reset when a tab changes — without
 the core taking on those opinions.
 
 **Modules** are how you add them. A module is an opt-in unit of behavior you
@@ -10,7 +10,7 @@ compose onto [`useQueryStates`](/guide/use-query-states) with `.use()`. The core
 stays small; you pull in only the modules you need.
 
 ```ts
-import { codecs, defineQueryState, useQueryStates } from 'vuqs'
+import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
 import { withContext, withEffective } from 'vuqs/modules'
 
 const { effective, activeContext } = useQueryStates(schema)
@@ -61,7 +61,7 @@ skip the import line entirely.
 | Module | Adds | |
 | --- | --- | --- |
 | [`withEffective`](/modules/effective) | `selected` / `defaults` / `effective` states and runtime defaults | [→](/modules/effective) |
-| [`withContext`](/modules/context) | context-aware field validity and reset/preserve on context change | [→](/modules/context) |
+| [`withContext`](/modules/context) | context-aware param validity and reset/preserve on context change | [→](/modules/context) |
 
 The set is open-ended — new modules slot in here without changing the ones above.
 
@@ -70,7 +70,7 @@ The set is open-ended — new modules slot in here without changing the ones abo
 If you only sync state to the URL — no runtime defaults, no context reset — stay
 with [`useQueryState`](/guide/use-query-state) /
 [`useQueryStates`](/guide/use-query-states). Modules are additive: the same
-[schema](/guide/concepts#schema-a-map-of-fields) works with or without them, so you
-can adopt one later without rewriting your fields.
+[schema](/guide/concepts#schema-a-map-of-params) works with or without them, so you
+can adopt one later without rewriting your params.
 
 Next: **[withEffective →](/modules/effective)**

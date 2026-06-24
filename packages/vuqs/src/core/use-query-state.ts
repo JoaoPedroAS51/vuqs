@@ -1,8 +1,8 @@
 import type { Codec, CodecWithDefault } from './codec'
-import type { QueryStateDefinition, QueryStateDefinitionWithDefault } from './define-query-state'
+import type { QueryParamDefinition, QueryParamDefinitionWithDefault } from './define-query-param'
 import type { NavigateOptions, QueryStateRef, UseQueryStatesOptions } from './use-query-states'
 import { codecs } from './codec'
-import { defineQueryState } from './define-query-state'
+import { defineQueryParam } from './define-query-param'
 import { createQueryStateRefs } from './use-query-states'
 
 /**
@@ -19,7 +19,7 @@ type StringQueryStateOptions = UseQueryStatesOptions & { parse?: never, serializ
  * @remarks
  * The default makes the ref non-nullable: reading an absent key yields the default.
  *
- * @typeParam T - The field's value type.
+ * @typeParam T - The param's value type.
  * @param path - A dot-path into the query object, for example `'filters.sort'`.
  * @param codec - A codec carrying a default, from {@link Codec.withDefault}.
  * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
@@ -30,7 +30,7 @@ export function useQueryState<T>(path: string, codec: CodecWithDefault<T>, optio
 /**
  * Binds a single query key to a writable ref via a codec.
  *
- * @typeParam T - The field's value type.
+ * @typeParam T - The param's value type.
  * @param path - A dot-path into the query object, for example `'filters.sort'`.
  * @param codec - The codec that reads and writes the value at `path`.
  * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
@@ -82,25 +82,25 @@ export function useQueryState(path: string, options?: StringQueryStateOptions): 
  * @remarks
  * The default makes the ref non-nullable: a missing key reads back as the default.
  *
- * @typeParam T - The field's value type.
+ * @typeParam T - The param's value type.
  * @param definition - A definition carrying a default, from a codec's `withDefault`.
  * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
  * The query source and URL writer come from the provided adapter.
  * @returns A writable ref that always holds a value.
  */
-export function useQueryState<T>(definition: QueryStateDefinitionWithDefault<T>, options?: UseQueryStatesOptions): QueryStateRef<T>
+export function useQueryState<T>(definition: QueryParamDefinitionWithDefault<T>, options?: UseQueryStatesOptions): QueryStateRef<T>
 /**
  * Binds a pre-built definition to a writable ref.
  *
- * @typeParam T - The field's value type.
- * @param definition - A definition from {@link defineQueryState}.
+ * @typeParam T - The param's value type.
+ * @param definition - A definition from {@link defineQueryParam}.
  * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
  * The query source and URL writer come from the provided adapter.
- * @returns A writable ref holding the value, or `undefined` when the field is absent.
+ * @returns A writable ref holding the value, or `undefined` when the param is absent.
  */
-export function useQueryState<T>(definition: QueryStateDefinition<T>, options?: UseQueryStatesOptions): QueryStateRef<T | undefined>
+export function useQueryState<T>(definition: QueryParamDefinition<T>, options?: UseQueryStatesOptions): QueryStateRef<T | undefined>
 export function useQueryState<T>(
-  pathOrDefinition: string | QueryStateDefinition<T>,
+  pathOrDefinition: string | QueryParamDefinition<T>,
   codecOrOptions?: Codec<T> | (UseQueryStatesOptions & { defaultValue?: string }),
   maybeOptions?: UseQueryStatesOptions,
 ): QueryStateRef<T | undefined> {
@@ -111,13 +111,13 @@ export function useQueryState<T>(
   const path = pathOrDefinition
 
   if (isCodec(codecOrOptions)) {
-    return toQueryStateRef(defineQueryState(path, codecOrOptions), maybeOptions ?? {})
+    return toQueryStateRef(defineQueryParam(path, codecOrOptions), maybeOptions ?? {})
   }
 
   const { defaultValue, ...navigateOptions } = codecOrOptions ?? {}
   const codec = defaultValue === undefined ? codecs.string : codecs.string.withDefault(defaultValue)
 
-  return toQueryStateRef(defineQueryState(path, codec), navigateOptions) as QueryStateRef<T | undefined>
+  return toQueryStateRef(defineQueryParam(path, codec), navigateOptions) as QueryStateRef<T | undefined>
 }
 
 /**
@@ -128,7 +128,7 @@ export function useQueryState<T>(
  * @internal
  */
 function toQueryStateRef<T>(
-  definition: QueryStateDefinition<T>,
+  definition: QueryParamDefinition<T>,
   options: UseQueryStatesOptions,
 ): QueryStateRef<T | undefined> {
   const { engine, refs } = createQueryStateRefs({ field: definition }, options)

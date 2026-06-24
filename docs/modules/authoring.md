@@ -19,7 +19,7 @@ export function withCount(): <TSchema extends QueryStateSchema>(core: QueryCore<
 
 Return a generic `(core) => api` function rather than one bound to a fixed schema,
 so the module adapts to whatever schema it's applied to — the pattern every
-built-in uses. When the API *or* the options need to reference field names, use the
+built-in uses. When the API *or* the options need to reference param names, use the
 `QueryModule<TSchema, TAdded>` overload form instead, as [`withContext`](/modules/context#typing-preserve-and-only)
 does.
 
@@ -31,7 +31,7 @@ does.
 | --- | --- |
 | `schema` | The schema being managed. |
 | `selected` | `ComputedRef` of explicit URL selections plus the optimistic overlay, with the `read` pipeline applied and no codec defaults. Derive read state from this. |
-| `setValue(key, value, options?)` | Optimistically write one field. |
+| `setValue(key, value, options?)` | Optimistically write one param. |
 | `navigate(query, options?)` | Apply a full query to the URL — runs the `navigate` stage and resolves the default navigation options. |
 | `currentQuery()` | Read the current parsed query. |
 | `hooks` | The notification bus for module-to-module coordination. |
@@ -80,7 +80,7 @@ mutate or cause side effects.
 ```ts
 import { pickBy } from 'vuqs/shared'
 
-// Drop fields failing a (possibly reactive) predicate from reads and writes.
+// Drop params failing a (possibly reactive) predicate from reads and writes.
 const untap = core.pipeline.tap(['read', 'write'], pickBy(key => isAllowed(key)))
 onScopeDispose(untap)
 ```
@@ -160,7 +160,7 @@ any module you expect to compose with.
 ## Full example
 
 A module that restricts the schema to an allow-list — useful for feature-flagged
-filters. It drops disallowed fields from reads and writes, emits an event when the
+filters. It drops disallowed params from reads and writes, emits an event when the
 list changes, and exposes `isAllowed`:
 
 ```ts
@@ -187,7 +187,7 @@ export function withAllowList(
     const allowList = computed(() => toValue(allowed))
     const isAllowed = (key: string) => allowList.value.includes(key)
 
-    // Disallowed fields never reach the app or the URL; re-filters when the list changes.
+    // Disallowed params never reach the app or the URL; re-filters when the list changes.
     const untap = core.pipeline.tap(['read', 'write'], pickBy(isAllowed))
     onScopeDispose(untap)
 

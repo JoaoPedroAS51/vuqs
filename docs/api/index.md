@@ -17,7 +17,7 @@ walkthroughs, see the [Guide](/guide/introduction) and
 ## Reference pages
 
 - **[codecs](/api/codecs)** — every built-in codec, `createCodec`, `.withDefault`.
-- **[Composables](/api/composables)** — `useQueryState`, `useQueryStates`, `defineQueryState`, the adapter.
+- **[Composables](/api/composables)** — `useQueryState`, `useQueryStates`, `defineQueryParam`, the adapter.
 - **[Adapters](/api/adapters)** — `createVueRouterAdapter`, `provideVueRouterAdapter`, `QueryAdapter`.
 - **[Serializer & pure functions](/api/serializer)** — `createSerializer` and the framework-free helpers.
 - **[Modules](/api/modules)** — `.use()`, `withEffective`, `withContext`, and the [authoring](/api/modules#authoring) surface.
@@ -33,9 +33,9 @@ walkthroughs, see the [Guide](/guide/introduction) and
 export { useQueryState, useQueryStates }
 export { installQueryAdapter, provideQueryAdapter, useQueryAdapter }
 
-// Fields & codecs
+// Params & codecs
 export { codecs, createCodec }
-export { defineQueryState }
+export { defineQueryParam }
 
 // Serializer & pure functions
 export { createSerializer }
@@ -61,9 +61,9 @@ export type {
   Codec,
   CodecInput,
   CodecWithDefault,
-  QueryStateDefinition,
-  QueryStateDefinitionInput,
-  QueryStateDefinitionWithDefault,
+  QueryParamDefinition,
+  QueryParamDefinitionInput,
+  QueryParamDefinitionWithDefault,
   QueryStateRef,
   QueryStateSchema,
   QueryStateValues,

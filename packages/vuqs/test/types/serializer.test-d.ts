@@ -2,12 +2,12 @@ import type { QueryStateValues } from '../../src/core/schema'
 import type { ParsedQuery, ParsedQueryRaw } from '../../src/core/types'
 import { describe, expectTypeOf, it } from 'vitest'
 import { codecs } from '../../src/core/codec'
-import { defineQueryState } from '../../src/core/define-query-state'
+import { defineQueryParam } from '../../src/core/define-query-param'
 import { createSerializer } from '../../src/core/serializer'
 
 const schema = {
-  q: defineQueryState('q', codecs.string),
-  page: defineQueryState('page', codecs.integer.withDefault(1)),
+  q: defineQueryParam('q', codecs.string),
+  page: defineQueryParam('page', codecs.integer.withDefault(1)),
 }
 
 describe('createSerializer types', () => {

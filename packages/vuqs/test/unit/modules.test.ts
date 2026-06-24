@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createApp, effectScope, nextTick, ref } from 'vue'
 import { installQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
-import { defineQueryState } from '../../src/core/define-query-state'
+import { defineQueryParam } from '../../src/core/define-query-param'
 import { useQueryStates } from '../../src/core/use-query-states'
 import { withContext } from '../../src/modules/context'
 import { withEffective } from '../../src/modules/effective'
@@ -26,8 +26,8 @@ function setup(initial: ParsedQuery = {}) {
 
 describe('withEffective', () => {
   const schema = {
-    currency: defineQueryState('currency', codecs.string),
-    region: defineQueryState('region', codecs.string),
+    currency: defineQueryParam('currency', codecs.string),
+    region: defineQueryParam('region', codecs.string),
   }
 
   it('separates selected, defaults, and effective', () => {
@@ -66,8 +66,8 @@ describe('withEffective', () => {
 
 describe('withEffective + codec defaults', () => {
   const schema = {
-    q: defineQueryState('q', codecs.string),
-    page: defineQueryState('page', codecs.integer.withDefault(1)),
+    q: defineQueryParam('q', codecs.string),
+    page: defineQueryParam('page', codecs.integer.withDefault(1)),
   }
 
   it('uses the codec default as the lowest fallback, keeping selected explicit', () => {
@@ -102,9 +102,9 @@ describe('withEffective + codec defaults', () => {
 
 describe('withContext', () => {
   const schema = {
-    q: defineQueryState('q', codecs.string),
-    category: defineQueryState('category', codecs.literal(['cpu', 'gpu'] as const)),
-    sort: defineQueryState('sort', codecs.literal(['newest', 'oldest'] as const)),
+    q: defineQueryParam('q', codecs.string),
+    category: defineQueryParam('category', codecs.literal(['cpu', 'gpu'] as const)),
+    sort: defineQueryParam('sort', codecs.literal(['newest', 'oldest'] as const)),
   }
 
   function setupContext(initial: ParsedQuery = {}) {
@@ -157,8 +157,8 @@ describe('withContext', () => {
 
 describe('withContext buildContextQuery', () => {
   const schema = {
-    q: defineQueryState('q', codecs.string),
-    page: defineQueryState('page', codecs.integer.withDefault(1)),
+    q: defineQueryParam('q', codecs.string),
+    page: defineQueryParam('page', codecs.integer.withDefault(1)),
   }
 
   it('omits a preserved field equal to its codec default (clearOnDefault on by default)', () => {
@@ -206,8 +206,8 @@ describe('withContext buildContextQuery', () => {
 
   it('drops a preserved field that is invalid in the target context', () => {
     const ctxSchema = {
-      q: defineQueryState('q', codecs.string),
-      category: defineQueryState('category', codecs.literal(['cpu', 'gpu'] as const)),
+      q: defineQueryParam('q', codecs.string),
+      category: defineQueryParam('category', codecs.literal(['cpu', 'gpu'] as const)),
     }
     const { query, build } = setup({ q: 'foo', category: 'cpu' })
     const tab = ref<'products' | 'orders'>('products')
@@ -224,8 +224,8 @@ describe('withContext buildContextQuery', () => {
 
 describe('withContext switchTo', () => {
   const schema = {
-    q: defineQueryState('q', codecs.string),
-    sort: defineQueryState('sort', codecs.literal(['newest', 'oldest'] as const)),
+    q: defineQueryParam('q', codecs.string),
+    sort: defineQueryParam('sort', codecs.literal(['newest', 'oldest'] as const)),
   }
 
   it('navigates via the navigate option with the reconciled query', () => {
@@ -281,8 +281,8 @@ describe('withContext switchTo', () => {
 describe('module coordination via hooks', () => {
   it('clears provided defaults on a context change without the modules referencing each other', async () => {
     const schema = {
-      q: defineQueryState('q', codecs.string),
-      category: defineQueryState('category', codecs.literal(['cpu', 'gpu'] as const)),
+      q: defineQueryParam('q', codecs.string),
+      category: defineQueryParam('category', codecs.literal(['cpu', 'gpu'] as const)),
     }
     const { build } = setup()
     const tab = ref<'products' | 'orders'>('products')
@@ -304,8 +304,8 @@ describe('module coordination via hooks', () => {
 
   it('keeps a context-invalid field out of defaults and effective (even with a codec default)', async () => {
     const schema = {
-      q: defineQueryState('q', codecs.string),
-      category: defineQueryState('category', codecs.literal(['cpu', 'gpu'] as const).withDefault('cpu')),
+      q: defineQueryParam('q', codecs.string),
+      category: defineQueryParam('category', codecs.literal(['cpu', 'gpu'] as const).withDefault('cpu')),
     }
     const { build } = setup()
     const tab = ref<'products' | 'orders'>('products')
@@ -327,7 +327,7 @@ describe('module coordination via hooks', () => {
 })
 
 describe('use() collision guard', () => {
-  const schema = { q: defineQueryState('q', codecs.string) }
+  const schema = { q: defineQueryParam('q', codecs.string) }
 
   it('throws when two modules contribute the same key', () => {
     const { build } = setup()

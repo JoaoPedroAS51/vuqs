@@ -1,5 +1,5 @@
 import type { ComputedRef, MaybeRefOrGetter } from 'vue'
-import type { QueryStateDefinition } from './define-query-state'
+import type { QueryParamDefinition } from './define-query-param'
 import type { QueryPipelineBus } from './pipeline'
 import type { QueryStateSchema, QueryStateValues } from './schema'
 import type { NavigateOptions, ParsedQuery, ParsedQueryRaw, QueryStateNavigate } from './types'
@@ -13,20 +13,20 @@ import { dropDefaults } from './schema'
  *
  * @remarks
  * `parse` and `build` are injected so a caller can make reads and writes
- * context-aware, for example filtering fields by an active context, while the
+ * context-aware, for example filtering params by an active context, while the
  * engine owns the reactive machinery: the optimistic overlay, reconciliation,
  * write coalescing, and navigation.
  *
- * @typeParam TSchema - The schema whose fields the engine tracks.
+ * @typeParam TSchema - The schema whose params the engine tracks.
  */
 export interface QueryStateEngineOptions<TSchema extends QueryStateSchema> extends NavigateOptions {
-  /** The tracked fields, used for per-field equality, defaults, and keys. */
+  /** The tracked params, used for per-param equality, defaults, and keys. */
   schema: TSchema
   /** The current parsed query, as a ref, getter, or plain value. */
   query: MaybeRefOrGetter<ParsedQuery>
   /** Applies the next query to the URL. */
   navigate: QueryStateNavigate
-  /** Reads field values from a query (the caller may make this context-aware). */
+  /** Reads param values from a query (the caller may make this context-aware). */
   parse: (query: ParsedQuery) => QueryStateValues<TSchema>
   /** Builds the next query from the values to commit (the caller may make this context-aware). */
   build: (currentQuery: ParsedQuery, values: QueryStateValues<TSchema>) => ParsedQueryRaw
@@ -40,14 +40,14 @@ export interface QueryStateEngineOptions<TSchema extends QueryStateSchema> exten
  * The reactive core behind URL-bound state, used by {@link useQueryStates}: a
  * resolved value map plus a scheduled, optimistic `setValue`.
  *
- * @typeParam TSchema - The schema whose fields the engine tracks.
+ * @typeParam TSchema - The schema whose params the engine tracks.
  */
 export interface QueryStateEngine<TSchema extends QueryStateSchema> {
   /** Current values: parsed from the URL with the optimistic overlay, codec defaults, and the read pipeline applied. */
   values: ComputedRef<QueryStateValues<TSchema>>
   /** Explicit selections plus the optimistic overlay, with the read pipeline applied and without codec defaults. */
   rawValues: ComputedRef<QueryStateValues<TSchema>>
-  /** Optimistically sets a field and schedules a coalesced navigation. */
+  /** Optimistically sets a param and schedules a coalesced navigation. */
   setValue: (key: keyof TSchema & string, value: unknown, options?: NavigateOptions) => void
   /** The transform pipeline applied to reads, writes, and the navigation boundary. */
   pipeline: QueryPipelineBus
@@ -61,7 +61,7 @@ export interface QueryStateEngine<TSchema extends QueryStateSchema> {
  * @remarks
  * Committed model: the URL is the source of truth. Writes apply to an optimistic
  * overlay and flush to `navigate` as one coalesced navigation (per microtask, or
- * per `throttleMs`). Once the URL reflects a write, that field's overlay entry is
+ * per `throttleMs`). Once the URL reflects a write, that param's overlay entry is
  * reconciled away; entries the URL has not caught up to are kept so an unrelated
  * navigation cannot discard an in-flight write.
  *
@@ -69,7 +69,7 @@ export interface QueryStateEngine<TSchema extends QueryStateSchema> {
  * component `setup` (or an `effectScope().run()`) so the watch is disposed with
  * its owner; calling it with no active scope leaks the watcher.
  *
- * @typeParam TSchema - The schema whose fields the engine tracks.
+ * @typeParam TSchema - The schema whose params the engine tracks.
  * @param options - Schema, query source, navigate adapter, and the `parse`/`build` hooks.
  * @returns The engine: resolved `values` and `rawValues`, a `setValue` writer,
  * the `pipeline`, and the resolved `clearOnDefault`.
@@ -85,8 +85,8 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
   const urlValues = computed(() => parse(toValue(options.query)))
   const pending = ref<Record<string, unknown>>({})
 
-  // The explicit selection: parsed values for fields actually present in the URL
-  // (or written optimistically), WITHOUT codec defaults — a field that fell back
+  // The explicit selection: parsed values for params actually present in the URL
+  // (or written optimistically), WITHOUT codec defaults — a param that fell back
   // to its codec default is treated as absent, not selected.
   const rawValues = computed<QueryStateValues<TSchema>>(() => {
     const query = toValue(options.query)
@@ -188,7 +188,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
 }
 
 function isReconciled(
-  definition: QueryStateDefinition<any>,
+  definition: QueryParamDefinition<any>,
   pendingValue: unknown,
   urlValue: unknown,
 ): boolean {

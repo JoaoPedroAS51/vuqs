@@ -11,7 +11,7 @@ function filterByKey<T extends object>(values: T, keep: (key: string) => boolean
 }
 
 /**
- * Returns a copy without `undefined`-valued keys, so a cleared field reads as
+ * Returns a copy without `undefined`-valued keys, so a cleared param reads as
  * absent rather than overwriting a default when layered.
  *
  * @typeParam T - The object's type, preserved on the result.

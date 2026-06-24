@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createApp, ref } from 'vue'
 import { installQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
-import { defineQueryState } from '../../src/core/define-query-state'
+import { defineQueryParam } from '../../src/core/define-query-param'
 import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
 
@@ -25,8 +25,8 @@ function setup(initial: ParsedQuery = {}) {
 }
 
 const schema = {
-  q: defineQueryState('q', codecs.string),
-  sort: defineQueryState('filters.sort', codecs.string),
+  q: defineQueryParam('q', codecs.string),
+  sort: defineQueryParam('filters.sort', codecs.string),
 }
 
 describe('useQueryStates', () => {
@@ -181,8 +181,8 @@ describe('useQueryStates', () => {
   it('throws when two fields declare the same path', () => {
     const { run } = setup()
     const clashing = {
-      a: defineQueryState('dupe', codecs.string),
-      b: defineQueryState('dupe', codecs.string),
+      a: defineQueryParam('dupe', codecs.string),
+      b: defineQueryParam('dupe', codecs.string),
     }
 
     expect(() => run(() => useQueryStates(clashing))).toThrowError(/duplicate query path/)
@@ -193,7 +193,7 @@ describe('useQueryStates', () => {
   })
 
   describe('clearOnDefault', () => {
-    const withDefault = { page: defineQueryState('page', codecs.integer.withDefault(1)) }
+    const withDefault = { page: defineQueryParam('page', codecs.integer.withDefault(1)) }
 
     it('drops a value equal to the default from the URL', async () => {
       const { query, run } = setup({ page: '3' })
@@ -280,7 +280,7 @@ describe('useQueryState', () => {
 
   it('accepts a definition', async () => {
     const { query, run } = setup({ q: 'lease' })
-    const q = run(() => useQueryState(defineQueryState('q', codecs.string)))
+    const q = run(() => useQueryState(defineQueryParam('q', codecs.string)))
 
     expect(q.value).toBe('lease')
 

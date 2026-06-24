@@ -26,10 +26,10 @@ interface CodecInput<T> {
 }
 ```
 
-## Field & schema types
+## Param & schema types
 
 ```ts
-interface QueryStateDefinition<T> {
+interface QueryParamDefinition<T> {
   readonly paths: readonly string[]
   parse: (query: ParsedQuery) => T | undefined
   serialize: (value: T) => ParsedQueryRaw
@@ -37,11 +37,11 @@ interface QueryStateDefinition<T> {
   readonly defaultValue?: T
 }
 
-interface QueryStateDefinitionWithDefault<T> extends QueryStateDefinition<T> {
+interface QueryParamDefinitionWithDefault<T> extends QueryParamDefinition<T> {
   readonly defaultValue: T
 }
 
-interface QueryStateDefinitionInput<T> {
+interface QueryParamDefinitionInput<T> {
   paths: readonly string[]
   parse: (query: ParsedQuery) => T | undefined
   serialize: (value: T) => ParsedQueryRaw
@@ -49,11 +49,11 @@ interface QueryStateDefinitionInput<T> {
   default?: T
 }
 
-type QueryStateSchema = Record<string, QueryStateDefinition<any>>
+type QueryStateSchema = Record<string, QueryParamDefinition<any>>
 
 type QueryStateValueOf<TDefinition> // the decoded value type of a definition
 type QueryStateRefValue<TDefinition> // T with a default, else T | undefined
-type QueryStateValues<TSchema>       // { [K]?: value } — every field optional
+type QueryStateValues<TSchema>       // { [K]?: value } — every param optional
 type QueryStateWriteValues<TSchema>  // { [K]?: value | null } — the write protocol
 ```
 

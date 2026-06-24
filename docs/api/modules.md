@@ -62,7 +62,7 @@ function withContext<TSchema, TContext extends string>(
 ): QueryModule<TSchema, ContextApi<TContext>>
 ```
 
-Adds context-aware field validity and reset/preserve on context change. It never
+Adds context-aware param validity and reset/preserve on context change. It never
 navigates on its own — drive the switch with `switchTo` (via the `navigate` option)
 or with `buildContextQuery`. See the [withContext guide](/modules/context).
 
@@ -173,5 +173,5 @@ function toReadonlyState<T>(source: ComputedRef<T>): Readonly<T>
 ```
 
 - `pickBy` / `omitBy` — build a pipeline transform that keeps / drops matching keys.
-- `definedOnly` — copy without `undefined`-valued keys (a cleared field reads as absent).
+- `definedOnly` — copy without `undefined`-valued keys (a cleared param reads as absent).
 - `toReadonlyState` — expose a `ComputedRef<record>` as a readonly reactive object.

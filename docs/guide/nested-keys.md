@@ -1,18 +1,18 @@
 # Nested & composite keys
 
-Most fields map to a flat top-level key (`?q=…`). Sometimes you want structure:
+Most params map to a flat top-level key (`?q=…`). Sometimes you want structure:
 a nested object in the query, or a single logical value spread across several
 keys. vuqs supports both.
 
 ## Nested keys with dot paths
 
-A field's path can be **dotted** to target a nested query object:
+A param's path can be **dotted** to target a nested query object:
 
 ```ts
-import { codecs, defineQueryState } from 'vuqs'
+import { codecs, defineQueryParam } from 'vuqs'
 
-defineQueryState('filters.sort', codecs.string)
-defineQueryState('filters.dir', codecs.literal(['asc', 'desc'] as const))
+defineQueryParam('filters.sort', codecs.string)
+defineQueryParam('filters.dir', codecs.literal(['asc', 'desc'] as const))
 // ⇄ ?filters[sort]=price&filters[dir]=asc
 ```
 
@@ -42,27 +42,27 @@ The same `qs` config also enables [array values](/guide/codecs#arrayof)
 
 ### Surgical removal
 
-vuqs never globally rewrites your query. When a nested field clears, it removes
+vuqs never globally rewrites your query. When a nested param clears, it removes
 exactly its own key and **prunes only the ancestor objects it emptied** —
 unmanaged siblings, even empty ones, are left untouched. Clearing
 `filters.sort` won't disturb `filters.dir`, and won't drop an unrelated
 `?other=…`.
 
-## Composite fields
+## Composite params
 
-A composite field maps **one logical value to several keys**. The classic case is
+A composite param maps **one logical value to several keys**. The classic case is
 a range — a `from`/`to` pair you want to read and write as a single object. Use
-the object form of [`defineQueryState`](/guide/defining-fields#composite-fields):
+the object form of [`defineQueryParam`](/guide/defining-params#composite-params):
 
 ```ts
-import { defineQueryState, getQueryString } from 'vuqs'
+import { defineQueryParam, getQueryString } from 'vuqs'
 
 interface DateRange {
   from: string
   to: string
 }
 
-const range = defineQueryState<DateRange>({
+const range = defineQueryParam<DateRange>({
   paths: ['from', 'to'],
   parse: (query) => {
     const from = getQueryString(query.from)
@@ -73,7 +73,7 @@ const range = defineQueryState<DateRange>({
 })
 ```
 
-Now a single field drives two keys:
+Now a single param drives two keys:
 
 ```ts
 const { values } = useQueryStates({ range })
@@ -86,12 +86,12 @@ values.range = undefined // clears BOTH keys
 
 ### `paths` is the contract
 
-`paths` lists every key the field owns — it's the source of truth for what
-"clearing" the field removes. vuqs enforces it: a dev guard runs on the first
+`paths` lists every key the param owns — it's the source of truth for what
+"clearing" the param removes. vuqs enforces it: a dev guard runs on the first
 `serialize` and **throws** if it writes a key outside `paths`:
 
 ```ts
-defineQueryState({
+defineQueryParam({
   paths: ['from', 'to'],
   parse: /* … */,
   serialize: value => ({ from: value.from, to: value.to, extra: 1 }),
@@ -110,7 +110,7 @@ The object form also takes:
 - `default?: T` — a default value, surfaced like a codec's `.withDefault()`.
 
 ```ts
-defineQueryState<DateRange>({
+defineQueryParam<DateRange>({
   paths: ['from', 'to'],
   parse: /* … */,
   serialize: /* … */,
@@ -123,7 +123,7 @@ defineQueryState<DateRange>({
 
 | You want… | Use |
 | --- | --- |
-| Several independent keys under a namespace | dotted paths, one field each |
-| One value that spans multiple keys | a composite field |
-| One value, one key | a [plain field](/guide/defining-fields) |
+| Several independent keys under a namespace | dotted paths, one param each |
+| One value that spans multiple keys | a composite param |
+| One value, one key | a [plain param](/guide/defining-params) |
 | A structured value in a single key | [`codecs.json`](/guide/codecs#json) |

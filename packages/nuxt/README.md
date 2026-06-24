@@ -16,7 +16,7 @@ export default defineNuxtConfig({
 })
 ```
 
-`useQueryState`, `useQueryStates`, `defineQueryState`, the `codecs` namespace and
+`useQueryState`, `useQueryStates`, `defineQueryParam`, the `codecs` namespace and
 more are auto-imported, and the adapter is provided:
 
 ```vue
@@ -34,7 +34,7 @@ const search = useQueryState('q', codecs.string.withDefault(''))
 **Auto-imports** (from `vuqs`):
 
 - Composables: `useQueryState`, `useQueryStates`, `useQueryAdapter`,
-  `provideQueryAdapter`, `defineQueryState`, `createSerializer`
+  `provideQueryAdapter`, `defineQueryParam`, `createSerializer`
 - Codecs: `codecs`, `createCodec` — `codecs` is a single namespace object
   (`codecs.string`, `codecs.integer`, …), so it's one auto-imported name, not one
   per codec

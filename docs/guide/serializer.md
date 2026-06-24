@@ -6,12 +6,12 @@ server for SSR. [`createSerializer`](/api/serializer#createserializer) builds a
 reusable, schema-bound function that turns values into a query.
 
 ```ts
-import { codecs, createSerializer, defineQueryState } from 'vuqs'
+import { codecs, createSerializer, defineQueryParam } from 'vuqs'
 
 const schema = {
-  q: defineQueryState('q', codecs.string.withDefault('')),
-  page: defineQueryState('page', codecs.integer.withDefault(1)),
-  sort: defineQueryState('sort', codecs.literal(['asc', 'desc'] as const)),
+  q: defineQueryParam('q', codecs.string.withDefault('')),
+  page: defineQueryParam('page', codecs.integer.withDefault(1)),
+  sort: defineQueryParam('sort', codecs.literal(['asc', 'desc'] as const)),
 }
 
 const serialize = createSerializer(schema)
@@ -27,7 +27,7 @@ matches what navigating would produce.
 ## Patching over a base
 
 Pass a base query as the first argument to merge values over it. Untouched managed
-fields **and** unmanaged params are preserved:
+params **and** unmanaged params are preserved:
 
 ```ts
 serialize({ page: 2 })                    // fresh: { page: '2' }
@@ -48,12 +48,12 @@ The values argument follows the three-state protocol:
 
 | In `values` | Effect |
 | --- | --- |
-| omitted / `undefined` | leave the field untouched |
-| `null` | clear the field |
+| omitted / `undefined` | leave the param untouched |
+| `null` | clear the param |
 | a value | set it (dropped if it equals the default, unless `clearOnDefault: false`) |
 
-Unmanaged params on the base are **always** kept. Only fields you actually mention
-are affected — the serializer never injects phantom defaults for fields you didn't
+Unmanaged params on the base are **always** kept. Only params you actually mention
+are affected — the serializer never injects phantom defaults for params you didn't
 touch.
 
 ## String output

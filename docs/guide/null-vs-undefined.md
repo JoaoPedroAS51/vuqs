@@ -5,19 +5,19 @@ worth stating plainly because it shows up in every write path.
 
 ## The one-line summary
 
-- **Reads are never `null`.** A field reads back `T` or `undefined` — never `null`.
+- **Reads are never `null`.** A param reads back `T` or `undefined` — never `null`.
 - **`null` is a write-only clear command,** and only in *batch* / *standalone*
   writes where a third "leave it alone" state is needed.
 
 ## Why two sentinels
 
-A **batch** write needs to express three different intentions per field:
+A **batch** write needs to express three different intentions per param:
 
 | Intent | Sentinel |
 | --- | --- |
-| Set this field | a value |
-| Clear this field | `null` |
-| Don't touch this field | omit it / `undefined` |
+| Set this param | a value |
+| Clear this param | `null` |
+| Don't touch this param | omit it / `undefined` |
 
 If `undefined` meant *both* "clear" and "skip," you couldn't write "set `q`,
 clear `sort`, leave `page` alone" in a single object. So batch writes use `null`
@@ -31,9 +31,9 @@ setValues({ q: 'laptop', sort: null })
 This applies to [`setValues`](/guide/use-query-states#setvalues) and to the
 [serializer](/guide/serializer#write-semantics).
 
-## Single fields don't use null
+## Single params don't use null
 
-A **single** field has no "leave it alone" state — every write is *this* field. So
+A **single** param has no "leave it alone" state — every write is *this* param. So
 `useQueryState`'s ref clears via `undefined` or `.clear()`, and **does not** accept
 `null`:
 
@@ -74,13 +74,13 @@ There's a practical reason `null` is the clear command and not, say, key-presenc
   serialization, Pinia persistence, etc.).
 
 `null` is type-distinct *and* survives a JSON round-trip, so a serialized
-"clear this field" instruction stays intact across the wire. That's why it earns
+"clear this param" instruction stays intact across the wire. That's why it earns
 its place as the write-side clear sentinel.
 
 ## Cheat sheet
 
 ```ts
-// Single field (useQueryState)
+// Single param (useQueryState)
 ref.value = x          // set
 ref.value = undefined  // clear
 ref.clear()            // clear

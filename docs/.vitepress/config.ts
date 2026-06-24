@@ -52,7 +52,7 @@ export default defineConfig({
             { text: 'Codecs', link: '/guide/codecs' },
             { text: 'useQueryState', link: '/guide/use-query-state' },
             { text: 'useQueryStates', link: '/guide/use-query-states' },
-            { text: 'Defining fields', link: '/guide/defining-fields' },
+            { text: 'Defining params', link: '/guide/defining-params' },
             { text: 'Adapters', link: '/guide/adapters' },
             { text: 'Navigation options', link: '/guide/navigation-options' },
           ],

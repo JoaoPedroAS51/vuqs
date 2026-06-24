@@ -1,7 +1,7 @@
 import type { ParsedQueryRaw } from './types'
 import { shallowRef } from 'vue'
 
-/** A field-keyed value map flowing through the pipeline. */
+/** A param-keyed value map flowing through the pipeline. */
 export type QueryValues = Record<string, unknown>
 
 /**
@@ -15,7 +15,7 @@ export type QueryValues = Record<string, unknown>
  * rewrites the serialized query at the navigation boundary.
  */
 export interface QueryPipeline {
-  /** Reshapes the values the app reads, for example dropping context-invalid fields. */
+  /** Reshapes the values the app reads, for example dropping context-invalid params. */
   read: (values: QueryValues) => QueryValues
   /** Reshapes the values written to the URL on a navigation. */
   write: (values: QueryValues) => QueryValues

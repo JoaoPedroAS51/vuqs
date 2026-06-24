@@ -18,7 +18,7 @@ export type { NavigateOptions, QueryStateNavigate } from './types'
  * @remarks
  * These are knobs only: `history` and `scroll` set the navigation defaults for
  * this instance (a per-call write can override them), `throttleMs` coalesces
- * writes, and `clearOnDefault` drops default-valued fields. The query source and
+ * writes, and `clearOnDefault` drops default-valued params. The query source and
  * the URL writer come from the {@link provideQueryAdapter | adapter}, never from
  * here.
  */
@@ -30,29 +30,29 @@ export interface UseQueryStatesOptions extends NavigateOptions {
 }
 
 /**
- * A writable ref bound to one query field, returned by {@link useQueryState}.
+ * A writable ref bound to one query param, returned by {@link useQueryState}.
  *
  * @remarks
- * Reading yields the current value, or the codec default when the field is
+ * Reading yields the current value, or the codec default when the param is
  * absent. Assigning `.value` schedules a write with the default navigation
  * options. `set` and `clear` do the same while accepting per-call overrides.
- * Calling `clear`, or assigning `undefined` to a nullable field, removes the
- * field from the URL.
+ * Calling `clear`, or assigning `undefined` to a nullable param, removes the
+ * param from the URL.
  *
- * @typeParam T - The field's value type.
+ * @typeParam T - The param's value type.
  */
 export interface QueryStateRef<T> extends WritableComputedRef<T> {
   /** Writes `value`, optionally overriding the navigation options for this write. */
   set: (value: T, options?: NavigateOptions) => void
-  /** Removes the field from the URL, optionally overriding the navigation options. */
+  /** Removes the param from the URL, optionally overriding the navigation options. */
   clear: (options?: NavigateOptions) => void
 }
 
 /**
- * The reactive value map returned by {@link useQueryStates}: each field is a
- * value, not a ref. Read `values.field`; assign `values.field = x` to write with
- * the default navigation options, or `values.field = undefined` to clear a
- * nullable field. Use Vue's `toRefs` to obtain individual refs.
+ * The reactive value map returned by {@link useQueryStates}: each param is a
+ * value, not a ref. Read `values.page`; assign `values.page = x` to write with
+ * the default navigation options, or `values.page = undefined` to clear a
+ * nullable param. Use Vue's `toRefs` to obtain individual refs.
  *
  * @typeParam TSchema - The schema bound to the URL.
  */
@@ -67,12 +67,12 @@ export type QueryStatesValues<TSchema extends QueryStateSchema> = {
  */
 export interface QueryStatesActions<TSchema extends QueryStateSchema> {
   /**
-   * Sets several fields at once, coalesced into one navigation. Omit a field (or
+   * Sets several params at once, coalesced into one navigation. Omit a param (or
    * pass `undefined`) to leave it untouched, `null` to clear it, or a value to
    * set it.
    */
   setValues: (values: QueryStateWriteValues<TSchema>, options?: NavigateOptions) => void
-  /** Clears every field, optionally overriding the navigation options. */
+  /** Clears every param, optionally overriding the navigation options. */
   clear: (options?: NavigateOptions) => void
 }
 
@@ -83,12 +83,12 @@ export interface QueryStatesActions<TSchema extends QueryStateSchema> {
  * @typeParam TSchema - The schema bound to the URL.
  */
 export interface UseQueryStatesReturn<TSchema extends QueryStateSchema> extends QueryStatesActions<TSchema> {
-  /** The reactive, writable value map, one entry per field. */
+  /** The reactive, writable value map, one entry per param. */
   values: QueryStatesValues<TSchema>
 }
 
 /**
- * Builds the engine and one writable computed per field. Shared by
+ * Builds the engine and one writable computed per param. Shared by
  * {@link useQueryStates} and {@link useQueryState} so neither duplicates the
  * adapter resolution or the reactive wiring.
  *
@@ -163,7 +163,7 @@ export interface QueryCore<TSchema extends QueryStateSchema> {
    * applied and without codec defaults.
    */
   selected: ComputedRef<QueryStateValues<TSchema>>
-  /** Optimistically sets one field. */
+  /** Optimistically sets one param. */
   setValue: (key: keyof TSchema & string, value: unknown, options?: NavigateOptions) => void
   /** Applies a full query to the URL, running the `navigate` pipeline stage and resolving the default navigation options. */
   navigate: (query: ParsedQueryRaw, options?: NavigateOptions) => void
@@ -207,31 +207,31 @@ export type QueryComposable<TSchema extends QueryStateSchema, TApi> = TApi & {
 }
 
 /**
- * Binds a schema's fields to the URL as a reactive value map.
+ * Binds a schema's params to the URL as a reactive value map.
  *
  * @remarks
  * Reads stay in sync with `query`. Writes are applied optimistically and flushed
  * to `navigate` as a single coalesced navigation, one per microtask or per
  * `throttleMs` when set. The URL is the source of truth: once it reflects a
- * write, the optimistic value for that field is reconciled away, while writes
+ * write, the optimistic value for that param is reconciled away, while writes
  * the URL has not caught up to are kept so an unrelated navigation cannot discard
  * them.
  *
- * `values` is reactive: `values.field` reads, `values.field = x` writes with the
- * default options, and `values.field = undefined` clears a nullable field. Use
+ * `values` is reactive: `values.page` reads, `values.page = x` writes with the
+ * default options, and `values.page = undefined` clears a nullable param. Use
  * `setValues` for batch writes (with `null` to clear) and per-call options, and
- * `clear` to reset every field. For rich single-field control (a ref to pass
- * around, per-call options on one field), reach for {@link useQueryState}.
+ * `clear` to reset every param. For rich single-param control (a ref to pass
+ * around, per-call options on one param), reach for {@link useQueryState}.
  *
  * Replace, do not mutate: assigning `values.tags = [...]` navigates, but mutating
  * the array in place (`values.tags.push(...)`) does not.
  *
- * @typeParam TSchema - The schema mapping field names to definitions.
- * @param schema - The fields to bind, keyed by logical name.
+ * @typeParam TSchema - The schema mapping param names to definitions.
+ * @param schema - The params to bind, keyed by logical name.
  * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
  * The query source and URL writer come from the provided {@link provideQueryAdapter | adapter}.
  * @returns The reactive `values` map, batch writers, and `use` for module composition.
- * @throws {Error} When two fields declare the same query path.
+ * @throws {Error} When two params declare the same query path.
  * @throws {Error} When no adapter has been provided.
  *
  * @example
@@ -240,8 +240,8 @@ export type QueryComposable<TSchema extends QueryStateSchema, TApi> = TApi & {
  * provideQueryAdapter(createVueRouterAdapter())
  *
  * const { values, setValues, clear } = useQueryStates({
- *   q: defineQueryState('q', codecs.string),
- *   sort: defineQueryState('filters.sort', codecs.string),
+ *   q: defineQueryParam('q', codecs.string),
+ *   sort: defineQueryParam('filters.sort', codecs.string),
  * })
  *
  * values.q = 'sale'

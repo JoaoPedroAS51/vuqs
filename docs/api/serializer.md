@@ -40,7 +40,7 @@ serialize(base, values)  // patch values over a base
 const serialize = createSerializer(schema)
 serialize({ q: 'lease' })                  // { q: 'lease' }
 serialize(route.query, { page: 2 })        // patch over the current query
-serialize(route.query, { currency: null }) // clear a field
+serialize(route.query, { currency: null }) // clear a param
 
 const toUrl = createSerializer(schema, {
   stringify: q => qs.stringify(q, { addQueryPrefix: true }),
@@ -60,7 +60,7 @@ link-building logic.
 function parseQueryStates<TSchema>(schema: TSchema, query: ParsedQuery): QueryStateValues<TSchema>
 ```
 
-Parses every field out of a query. Absent fields are omitted (not set to
+Parses every param out of a query. Absent params are omitted (not set to
 `undefined`).
 
 ### `serializeQueryStates`
@@ -70,7 +70,7 @@ function serializeQueryStates<TSchema>(schema: TSchema, values: QueryStateValues
 ```
 
 Serializes a value map into a compacted nested query object. Pass selected values
-only — a field equal to its default should be omitted first (see `dropDefaults`).
+only — a param equal to its default should be omitted first (see `dropDefaults`).
 
 ### `buildQuery`
 
@@ -87,7 +87,7 @@ Unmanaged params are preserved; a managed key absent from `values` is dropped.
 function dropDefaults<TSchema>(schema: TSchema, values: QueryStateValues<TSchema>): QueryStateValues<TSchema>
 ```
 
-Drops fields whose value equals their codec default (and absent fields). The
+Drops params whose value equals their codec default (and absent params). The
 `clearOnDefault` rule as a reusable function.
 
 ### `getManagedKeys`
@@ -96,7 +96,7 @@ Drops fields whose value equals their codec default (and absent fields). The
 function getManagedKeys<TSchema>(schema: TSchema): string[]
 ```
 
-Every query key the schema manages, across all fields, in declaration order.
+Every query key the schema manages, across all params, in declaration order.
 
 ### `omitManagedKeys`
 
@@ -113,7 +113,7 @@ empty by the removal. Unmanaged params, even empty ones, are untouched.
 function assertUniquePaths<TSchema>(schema: TSchema): void
 ```
 
-Throws if any query path is declared by more than one field. Called internally by
+Throws if any query path is declared by more than one param. Called internally by
 the composables.
 
 ## Path helpers

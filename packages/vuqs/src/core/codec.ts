@@ -7,7 +7,7 @@ import { getQueryString } from './path'
  *
  * @remarks
  * A codec pairs `parse` with `serialize` as one unit so the two cannot drift
- * apart. It is unaware of where in the query the value lives: {@link defineQueryState}
+ * apart. It is unaware of where in the query the value lives: {@link defineQueryParam}
  * binds a codec to a concrete path.
  *
  * @typeParam T - The decoded value type the codec reads and writes.

@@ -18,19 +18,19 @@ declare module 'vuqs' {
  * Options for {@link withContext}.
  *
  * @remarks
- * `preserve` and `only` are keyed by schema field names. They are checked either
+ * `preserve` and `only` are keyed by schema param names. They are checked either
  * from the schema passed to {@link withContext} or from the schema supplied by
  * {@link QueryComposable.use}.
  *
- * @typeParam TSchema - The schema whose field names key `preserve` and `only`.
+ * @typeParam TSchema - The schema whose param names key `preserve` and `only`.
  * @typeParam TContext - The union of context identifiers.
  */
 export interface ContextOptions<TSchema extends QueryStateSchema, TContext extends string> {
   /** The active context as a ref, getter, or plain value. The module never derives it. */
   active: MaybeRefOrGetter<TContext>
-  /** Fields kept across a context change; everything else resets. */
+  /** Params kept across a context change; everything else resets. */
   preserve?: ReadonlyArray<keyof TSchema & string>
-  /** Per-field validity: the contexts a field exists in. Omit a field to make it valid everywhere. */
+  /** Per-param validity: the contexts a param exists in. Omit a param to make it valid everywhere. */
   only?: Partial<Record<keyof TSchema & string, readonly TContext[]>>
   /**
    * How to navigate to a context. The module reconciles the query and passes it
@@ -50,7 +50,7 @@ export interface ContextApi<TContext extends string> {
   activeContext: ComputedRef<TContext>
   /**
    * Builds the reconciled query for switching to `nextContext` without
-   * navigating: preserved fields valid in the target are kept, everything else
+   * navigating: preserved params valid in the target are kept, everything else
    * is dropped. Use it to render a link or for SSR.
    */
   buildContextQuery: (currentQuery: ParsedQuery, nextContext: TContext) => ParsedQueryRaw
@@ -62,15 +62,15 @@ export interface ContextApi<TContext extends string> {
 }
 
 /**
- * Creates a context module with schema-checked field keys.
+ * Creates a context module with schema-checked param keys.
  *
  * @remarks
- * The `schema` argument binds `preserve` and `only` to the schema's field names.
+ * The `schema` argument binds `preserve` and `only` to the schema's param names.
  * TypeScript rejects keys that are not present in the schema.
  *
- * The module taps a `read`/`write` pipeline transform that drops fields invalid
- * in the active context, so such a field never enters `values`, the URL, or
- * derived module state. Invalid fields from a pasted stale link are dropped on
+ * The module taps a `read`/`write` pipeline transform that drops params invalid
+ * in the active context, so such a param never enters `values`, the URL, or
+ * derived module state. Invalid params from a pasted stale link are dropped on
  * the next write.
  *
  * On a context change the module emits the `'context:change'` hook (so modules
@@ -79,10 +79,10 @@ export interface ContextApi<TContext extends string> {
  * switch with `switchTo` (one navigation, via the `navigate` option) or build the
  * query yourself with `buildContextQuery`.
  *
- * @typeParam TSchema - The schema whose field names key `preserve` and `only`.
+ * @typeParam TSchema - The schema whose param names key `preserve` and `only`.
  * @typeParam TContext - The union of context identifiers.
  * @param schema - The schema used to type-check `preserve` and `only`.
- * @param options - The active context, preserved fields, per-field validity, and the `navigate` mapping.
+ * @param options - The active context, preserved params, per-param validity, and the `navigate` mapping.
  * @returns A query module that contributes {@link ContextApi}.
  *
  * @example
@@ -95,7 +95,7 @@ export interface ContextApi<TContext extends string> {
  *     navigate: (target, query) => navigateTo({ name: target, query }),
  *   }))
  *
- * switchTo('orders') // one navigation: preserved fields kept, the rest reset
+ * switchTo('orders') // one navigation: preserved params kept, the rest reset
  * ```
  */
 export function withContext<TSchema extends QueryStateSchema, TContext extends string>(
@@ -103,19 +103,19 @@ export function withContext<TSchema extends QueryStateSchema, TContext extends s
   options: ContextOptions<TSchema, TContext>,
 ): QueryModule<TSchema, ContextApi<TContext>>
 /**
- * Creates a context module whose field keys are checked by `use`.
+ * Creates a context module whose param keys are checked by `use`.
  *
  * @remarks
  * This overload returns a {@link QueryModule}. When it is passed to
  * `useQueryStates(schema).use(...)`, TypeScript checks `preserve` and `only`
- * against that schema's field names.
+ * against that schema's param names.
  *
- * Invalid fields are filtered out, and a context change emits the
+ * Invalid params are filtered out, and a context change emits the
  * `'context:change'` hook. Navigate with `switchTo` or `buildContextQuery`.
  *
  * @typeParam TSchema - The schema inferred from `useQueryStates(...).use(...)`.
  * @typeParam TContext - The union of context identifiers.
- * @param options - The active context, preserved fields, and per-field validity.
+ * @param options - The active context, preserved params, and per-param validity.
  * @returns A query module that contributes {@link ContextApi}.
  *
  * @example

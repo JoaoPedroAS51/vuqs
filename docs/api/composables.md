@@ -1,6 +1,6 @@
 # API: composables
 
-`import { useQueryState, useQueryStates, defineQueryState, provideQueryAdapter, useQueryAdapter } from 'vuqs'`
+`import { useQueryState, useQueryStates, defineQueryParam, provideQueryAdapter, useQueryAdapter } from 'vuqs'`
 
 ## `useQueryState`
 
@@ -19,8 +19,8 @@ function useQueryState(path: string, options: StringOptions & { defaultValue: st
 function useQueryState(path: string, options?: StringOptions): QueryStateRef<string | undefined>
 
 // With a pre-built definition
-function useQueryState<T>(definition: QueryStateDefinitionWithDefault<T>, options?: UseQueryStatesOptions): QueryStateRef<T>
-function useQueryState<T>(definition: QueryStateDefinition<T>, options?: UseQueryStatesOptions): QueryStateRef<T | undefined>
+function useQueryState<T>(definition: QueryParamDefinitionWithDefault<T>, options?: UseQueryStatesOptions): QueryStateRef<T>
+function useQueryState<T>(definition: QueryParamDefinition<T>, options?: UseQueryStatesOptions): QueryStateRef<T | undefined>
 ```
 
 `StringOptions` is `UseQueryStatesOptions` with `parse`/`serialize` forbidden, so
@@ -36,7 +36,7 @@ interface QueryStateRef<T> extends WritableComputedRef<T> {
 }
 ```
 
-- `.value` — read/write (clears via `undefined` on a nullable field).
+- `.value` — read/write (clears via `undefined` on a nullable param).
 - `.set(value, options?)` — write with per-call [options](/guide/navigation-options).
 - `.clear(options?)` — remove the key (revert to default).
 
@@ -48,7 +48,7 @@ there. Call them from a function in `<script setup>` instead. See
 
 ## `useQueryStates`
 
-Binds a schema of fields to a reactive value map plus batch writers.
+Binds a schema of params to a reactive value map plus batch writers.
 
 ```ts
 function useQueryStates<TSchema extends QueryStateSchema>(
@@ -67,13 +67,13 @@ interface UseQueryStatesReturn<TSchema> {
 }
 ```
 
-- `values` — reactive, writable; `values.k` is the value. Fields with a default
+- `values` — reactive, writable; `values.k` is the value. Params with a default
   are non-nullable. **Replace, don't mutate** arrays/objects.
 - `setValues(values, options?)` — batch write; `null` clears, `undefined`/absent
   skips, a value sets. Coalesced into one navigation.
-- `clear(options?)` — reset every field.
+- `clear(options?)` — reset every param.
 
-**Throws** if two fields declare the same query path, or if no adapter has been
+**Throws** if two params declare the same query path, or if no adapter has been
 provided (see [`provideQueryAdapter`](#providequeryadapter)).
 
 ## `UseQueryStatesOptions`
@@ -92,20 +92,20 @@ interface UseQueryStatesOptions extends NavigateOptions {
 
 See [Navigation options](/guide/navigation-options) for behavior and precedence.
 
-## `defineQueryState`
+## `defineQueryParam`
 
-Builds a reusable [field](/guide/defining-fields) from a path + codec, or a
+Builds a reusable [param](/guide/defining-params) from a path + codec, or a
 custom multi-key definition.
 
 ```ts
 // Single key
-function defineQueryState<T>(path: string, codec: CodecWithDefault<T>): QueryStateDefinitionWithDefault<T>
-function defineQueryState<T>(path: string, codec: Codec<T>): QueryStateDefinition<T>
+function defineQueryParam<T>(path: string, codec: CodecWithDefault<T>): QueryParamDefinitionWithDefault<T>
+function defineQueryParam<T>(path: string, codec: Codec<T>): QueryParamDefinition<T>
 
 // Composite / custom
-function defineQueryState<T>(definition: QueryStateDefinitionInput<T>): QueryStateDefinition<T>
+function defineQueryParam<T>(definition: QueryParamDefinitionInput<T>): QueryParamDefinition<T>
 
-interface QueryStateDefinitionInput<T> {
+interface QueryParamDefinitionInput<T> {
   paths: readonly string[]              // every key serialize writes
   parse: (query: ParsedQuery) => T | undefined
   serialize: (value: T) => ParsedQueryRaw
@@ -115,7 +115,7 @@ interface QueryStateDefinitionInput<T> {
 ```
 
 A dev guard throws on the first `serialize` if it writes a key outside `paths`.
-See [composite fields](/guide/nested-keys#composite-fields).
+See [composite params](/guide/nested-keys#composite-params).
 
 ## `provideQueryAdapter`
 

@@ -1,7 +1,7 @@
 # useQueryState
 
 Binds a **single** query key to a writable ref. This is the workhorse for one
-field — a search box, a page number, a toggle.
+param — a search box, a page number, a toggle.
 
 ```ts
 import { codecs, useQueryState } from 'vuqs'
@@ -32,7 +32,7 @@ q.set('phone', { history: 'push' }) // push a history entry instead of replacing
 q.clear()                          // back to '' and the key leaves the URL
 ```
 
-Assigning `undefined` to a nullable field also clears it:
+Assigning `undefined` to a nullable param also clears it:
 
 ```ts
 const color = useQueryState('color', codecs.literal(['red', 'blue'] as const))
@@ -66,11 +66,11 @@ For any other type, pass a codec: `codecs.integer.withDefault(0)`.
 
 ### With a pre-built definition
 
-If you've named a field with [`defineQueryState`](/guide/defining-fields), pass it
+If you've named a param with [`defineQueryParam`](/guide/defining-params), pass it
 directly:
 
 ```ts
-const pageField = defineQueryState('page', codecs.integer.withDefault(1))
+const pageField = defineQueryParam('page', codecs.integer.withDefault(1))
 
 const page = useQueryState(pageField) // QueryStateRef<number>
 ```
@@ -153,7 +153,7 @@ const dateInput = computed({
 
 ## When to reach for `useQueryStates` instead
 
-`useQueryState` shines for **one field with rich control** — a ref you pass
-around, per-call options on that single field. For a **group of related fields**
+`useQueryState` shines for **one param with rich control** — a ref you pass
+around, per-call options on that single param. For a **group of related params**
 that change together, [`useQueryStates`](/guide/use-query-states) binds them in one
-call and coalesces multi-field writes into a single navigation.
+call and coalesces multi-param writes into a single navigation.

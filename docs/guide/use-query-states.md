@@ -2,20 +2,20 @@
 
 Binds a **group** of query keys at once. Use it for a filter bar, a search +
 sort + page trio, anything where several keys change together and you want
-multi-field writes to land as a single navigation.
+multi-param writes to land as a single navigation.
 
 ```ts
-import { codecs, defineQueryState, useQueryStates } from 'vuqs'
+import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
 
 const { values, setValues, clear } = useQueryStates({
-  q: defineQueryState('q', codecs.string.withDefault('')),
-  sort: defineQueryState('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
-  page: defineQueryState('page', codecs.integer.withDefault(1)),
+  q: defineQueryParam('q', codecs.string.withDefault('')),
+  sort: defineQueryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
+  page: defineQueryParam('page', codecs.integer.withDefault(1)),
 })
 ```
 
-The argument is a [schema](/guide/concepts#schema-a-map-of-fields): a map of
-logical names to [fields](/guide/defining-fields).
+The argument is a [schema](/guide/concepts#schema-a-map-of-params): a map of
+logical names to [params](/guide/defining-params).
 
 ## What you get back
 
@@ -39,7 +39,7 @@ logical names to [fields](/guide/defining-fields).
 </template>
 ```
 
-Fields declaring a `.withDefault()` are **non-nullable** in `values`, so reads
+Params declaring a `.withDefault()` are **non-nullable** in `values`, so reads
 need no `?? fallback`:
 
 ```ts
@@ -47,10 +47,10 @@ values.q.trim()   // string — no guard needed
 values.page + 1   // number
 ```
 
-A field without a default reads as `T | undefined`.
+A param without a default reads as `T | undefined`.
 
 ::: warning Replace, don't mutate
-`values` tracks assignment, not in-place mutation. To change an array field,
+`values` tracks assignment, not in-place mutation. To change an array param,
 assign a new array:
 
 ```ts
@@ -63,11 +63,11 @@ Need an individual ref to pass around? Use Vue's `toRefs(values)`.
 
 ### `setValues` — batch write
 
-Sets several fields in one coalesced navigation. Each field follows the
+Sets several params in one coalesced navigation. Each param follows the
 three-state [write protocol](/guide/null-vs-undefined):
 
-- **omit / `undefined`** → leave the field untouched
-- **`null`** → clear the field (revert to default)
+- **omit / `undefined`** → leave the param untouched
+- **`null`** → clear the param (revert to default)
 - **a value** → set it
 
 ```ts
@@ -83,7 +83,7 @@ one" that's distinct from "don't touch this one." (Single refs clear via
 ### `clear` — reset everything
 
 ```ts
-clear()                      // every field back to its default, one navigation
+clear()                      // every param back to its default, one navigation
 clear({ history: 'push' })   // with options
 ```
 
@@ -107,13 +107,13 @@ calls for a related group.
 
 ```vue
 <script setup lang="ts">
-import { codecs, defineQueryState, useQueryStates } from 'vuqs'
+import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
 import { computed } from 'vue'
 
 const { values, setValues, clear } = useQueryStates({
-  q: defineQueryState('q', codecs.string.withDefault('')),
-  sort: defineQueryState('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
-  page: defineQueryState('page', codecs.integer.withDefault(1)),
+  q: defineQueryParam('q', codecs.string.withDefault('')),
+  sort: defineQueryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
+  page: defineQueryParam('page', codecs.integer.withDefault(1)),
 })
 
 const results = computed(() => runSearch(values.q, values.sort, values.page))
@@ -146,9 +146,9 @@ function search(term: string) {
 | --- | --- | --- |
 | Binds | one key | a group |
 | Returns | a `QueryStateRef` (`.value`, `.set`, `.clear`) | `{ values, setValues, clear }` |
-| Per-field options | ✅ on `.set` / `.clear` | via `setValues` (whole batch) |
-| Multi-field coalescing | — | ✅ |
+| Per-param options | ✅ on `.set` / `.clear` | via `setValues` (whole batch) |
+| Multi-param coalescing | — | ✅ |
 | A ref to pass around | ✅ | `toRefs(values)` |
 
-Reach for `useQueryStates` when fields move together; reach for `useQueryState`
-when you want rich control over one field.
+Reach for `useQueryStates` when params move together; reach for `useQueryState`
+when you want rich control over one param.

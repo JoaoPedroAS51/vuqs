@@ -4,60 +4,60 @@ import { structuralEq } from './equality'
 import { collectLeafPaths, getPath, setPath } from './path'
 
 /**
- * A field's wiring: the query path(s) it owns and how it reads and writes them.
+ * A param's wiring: the query path(s) it owns and how it reads and writes them.
  *
  * @remarks
  * This is the Layer 1 primitive and carries no context policy such as preserve
- * or validity handling. `paths` is the source of truth for the keys the field
- * manages, so removal can target only this field's keys while preserving siblings.
+ * or validity handling. `paths` is the source of truth for the keys the param
+ * manages, so removal can target only this param's keys while preserving siblings.
  *
- * @typeParam T - The decoded value type of the field.
+ * @typeParam T - The decoded value type of the param.
  */
-export interface QueryStateDefinition<T> {
-  /** The query keys this field owns. */
+export interface QueryParamDefinition<T> {
+  /** The query keys this param owns. */
   readonly paths: readonly string[]
-  /** Reads the field's value from the parsed query, or `undefined` when absent. */
+  /** Reads the param's value from the parsed query, or `undefined` when absent. */
   parse: (query: ParsedQuery) => T | undefined
-  /** Writes the field's value into a fresh query object covering only `paths`. */
+  /** Writes the param's value into a fresh query object covering only `paths`. */
   serialize: (value: T) => ParsedQueryRaw
   /** Compares two values to detect when one equals the default. */
   eq: (a: T, b: T) => boolean
-  /** The field's default value, if the underlying codec or definition declared one. */
+  /** The param's default value, if the underlying codec or definition declared one. */
   readonly defaultValue?: T
 }
 
 /**
- * A {@link QueryStateDefinition} whose codec declared a default, so its value is
- * never absent: a missing key reads back as {@link QueryStateDefinition.defaultValue}.
+ * A {@link QueryParamDefinition} whose codec declared a default, so its value is
+ * never absent: a missing key reads back as {@link QueryParamDefinition.defaultValue}.
  *
  * @remarks
  * Carrying this as a distinct type lets {@link useQueryStates} narrow a defaulted
- * field to `T` instead of `T | undefined`, matching the single-field overload.
+ * param to `T` instead of `T | undefined`, matching the single-param overload.
  *
- * @typeParam T - The decoded value type of the field.
+ * @typeParam T - The decoded value type of the param.
  */
-export interface QueryStateDefinitionWithDefault<T> extends QueryStateDefinition<T> {
+export interface QueryParamDefinitionWithDefault<T> extends QueryParamDefinition<T> {
   readonly defaultValue: T
 }
 
 /**
- * The escape-hatch form passed to {@link defineQueryState} for fields that span
+ * The escape-hatch form passed to {@link defineQueryParam} for params that span
  * multiple keys or need custom parse/serialize.
  *
  * @remarks
  * `paths` must list every key `serialize` writes. A dev guard checks this on the
  * first serialize and throws on a mismatch.
  */
-export interface QueryStateDefinitionInput<T> {
-  /** Every query key the field manages. `serialize` must not write outside this list. */
+export interface QueryParamDefinitionInput<T> {
+  /** Every query key the param manages. `serialize` must not write outside this list. */
   paths: readonly string[]
-  /** Reads the field's value from the parsed query, or `undefined` when absent. */
+  /** Reads the param's value from the parsed query, or `undefined` when absent. */
   parse: (query: ParsedQuery) => T | undefined
-  /** Writes the field's value as a query object covering only `paths`. */
+  /** Writes the param's value as a query object covering only `paths`. */
   serialize: (value: T) => ParsedQueryRaw
   /** Optional equality, defaulting to {@link structuralEq}. */
   eq?: (a: T, b: T) => boolean
-  /** Optional default value, surfaced as {@link QueryStateDefinition.defaultValue}. */
+  /** Optional default value, surfaced as {@link QueryParamDefinition.defaultValue}. */
   default?: T
 }
 
@@ -66,8 +66,8 @@ export interface QueryStateDefinitionInput<T> {
  *
  * @remarks
  * `paths` is derived from `path`. The codec's default is surfaced as
- * {@link QueryStateDefinition.defaultValue}, and the result is a
- * {@link QueryStateDefinitionWithDefault}, so a missing key reads back as that
+ * {@link QueryParamDefinition.defaultValue}, and the result is a
+ * {@link QueryParamDefinitionWithDefault}, so a missing key reads back as that
  * default instead of `undefined`.
  *
  * @typeParam T - The decoded value type.
@@ -77,10 +77,10 @@ export interface QueryStateDefinitionInput<T> {
  *
  * @example
  * ```ts
- * defineQueryState('page', codecs.integer.withDefault(1))
+ * defineQueryParam('page', codecs.integer.withDefault(1))
  * ```
  */
-export function defineQueryState<T>(path: string, codec: CodecWithDefault<T>): QueryStateDefinitionWithDefault<T>
+export function defineQueryParam<T>(path: string, codec: CodecWithDefault<T>): QueryParamDefinitionWithDefault<T>
 /**
  * Binds a codec to a single dot-path.
  *
@@ -94,16 +94,16 @@ export function defineQueryState<T>(path: string, codec: CodecWithDefault<T>): Q
  *
  * @example
  * ```ts
- * defineQueryState('currency', codecs.string)
- * defineQueryState('filters.sort', codecs.string)
+ * defineQueryParam('currency', codecs.string)
+ * defineQueryParam('filters.sort', codecs.string)
  * ```
  */
-export function defineQueryState<T>(path: string, codec: Codec<T>): QueryStateDefinition<T>
+export function defineQueryParam<T>(path: string, codec: Codec<T>): QueryParamDefinition<T>
 /**
- * Defines a composite or custom field spanning one or more keys.
+ * Defines a composite or custom param spanning one or more keys.
  *
  * @remarks
- * `paths` is the source of truth for the keys the field manages. The returned
+ * `paths` is the source of truth for the keys the param manages. The returned
  * `serialize` throws on its first call if it writes a key outside `paths`.
  *
  * @typeParam T - The decoded value type.
@@ -112,18 +112,18 @@ export function defineQueryState<T>(path: string, codec: Codec<T>): QueryStateDe
  *
  * @example
  * ```ts
- * defineQueryState({
+ * defineQueryParam({
  *   paths: ['from', 'to'],
  *   parse: q => buildRange(q),
  *   serialize: v => ({ from: v.from, to: v.to }),
  * })
  * ```
  */
-export function defineQueryState<T>(definition: QueryStateDefinitionInput<T>): QueryStateDefinition<T>
-export function defineQueryState<T>(
-  pathOrDefinition: string | QueryStateDefinitionInput<T>,
+export function defineQueryParam<T>(definition: QueryParamDefinitionInput<T>): QueryParamDefinition<T>
+export function defineQueryParam<T>(
+  pathOrDefinition: string | QueryParamDefinitionInput<T>,
   codec?: Codec<T>,
-): QueryStateDefinition<T> {
+): QueryParamDefinition<T> {
   if (typeof pathOrDefinition === 'string') {
     const path = pathOrDefinition
     const boundCodec = codec as Codec<T>

@@ -1,37 +1,37 @@
-# Defining fields
+# Defining params
 
-A **field** binds a [codec](/guide/codecs) to a concrete query key.
-[`defineQueryState`](/api/composables#definequerystate) creates one. You've seen
+A **param** binds a [codec](/guide/codecs) to a concrete query key.
+[`defineQueryParam`](/api/composables#definequeryParam) creates one. You've seen
 it inline in `useQueryStates`; this page covers it on its own — for naming,
-reusing, and composing fields.
+reusing, and composing params.
 
 ```ts
-import { codecs, defineQueryState } from 'vuqs'
+import { codecs, defineQueryParam } from 'vuqs'
 
-const page = defineQueryState('page', codecs.integer.withDefault(1))
+const page = defineQueryParam('page', codecs.integer.withDefault(1))
 ```
 
-A field is **pure data**. The same definition works everywhere a field is
+A param is **pure data**. The same definition works everywhere a param is
 accepted: [`useQueryState`](/guide/use-query-state),
 [`useQueryStates`](/guide/use-query-states), the
 [serializer](/guide/serializer), and any [modules](/modules/introduction) applied
 to it.
 
-## Why name a field?
+## Why name a param?
 
-Inline definitions are fine for one-off use. Pull a field out when you want to:
+Inline definitions are fine for one-off use. Pull a param out when you want to:
 
 **Reuse it across components.** Define your filter schema once, import it
 everywhere:
 
 ```ts
 // filters.ts
-import { codecs, defineQueryState } from 'vuqs'
+import { codecs, defineQueryParam } from 'vuqs'
 
 export const filterSchema = {
-  q: defineQueryState('q', codecs.string.withDefault('')),
-  sort: defineQueryState('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
-  page: defineQueryState('page', codecs.integer.withDefault(1)),
+  q: defineQueryParam('q', codecs.string.withDefault('')),
+  sort: defineQueryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
+  page: defineQueryParam('page', codecs.integer.withDefault(1)),
 }
 ```
 
@@ -48,40 +48,40 @@ what the URL shows. They can differ:
 
 ```ts
 const schema = {
-  lat: defineQueryState('latitude', codecs.float),
-  lng: defineQueryState('longitude', codecs.float),
+  lat: defineQueryParam('latitude', codecs.float),
+  lng: defineQueryParam('longitude', codecs.float),
 }
 // values.lat ⇄ ?latitude=…
 ```
 
 This is vuqs's equivalent of a key alias — no separate `urlKeys` config needed.
 
-## Single-key fields
+## Single-key params
 
 The common form: a path and a codec.
 
 ```ts
-defineQueryState('currency', codecs.string)              // QueryStateDefinition<string>
-defineQueryState('page', codecs.integer.withDefault(1))  // QueryStateDefinitionWithDefault<number>
-defineQueryState('filters.sort', codecs.string)          // a nested key — see below
+defineQueryParam('currency', codecs.string)              // QueryParamDefinition<string>
+defineQueryParam('page', codecs.integer.withDefault(1))  // QueryParamDefinitionWithDefault<number>
+defineQueryParam('filters.sort', codecs.string)          // a nested key — see below
 ```
 
-A codec carrying `.withDefault()` produces a `QueryStateDefinitionWithDefault`,
-which is what lets `useQueryStates` narrow that field to non-nullable.
+A codec carrying `.withDefault()` produces a `QueryParamDefinitionWithDefault`,
+which is what lets `useQueryStates` narrow that param to non-nullable.
 
 ## Nested keys
 
 A path can be dotted to target a nested query object:
 
 ```ts
-defineQueryState('filters.sort', codecs.string)
+defineQueryParam('filters.sort', codecs.string)
 // ⇄ ?filters[sort]=price   (with qs configured)
 ```
 
 Nested keys need the adapter to parse/stringify with `qs`. See
 [Nested & composite keys](/guide/nested-keys).
 
-## Composite fields
+## Composite params
 
 For a value that spans **multiple keys** — a date range across `from` and `to`, a
 bounding box across four — use the object form. You provide `paths`, `parse`, and
@@ -95,7 +95,7 @@ interface Range {
   to: string
 }
 
-const range = defineQueryState<Range>({
+const range = defineQueryParam<Range>({
   paths: ['from', 'to'],
   parse: (query) => {
     const from = getQueryString(query.from)
@@ -107,23 +107,23 @@ const range = defineQueryState<Range>({
 // values.range ⇄ ?from=2026-01-01&to=2026-06-30
 ```
 
-`paths` is the source of truth for the keys the field owns. A dev guard checks
+`paths` is the source of truth for the keys the param owns. A dev guard checks
 that `serialize` never writes a key outside `paths` and throws if it does — so a
 later "clear" can't leak or miss keys. See
-[composite fields](/guide/nested-keys#composite-fields) for the full walkthrough.
+[composite params](/guide/nested-keys#composite-params) for the full walkthrough.
 
 The object form also accepts optional `eq` (custom equality, defaults to
 structural) and `default`.
 
 ## Definitions never collide
 
-vuqs throws if two fields in a schema declare the same query path, because their
+vuqs throws if two params in a schema declare the same query path, because their
 reads and writes would silently clobber each other:
 
 ```ts
 useQueryStates({
-  a: defineQueryState('q', codecs.string),
-  b: defineQueryState('q', codecs.integer), // ❌ throws: duplicate path "q"
+  a: defineQueryParam('q', codecs.string),
+  b: defineQueryParam('q', codecs.integer), // ❌ throws: duplicate path "q"
 })
 ```
 
