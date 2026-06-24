@@ -55,8 +55,9 @@ Builds a `QueryAdapter` backed by `vue-router`. Reads
 `router.push` when `history` is `'push'`. The router defaults to `useRouter()`, so
 call it inside `setup` unless you pass `router` explicitly.
 
-Returns the adapter **without** providing it — pass `adapter.query` /
-`adapter.navigate` where needed (e.g. into a `useQueryStates` call).
+Returns the adapter **without** providing it — pass it to
+[`installQueryAdapter`](/api/composables#installqueryadapter) or
+[`provideQueryAdapter`](/api/composables#providequeryadapter).
 
 ::: tip Nested keys
 Dotted keys (`filters.sort`) and array values require `vue-router` configured with

@@ -75,36 +75,7 @@ describe('provideQueryAdapter', () => {
     expect(navigate).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ history: 'replace' }))
   })
 
-  it('prefers explicit options over the adapter', async () => {
-    const adapterNavigate = vi.fn()
-    const explicitQuery = ref<ParsedQuery>({ q: 'explicit' })
-    const explicitNavigate = vi.fn((next: ParsedQueryRaw) => {
-      explicitQuery.value = next
-    })
-    let states: UseQueryStatesReturn<typeof schema> | undefined
-
-    const Child = defineComponent({
-      setup() {
-        states = useQueryStates(schema, { query: () => explicitQuery.value, navigate: explicitNavigate })
-        return () => h('div')
-      },
-    })
-
-    await mount(() => {
-      provideQueryAdapter({ query: () => ({ q: 'adapter' }), navigate: adapterNavigate })
-      return () => h(Child)
-    })
-
-    expect(states!.values.q).toBe('explicit')
-
-    states!.values.q = 'x'
-    await flush()
-
-    expect(explicitNavigate).toHaveBeenCalled()
-    expect(adapterNavigate).not.toHaveBeenCalled()
-  })
-
-  it('throws when neither options nor an adapter provide a query source', async () => {
+  it('throws when no adapter is provided', async () => {
     const Orphan = defineComponent({
       setup() {
         useQueryStates(schema)

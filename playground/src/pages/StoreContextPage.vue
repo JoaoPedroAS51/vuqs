@@ -8,6 +8,9 @@ import StateBlock from '../components/StateBlock.vue'
 
 type Tab = 'products' | 'orders'
 
+// A local adapter just for the context `navigate` below (writing the reconciled
+// query). The query source for `useQueryStates` itself comes from the app-root
+// adapter (see App.vue).
 const adapter = createVueRouterAdapter()
 
 // The active context is external and opaque — the module never derives it.
@@ -20,11 +23,7 @@ const schema = {
   sort: defineQueryState('sort', codecs.literal(['newest', 'oldest'] as const)),
 }
 
-const q = useQueryStates(schema, {
-  query: adapter.query,
-  navigate: adapter.navigate,
-  history: 'replace',
-})
+const q = useQueryStates(schema)
   .use(withEffective())
   // `q` survives a context switch; everything not preserved resets. Field validity
   // per context: invalid fields never enter selected/URL/effective, and are dropped

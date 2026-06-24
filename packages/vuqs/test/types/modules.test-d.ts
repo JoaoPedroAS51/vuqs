@@ -11,13 +11,11 @@ const schema = {
   category: defineQueryState('category', codecs.literal(['cpu', 'gpu'] as const)),
 }
 
-const options = { query: {}, navigate: () => {} }
-
 describe('module composition', () => {
   it('accumulates each module API on the composable', () => {
     const tab = ref<'products' | 'orders'>('products')
 
-    const q = useQueryStates(schema, options)
+    const q = useQueryStates(schema)
       .use(withEffective())
       .use(withContext({ active: tab, preserve: ['q'], only: { category: ['products'] } }))
 
@@ -48,15 +46,15 @@ describe('withContext key-safety (checked by use)', () => {
   const tab = ref<'products' | 'orders'>('products')
 
   it('accepts valid field keys inferred from the composable schema', () => {
-    useQueryStates(schema, options).use(
+    useQueryStates(schema).use(
       withContext({ active: tab, preserve: ['q', 'category'], only: { category: ['products'] } }),
     )
   })
 
   it('rejects unknown keys inferred from the composable schema', () => {
     // @ts-expect-error 'nope' is not a field of the schema
-    useQueryStates(schema, options).use(withContext({ active: tab, preserve: ['nope'] }))
+    useQueryStates(schema).use(withContext({ active: tab, preserve: ['nope'] }))
     // @ts-expect-error 'nope' is not a field of the schema
-    useQueryStates(schema, options).use(withContext({ active: tab, only: { nope: ['products'] } }))
+    useQueryStates(schema).use(withContext({ active: tab, only: { nope: ['products'] } }))
   })
 })

@@ -1,6 +1,7 @@
 import type { NavigateOptions, ParsedQuery, ParsedQueryRaw } from '../../src/core/types'
 import { describe, expect, it, vi } from 'vitest'
-import { effectScope, nextTick, ref } from 'vue'
+import { createApp, effectScope, nextTick, ref } from 'vue'
+import { installQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
 import { defineQueryState } from '../../src/core/define-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
@@ -9,18 +10,18 @@ import { withEffective } from '../../src/modules/effective'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
 
+// Provides the adapter via app-level inject; `build` creates the composable inside
+// that context and an effect scope (module watches/taps own a scope).
 function setup(initial: ParsedQuery = {}) {
   const query = ref<ParsedQuery>(initial)
   const navigate = vi.fn((next: ParsedQueryRaw) => {
     query.value = next
   })
+  const app = createApp({})
+  installQueryAdapter(app, { query, navigate })
+  const build = <T>(factory: () => T): T => app.runWithContext(() => effectScope().run(factory)) as T
 
-  return { query, navigate }
-}
-
-// Build inside an effect scope so module watches/filters own a scope (matches setup usage).
-function build<T>(factory: () => T): T {
-  return effectScope().run(factory) as T
+  return { query, navigate, build }
 }
 
 describe('withEffective', () => {
@@ -30,8 +31,8 @@ describe('withEffective', () => {
   }
 
   it('separates selected, defaults, and effective', () => {
-    const { query, navigate } = setup({ currency: 'EUR' })
-    const q = build(() => useQueryStates(schema, { query, navigate }).use(withEffective()))
+    const { build } = setup({ currency: 'EUR' })
+    const q = build(() => useQueryStates(schema).use(withEffective()))
 
     q.setDefaults({ currency: 'USD', region: 'us' })
 
@@ -41,8 +42,8 @@ describe('withEffective', () => {
   })
 
   it('falls back to the default in effective when a field is cleared', async () => {
-    const { query, navigate } = setup({ currency: 'EUR' })
-    const q = build(() => useQueryStates(schema, { query, navigate }).use(withEffective()))
+    const { build } = setup({ currency: 'EUR' })
+    const q = build(() => useQueryStates(schema).use(withEffective()))
     q.setDefaults({ currency: 'USD' })
 
     q.values.currency = undefined
@@ -53,8 +54,8 @@ describe('withEffective', () => {
   })
 
   it('clears provided defaults', () => {
-    const { query, navigate } = setup()
-    const q = build(() => useQueryStates(schema, { query, navigate }).use(withEffective()))
+    const { build } = setup()
+    const q = build(() => useQueryStates(schema).use(withEffective()))
 
     q.setDefaults({ currency: 'USD' })
     q.clearDefaults()
@@ -70,8 +71,8 @@ describe('withEffective + codec defaults', () => {
   }
 
   it('uses the codec default as the lowest fallback, keeping selected explicit', () => {
-    const { query, navigate } = setup()
-    const q = build(() => useQueryStates(schema, { query, navigate }).use(withEffective()))
+    const { build } = setup()
+    const q = build(() => useQueryStates(schema).use(withEffective()))
 
     expect(q.selected).toEqual({}) // explicit only — no codec default here
     expect(q.defaults).toEqual({ page: 1 }) // codec default
@@ -80,8 +81,8 @@ describe('withEffective + codec defaults', () => {
   })
 
   it('lets setDefaults override the codec default', () => {
-    const { query, navigate } = setup()
-    const q = build(() => useQueryStates(schema, { query, navigate }).use(withEffective()))
+    const { build } = setup()
+    const q = build(() => useQueryStates(schema).use(withEffective()))
 
     q.setDefaults({ page: 5 })
 
@@ -90,8 +91,8 @@ describe('withEffective + codec defaults', () => {
   })
 
   it('lets the URL selection override both', () => {
-    const { query, navigate } = setup({ page: '3' })
-    const q = build(() => useQueryStates(schema, { query, navigate }).use(withEffective()))
+    const { build } = setup({ page: '3' })
+    const q = build(() => useQueryStates(schema).use(withEffective()))
     q.setDefaults({ page: 5 })
 
     expect(q.selected).toEqual({ page: 3 })
@@ -107,15 +108,15 @@ describe('withContext', () => {
   }
 
   function setupContext(initial: ParsedQuery = {}) {
-    const { query, navigate } = setup(initial)
+    const { query, build } = setup(initial)
     const tab = ref<'products' | 'orders'>('products')
     const q = build(() =>
-      useQueryStates(schema, { query, navigate }).use(
+      useQueryStates(schema).use(
         withContext({ active: tab, preserve: ['q'], only: { category: ['products'] } }),
       ),
     )
 
-    return { query, navigate, tab, q }
+    return { query, tab, q }
   }
 
   it('drops a field invalid in the active context from values', () => {
@@ -142,10 +143,10 @@ describe('withContext', () => {
   })
 
   it('works the same via the key-typed schema form', () => {
-    const { query, navigate } = setup({ q: 'foo', sort: 'newest' })
+    const { query, build } = setup({ q: 'foo', sort: 'newest' })
     const tab = ref<'products' | 'orders'>('products')
     const q = build(() =>
-      useQueryStates(schema, { query, navigate }).use(
+      useQueryStates(schema).use(
         withContext(schema, { active: tab, preserve: ['q'], only: { category: ['products'] } }),
       ),
     )
@@ -161,10 +162,10 @@ describe('withContext buildContextQuery', () => {
   }
 
   it('omits a preserved field equal to its codec default (clearOnDefault on by default)', () => {
-    const { query, navigate } = setup({ q: 'foo' })
+    const { query, build } = setup({ q: 'foo' })
     const tab = ref<'products' | 'orders'>('products')
     const q = build(() =>
-      useQueryStates(schema, { query, navigate }).use(
+      useQueryStates(schema).use(
         withContext({ active: tab, preserve: ['q', 'page'] }),
       ),
     )
@@ -175,10 +176,10 @@ describe('withContext buildContextQuery', () => {
   })
 
   it('keeps a preserved default-valued field when clearOnDefault is false', () => {
-    const { query, navigate } = setup({ q: 'foo' })
+    const { query, build } = setup({ q: 'foo' })
     const tab = ref<'products' | 'orders'>('products')
     const q = build(() =>
-      useQueryStates(schema, { query, navigate, clearOnDefault: false }).use(
+      useQueryStates(schema, { clearOnDefault: false }).use(
         withContext({ active: tab, preserve: ['q', 'page'] }),
       ),
     )
@@ -189,10 +190,10 @@ describe('withContext buildContextQuery', () => {
   })
 
   it('applies the navigate pipeline stage', () => {
-    const { query, navigate } = setup({ q: 'foo' })
+    const { query, build } = setup({ q: 'foo' })
     const tab = ref<'products' | 'orders'>('products')
     const q = build(() =>
-      useQueryStates(schema, { query, navigate })
+      useQueryStates(schema)
         .use((core) => {
           core.pipeline.tap('navigate', next => ({ ...next, flag: 'on' }))
           return {}
@@ -208,10 +209,10 @@ describe('withContext buildContextQuery', () => {
       q: defineQueryState('q', codecs.string),
       category: defineQueryState('category', codecs.literal(['cpu', 'gpu'] as const)),
     }
-    const { query, navigate } = setup({ q: 'foo', category: 'cpu' })
+    const { query, build } = setup({ q: 'foo', category: 'cpu' })
     const tab = ref<'products' | 'orders'>('products')
     const q = build(() =>
-      useQueryStates(ctxSchema, { query, navigate }).use(
+      useQueryStates(ctxSchema).use(
         withContext({ active: tab, preserve: ['q', 'category'], only: { category: ['products'] } }),
       ),
     )
@@ -228,11 +229,11 @@ describe('withContext switchTo', () => {
   }
 
   it('navigates via the navigate option with the reconciled query', () => {
-    const { query, navigate } = setup({ q: 'foo', sort: 'newest' })
+    const { build } = setup({ q: 'foo', sort: 'newest' })
     const tab = ref<'products' | 'orders'>('products')
     const switches: Array<{ target: string, query: ParsedQueryRaw }> = []
     const q = build(() =>
-      useQueryStates(schema, { query, navigate }).use(
+      useQueryStates(schema).use(
         withContext({
           active: tab,
           preserve: ['q'],
@@ -247,11 +248,11 @@ describe('withContext switchTo', () => {
   })
 
   it('forwards per-call navigate options', () => {
-    const { query, navigate } = setup({ q: 'foo' })
+    const { build } = setup({ q: 'foo' })
     const tab = ref<'products' | 'orders'>('products')
     let received: NavigateOptions | undefined
     const q = build(() =>
-      useQueryStates(schema, { query, navigate }).use(
+      useQueryStates(schema).use(
         withContext({
           active: tab,
           navigate: (_target, _query, options) => {
@@ -267,10 +268,10 @@ describe('withContext switchTo', () => {
   })
 
   it('throws when no navigate option is provided', () => {
-    const { query, navigate } = setup()
+    const { build } = setup()
     const tab = ref<'products' | 'orders'>('products')
     const q = build(() =>
-      useQueryStates(schema, { query, navigate }).use(withContext({ active: tab })),
+      useQueryStates(schema).use(withContext({ active: tab })),
     )
 
     expect(() => q.switchTo('orders')).toThrow(/provide a `navigate` option/)
@@ -283,10 +284,10 @@ describe('module coordination via hooks', () => {
       q: defineQueryState('q', codecs.string),
       category: defineQueryState('category', codecs.literal(['cpu', 'gpu'] as const)),
     }
-    const { query, navigate } = setup()
+    const { build } = setup()
     const tab = ref<'products' | 'orders'>('products')
     const q = build(() =>
-      useQueryStates(schema, { query, navigate })
+      useQueryStates(schema)
         .use(withEffective())
         .use(withContext({ active: tab, only: { category: ['products'] } })),
     )
@@ -306,10 +307,10 @@ describe('module coordination via hooks', () => {
       q: defineQueryState('q', codecs.string),
       category: defineQueryState('category', codecs.literal(['cpu', 'gpu'] as const).withDefault('cpu')),
     }
-    const { query, navigate } = setup()
+    const { build } = setup()
     const tab = ref<'products' | 'orders'>('products')
     const q = build(() =>
-      useQueryStates(schema, { query, navigate })
+      useQueryStates(schema)
         .use(withEffective())
         .use(withContext({ active: tab, only: { category: ['products'] } })),
     )
@@ -329,11 +330,11 @@ describe('use() collision guard', () => {
   const schema = { q: defineQueryState('q', codecs.string) }
 
   it('throws when two modules contribute the same key', () => {
-    const { query, navigate } = setup()
+    const { build } = setup()
 
     expect(() =>
       build(() =>
-        useQueryStates(schema, { query, navigate })
+        useQueryStates(schema)
           .use(() => ({ shared: 1 }))
           .use(() => ({ shared: 2 })),
       ),
@@ -341,10 +342,10 @@ describe('use() collision guard', () => {
   })
 
   it('throws when a module overwrites a built-in key', () => {
-    const { query, navigate } = setup()
+    const { build } = setup()
 
     expect(() =>
-      build(() => useQueryStates(schema, { query, navigate }).use(() => ({ clear: () => {} }))),
+      build(() => useQueryStates(schema).use(() => ({ clear: () => {} }))),
     ).toThrow(/module key "clear" is already provided/)
   })
 })

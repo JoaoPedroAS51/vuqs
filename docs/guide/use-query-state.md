@@ -77,9 +77,9 @@ const page = useQueryState(pageField) // QueryStateRef<number>
 
 ### With options
 
-Every form takes a trailing options object — `query`, `navigate`, `history`,
-`scroll`, `throttleMs`, `clearOnDefault`. When an [adapter](/guide/adapters) is
-provided, `query` and `navigate` are optional:
+Every form takes a trailing options object of behavior knobs — `history`,
+`scroll`, `throttleMs`, `clearOnDefault`. The query source and URL writer come
+from the [adapter](/guide/adapters):
 
 ```ts
 useQueryState('q', codecs.string, { history: 'push', throttleMs: 300 })

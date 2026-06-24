@@ -143,28 +143,6 @@ const { values, setValues, clear } = useQueryStates({
 Assigning several `values.*` in a row coalesces into **one** navigation, so a
 "reset everything" button writes the URL once, not three times.
 
-## Without an adapter
-
-You don't have to provide an adapter — you can pass `query` and `navigate` per
-call instead. This is useful in tests or when you want explicit control:
-
-```ts
-import qs from 'qs'
-import { codecs, useQueryState } from 'vuqs'
-import { useRoute, useRouter } from 'vue-router'
-
-const route = useRoute()
-const router = useRouter()
-
-const q = useQueryState('q', codecs.string, {
-  query: () => route.query,
-  navigate: next => router.replace({ query: qs.stringify(next) }),
-})
-```
-
-The [adapter](/guide/adapters) just saves you from repeating this in every
-component.
-
 ## Next steps
 
 - **[Core concepts](/guide/concepts)** — the mental model behind codecs, fields, and the commit cycle.

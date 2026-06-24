@@ -13,17 +13,16 @@ import { assertUniquePaths, buildQuery, parseQueryStates } from './schema'
 export type { NavigateOptions, QueryStateNavigate } from './types'
 
 /**
- * Options for {@link useQueryStates} and {@link useQueryState}.
+ * Behavior options for {@link useQueryStates} and {@link useQueryState}.
  *
  * @remarks
- * Extends {@link NavigateOptions}, so `history` and `scroll` set the defaults
- * applied to every navigation unless a per-call write overrides them.
+ * These are knobs only: `history` and `scroll` set the navigation defaults for
+ * this instance (a per-call write can override them), `throttleMs` coalesces
+ * writes, and `clearOnDefault` drops default-valued fields. The query source and
+ * the URL writer come from the {@link provideQueryAdapter | adapter}, never from
+ * here.
  */
 export interface UseQueryStatesOptions extends NavigateOptions {
-  /** The current parsed query. Falls back to the provided {@link provideQueryAdapter | adapter}. */
-  query?: MaybeRefOrGetter<ParsedQuery>
-  /** Applies the next query to the URL. Falls back to the provided adapter. */
-  navigate?: QueryStateNavigate
   /** Coalesce writes within this many ms into one navigation. Defaults to a microtask. */
   throttleMs?: number
   /** Drop a value from the URL when it equals its codec default. Defaults to `true`. */
@@ -109,16 +108,15 @@ export function createQueryStateRefs<TSchema extends QueryStateSchema>(
   assertUniquePaths(schema)
 
   const adapter = useQueryAdapter()
-  const querySource = options.query ?? adapter?.query
-  const navigate = options.navigate ?? adapter?.navigate
 
-  if (querySource === undefined || navigate === undefined) {
+  if (adapter === undefined) {
     throw new Error(
-      '[vuqs] no query source: pass `query` and `navigate` in options, or call provideQueryAdapter().',
+      '[vuqs] no query adapter: provide one with provideQueryAdapter() (or installQueryAdapter() at the app level).',
     )
   }
 
-  const adapterDefaults = adapter?.defaultOptions
+  const { query: querySource, navigate, defaultOptions: adapterDefaults } = adapter
+
   const history = options.history ?? adapterDefaults?.history
   const scroll = options.scroll ?? adapterDefaults?.scroll
 
@@ -230,21 +228,21 @@ export type QueryComposable<TSchema extends QueryStateSchema, TApi> = TApi & {
  *
  * @typeParam TSchema - The schema mapping field names to definitions.
  * @param schema - The fields to bind, keyed by logical name.
- * @param options - The query source, navigate adapter, and navigation defaults.
- * Optional: omitted parts fall back to a provided {@link provideQueryAdapter | adapter}.
+ * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
+ * The query source and URL writer come from the provided {@link provideQueryAdapter | adapter}.
  * @returns The reactive `values` map, batch writers, and `use` for module composition.
  * @throws {Error} When two fields declare the same query path.
- * @throws {Error} When neither `options` nor a provided adapter supplies `query` and `navigate`.
+ * @throws {Error} When no adapter has been provided.
  *
  * @example
  * ```ts
- * const { values, setValues, clear } = useQueryStates(
- *   {
- *     q: defineQueryState('q', codecs.string),
- *     sort: defineQueryState('filters.sort', codecs.string),
- *   },
- *   { query: () => route.query, navigate: next => router.push({ query: stringify(next) }) },
- * )
+ * // Provide the adapter once (e.g. in your app root):
+ * provideQueryAdapter(createVueRouterAdapter())
+ *
+ * const { values, setValues, clear } = useQueryStates({
+ *   q: defineQueryState('q', codecs.string),
+ *   sort: defineQueryState('filters.sort', codecs.string),
+ * })
  *
  * values.q = 'sale'
  * setValues({ q: 'lease', sort: null }, { history: 'push' })

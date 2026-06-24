@@ -73,21 +73,20 @@ interface UseQueryStatesReturn<TSchema> {
   skips, a value sets. Coalesced into one navigation.
 - `clear(options?)` — reset every field.
 
-**Throws** if two fields declare the same query path, or if neither the options
-nor a provided adapter supply `query` and `navigate`.
+**Throws** if two fields declare the same query path, or if no adapter has been
+provided (see [`provideQueryAdapter`](#providequeryadapter)).
 
 ## `UseQueryStatesOptions`
 
-Shared by both composables (and the basis for `useQueryState`'s options).
+Behavior knobs only — the query source and URL writer come from the
+[adapter](/api/adapters#queryadapter), never from here. Shared by both composables.
 
 ```ts
 interface UseQueryStatesOptions extends NavigateOptions {
-  query?: MaybeRefOrGetter<ParsedQuery>  // falls back to the adapter
-  navigate?: QueryStateNavigate          // falls back to the adapter
-  history?: 'replace' | 'push'           // from NavigateOptions
-  scroll?: boolean                       // from NavigateOptions
-  throttleMs?: number                    // coalescing window; default microtask
-  clearOnDefault?: boolean               // default true
+  history?: 'replace' | 'push'  // from NavigateOptions
+  scroll?: boolean              // from NavigateOptions
+  throttleMs?: number           // coalescing window; default microtask
+  clearOnDefault?: boolean      // default true
 }
 ```
 

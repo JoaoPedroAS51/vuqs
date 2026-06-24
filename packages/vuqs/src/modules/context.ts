@@ -87,7 +87,7 @@ export interface ContextApi<TContext extends string> {
  *
  * @example
  * ```ts
- * const { switchTo } = useQueryStates(schema, { query, navigate })
+ * const { switchTo } = useQueryStates(schema)
  *   .use(withContext(schema, {
  *     active: () => route.name as 'products' | 'orders',
  *     preserve: ['q'],
@@ -120,7 +120,7 @@ export function withContext<TSchema extends QueryStateSchema, TContext extends s
  *
  * @example
  * ```ts
- * const { activeContext } = useQueryStates(schema, { query, navigate })
+ * const { activeContext } = useQueryStates(schema)
  *   .use(withContext({ active: () => route.name, preserve: ['q'] }))
  *
  * activeContext.value // mirrors the active context

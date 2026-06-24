@@ -22,8 +22,8 @@ type StringQueryStateOptions = UseQueryStatesOptions & { parse?: never, serializ
  * @typeParam T - The field's value type.
  * @param path - A dot-path into the query object, for example `'filters.sort'`.
  * @param codec - A codec carrying a default, from {@link Codec.withDefault}.
- * @param options - The query source, navigate adapter, and navigation defaults.
- * Optional: omitted parts fall back to a provided adapter.
+ * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
+ * The query source and URL writer come from the provided adapter.
  * @returns A writable ref that always holds a value.
  */
 export function useQueryState<T>(path: string, codec: CodecWithDefault<T>, options?: UseQueryStatesOptions): QueryStateRef<T>
@@ -33,13 +33,13 @@ export function useQueryState<T>(path: string, codec: CodecWithDefault<T>, optio
  * @typeParam T - The field's value type.
  * @param path - A dot-path into the query object, for example `'filters.sort'`.
  * @param codec - The codec that reads and writes the value at `path`.
- * @param options - The query source, navigate adapter, and navigation defaults.
- * Optional: omitted parts fall back to a provided adapter.
+ * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
+ * The query source and URL writer come from the provided adapter.
  * @returns A writable ref holding the value, or `undefined` when the key is absent.
  *
  * @example
  * ```ts
- * const q = useQueryState('q', codecs.string, { query: () => route.query, navigate })
+ * const q = useQueryState('q', codecs.string)
  * ```
  */
 export function useQueryState<T>(path: string, codec: Codec<T>, options?: UseQueryStatesOptions): QueryStateRef<T | undefined>
@@ -52,8 +52,8 @@ export function useQueryState<T>(path: string, codec: Codec<T>, options?: UseQue
  * `codecs.integer.withDefault(0)`.
  *
  * @param path - A dot-path into the query object, for example `'filters.sort'`.
- * @param options - Navigation defaults plus the `defaultValue` string. The query
- * source and navigate adapter may be omitted when an adapter is provided.
+ * @param options - Behavior options plus the `defaultValue` string. The query
+ * source and URL writer come from the provided adapter.
  * @returns A writable ref that always holds a string.
  *
  * @example
@@ -66,8 +66,8 @@ export function useQueryState(path: string, options: StringQueryStateOptions & {
  * Binds a single query key as a string, using an implicit `codecs.string`.
  *
  * @param path - A dot-path into the query object, for example `'filters.sort'`.
- * @param options - The query source, navigate adapter, and navigation defaults.
- * Optional: omitted parts fall back to a provided adapter.
+ * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
+ * The query source and URL writer come from the provided adapter.
  * @returns A writable ref holding the string, or `undefined` when the key is absent.
  *
  * @example
@@ -84,8 +84,8 @@ export function useQueryState(path: string, options?: StringQueryStateOptions): 
  *
  * @typeParam T - The field's value type.
  * @param definition - A definition carrying a default, from a codec's `withDefault`.
- * @param options - The query source, navigate adapter, and navigation defaults.
- * Optional: omitted parts fall back to a provided adapter.
+ * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
+ * The query source and URL writer come from the provided adapter.
  * @returns A writable ref that always holds a value.
  */
 export function useQueryState<T>(definition: QueryStateDefinitionWithDefault<T>, options?: UseQueryStatesOptions): QueryStateRef<T>
@@ -94,8 +94,8 @@ export function useQueryState<T>(definition: QueryStateDefinitionWithDefault<T>,
  *
  * @typeParam T - The field's value type.
  * @param definition - A definition from {@link defineQueryState}.
- * @param options - The query source, navigate adapter, and navigation defaults.
- * Optional: omitted parts fall back to a provided adapter.
+ * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
+ * The query source and URL writer come from the provided adapter.
  * @returns A writable ref holding the value, or `undefined` when the field is absent.
  */
 export function useQueryState<T>(definition: QueryStateDefinition<T>, options?: UseQueryStatesOptions): QueryStateRef<T | undefined>

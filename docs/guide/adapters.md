@@ -14,7 +14,8 @@ interface QueryAdapter {
 ```
 
 Provide an adapter once near the root, and every `useQueryState` /
-`useQueryStates` below it resolves `query` and `navigate` automatically.
+`useQueryStates` below it reads `query` and `navigate` from it — there's no other
+source, so a composable with no adapter in scope throws.
 
 ## vue-router
 
@@ -77,46 +78,31 @@ export const router = createRouter({
 Flat, top-level keys work without this. Arrays (`?tags=a&tags=b`) and nesting
 both rely on it.
 
-### Create without providing
+### Create and provide separately
 
-`createVueRouterAdapter()` returns the adapter object without injecting it —
-handy when you want to pass `adapter.query` / `adapter.navigate` explicitly into a
-[`useQueryStates`](/guide/use-query-states) call:
+`provideVueRouterAdapter()` builds the adapter and provides it in one step. To
+split those — say, to register it at the app level in `main.ts` rather than from a
+component — `createVueRouterAdapter()` returns the bare object, which you hand to
+[`installQueryAdapter`](/api/composables#installqueryadapter) (app-level) or
+[`provideQueryAdapter`](/api/composables#providequeryadapter) (component-level):
 
 ```ts
+import { installQueryAdapter } from 'vuqs'
 import { createVueRouterAdapter } from 'vuqs/adapters/vue-router'
 
-const adapter = createVueRouterAdapter()
-// adapter.query, adapter.navigate
+installQueryAdapter(app, createVueRouterAdapter())
 ```
 
 ## Manual adapter
 
 An adapter is just an object. Any source of a query and a way to navigate works.
 
-### Per-call, no provider
-
-You can skip the provider and pass `query` + `navigate` to each composable:
-
-```ts
-import qs from 'qs'
-import { codecs, useQueryState } from 'vuqs'
-import { useRoute, useRouter } from 'vue-router'
-
-const route = useRoute()
-const router = useRouter()
-
-const q = useQueryState('q', codecs.string, {
-  query: () => route.query,
-  navigate: next => router.replace({ query: qs.stringify(next) }),
-})
-```
-
 ### A custom provider
 
 To centralize a non-vue-router setup, build the adapter and provide it yourself:
 
 ```ts
+import qs from 'qs'
 import { provideQueryAdapter } from 'vuqs'
 
 provideQueryAdapter({
@@ -146,13 +132,10 @@ resolved [navigation options](/guide/navigation-options). It's responsible for:
 
 It may run synchronously or return a promise.
 
-## How resolution works
+## Where `query` and `navigate` come from
 
-When a composable needs `query` / `navigate`, it resolves them in order:
-
-1. Options passed to the composable call.
-2. The [provided adapter](/api/composables#providequeryadapter).
-3. If neither supplies them, it throws with a clear message.
-
-So you can provide an app-wide adapter *and* override it for a specific component
-by passing options.
+A composable takes `query` and `navigate` solely from the
+[provided adapter](/api/composables#providequeryadapter) — there's no per-call
+override, and no adapter in scope throws with a clear message. Behavior options
+(`history`, `scroll`, `throttleMs`, `clearOnDefault`) are the other half: pass them
+per call, and they fall back to the adapter's `defaultOptions`.

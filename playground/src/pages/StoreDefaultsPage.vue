@@ -1,25 +1,18 @@
 <script setup lang="ts">
 import { codecs, defineQueryState, useQueryStates } from 'vuqs'
-import { createVueRouterAdapter } from 'vuqs/adapters/vue-router'
 import { withEffective } from 'vuqs/modules'
 import { onMounted, ref } from 'vue'
 import PageLayout from '../components/PageLayout.vue'
 import StateBlock from '../components/StateBlock.vue'
 
-// Reuse the vue-router adapter as the query source + navigate.
-const adapter = createVueRouterAdapter()
-
 // `withEffective` separates the three states: selected (the URL), defaults
 // (supplied at runtime via setDefaults, over codec defaults), and the derived
-// effective. Defaults feed the UI but are never serialized.
+// effective. Defaults feed the UI but are never serialized. The query source and
+// navigate come from the app-root adapter (see App.vue).
 const q = useQueryStates({
   q: defineQueryState('q', codecs.string),
   status: defineQueryState('status', codecs.literal(['active', 'archived'] as const)),
   perPage: defineQueryState('perPage', codecs.integer),
-}, {
-  query: adapter.query,
-  navigate: adapter.navigate,
-  history: 'replace',
 }).use(withEffective())
 
 const loading = ref(false)

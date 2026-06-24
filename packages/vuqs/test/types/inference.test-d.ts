@@ -91,7 +91,7 @@ describe('useQueryStates inference', () => {
     const { values } = useQueryStates({
       q: defineQueryState('q', codecs.string),
       page: defineQueryState('page', codecs.integer.withDefault(1)),
-    }, { query: {}, navigate: () => {} })
+    })
 
     expectTypeOf(values.q).toEqualTypeOf<string | undefined>()
     expectTypeOf(values.page).toEqualTypeOf<number>()

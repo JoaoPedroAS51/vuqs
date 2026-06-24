@@ -45,7 +45,7 @@ export interface EffectiveApi<TSchema extends QueryStateSchema> {
  *
  * @example
  * ```ts
- * const { effective, setDefaults } = useQueryStates(schema, { query, navigate })
+ * const { effective, setDefaults } = useQueryStates(schema)
  *   .use(withEffective())
  *
  * setDefaults(await loadSavedPreferences())
