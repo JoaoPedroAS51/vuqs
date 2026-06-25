@@ -14,6 +14,7 @@
     "dev": "pnpm --filter './packages/*' dev",
     "test": "pnpm --filter './packages/*' test",
     "test:run": "pnpm --filter './packages/*' test:run",
+    "test:coverage": "pnpm --filter './packages/*' test:coverage",
     "test:types": "pnpm --filter './packages/*' test:types",
     "typecheck": "pnpm --recursive typecheck",
     "lint": "eslint .",
