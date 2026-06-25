@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
 import { createVueRouterAdapter } from 'vuqs/adapters/vue-router'
-import { withContext, withEffective } from 'vuqs/modules'
+import { withContext, withRuntimeDefaults } from 'vuqs/modules'
 import PageLayout from '../components/PageLayout.vue'
 import StateBlock from '../components/StateBlock.vue'
 
@@ -24,7 +24,7 @@ const schema = {
 }
 
 const q = useQueryStates(schema)
-  .use(withEffective())
+  .use(withRuntimeDefaults())
   // `q` survives a context switch; everything not preserved resets. Field validity
   // per context: invalid fields never enter selected/URL/values, and are dropped
   // when you switch away (or paste a stale link).

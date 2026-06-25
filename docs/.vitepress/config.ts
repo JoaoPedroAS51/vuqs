@@ -80,7 +80,7 @@ export default defineConfig({
         {
           text: 'Available modules',
           items: [
-            { text: 'withEffective', link: '/modules/effective' },
+            { text: 'withRuntimeDefaults', link: '/modules/runtime-defaults' },
             { text: 'withContext', link: '/modules/context' },
           ],
         },

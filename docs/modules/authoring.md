@@ -59,7 +59,7 @@ return { visible: toReadonlyState(visible) }
 ```
 
 `toReadonlyState` turns a `ComputedRef<record>` into a `Readonly<record>` whose keys
-track the computed live — the shape `withEffective` exposes for `selected` and
+track the computed live — the shape `withRuntimeDefaults` exposes for `selected` and
 `defaults`. A single scalar stays a plain `ComputedRef` (`.value`), like
 `withContext`'s `activeContext`.
 
@@ -85,7 +85,7 @@ never clobbers a lower one with `undefined`.
 Registering a layer also moves [`clearOnDefault`](/guide/navigation-options#clearondefault):
 a write clears when it equals the *resolved* default, not just the codec default.
 Reads and writes share one notion of "the default", which is what lets
-`withEffective` persist a write of the codec default while a differing runtime
+`withRuntimeDefaults` persist a write of the codec default while a differing runtime
 default exists.
 
 ## Shaping reads and writes — the pipeline
@@ -156,7 +156,7 @@ onScopeDispose(stop)
 
 Handlers run synchronously in an unspecified order and must be commutative — don't
 rely on ordering. A throwing handler is isolated and logged; it never aborts the
-others or the emitter. This is exactly how `withContext` tells `withEffective` to
+others or the emitter. This is exactly how `withContext` tells `withRuntimeDefaults` to
 drop per-context defaults, with neither importing the other.
 
 ## Lifecycle and cleanup

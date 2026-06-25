@@ -52,7 +52,7 @@ or "resetting filters when you change tabs" — those are [modules](/modules/int
 Opt-in behavior you compose onto `useQueryStates` with `.use()`, imported from the
 [`vuqs/modules`](/modules/introduction) subpath of the same package:
 
-- **[`withEffective`](/modules/effective)** — runtime defaults layered under the
+- **[`withRuntimeDefaults`](/modules/runtime-defaults)** — runtime defaults layered under the
   bound state, so `values` reads through them while only `selected` reaches the URL.
 - **[`withContext`](/modules/context)** — preserve some filters and reset others
   when the user switches tabs, steps through a wizard, or changes route.
@@ -69,7 +69,7 @@ ground-up Vue implementation, not a port:
 | --- | --- | --- |
 | Reactivity | hooks / `useState` | refs & reactive maps |
 | Value ⇄ URL | ✅ parsers | ✅ codecs |
-| Runtime defaults | — | ✅ [`withEffective`](/modules/effective) |
+| Runtime defaults | — | ✅ [`withRuntimeDefaults`](/modules/runtime-defaults) |
 | Context-aware reset | — | ✅ [`withContext`](/modules/context) |
 
 The runtime defaults layer and context machinery are vuqs's own — they grew out of

@@ -69,7 +69,7 @@ function setMode(next: Mode) {
         Grouped
       </RouterLink>
       <RouterLink to="/store">
-        Effective
+        Runtime defaults
       </RouterLink>
       <RouterLink to="/context">
         Context

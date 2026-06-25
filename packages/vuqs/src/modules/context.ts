@@ -75,7 +75,7 @@ export interface ContextApi<TContext extends string> {
  * switch via `switchTo` or `buildContextQuery`.
  *
  * On a context change the module emits the `'context:change'` hook (so modules
- * such as {@link withEffective} clear per-context state) and the read/write
+ * such as {@link withRuntimeDefaults} clear per-context state) and the read/write
  * filter follows the active context. It never navigates on its own: drive the
  * switch with `switchTo` (one navigation, via the `navigate` option) or build the
  * query yourself with `buildContextQuery`.

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
-import { withEffective } from 'vuqs/modules'
+import { withRuntimeDefaults } from 'vuqs/modules'
 import PageLayout from '../components/PageLayout.vue'
 import StateBlock from '../components/StateBlock.vue'
 
-// `withEffective` registers runtime defaults (supplied via setDefaults, over
+// `withRuntimeDefaults` registers runtime defaults (supplied via setDefaults, over
 // codec defaults) as a layer, so the bound `values` read as the selection over
 // those defaults. It also exposes `selected` (the URL) and `defaults`. Defaults
 // feed the UI but are never serialized. The query source and navigate come from
@@ -14,7 +14,7 @@ const q = useQueryStates({
   q: defineQueryParam('q', codecs.string),
   status: defineQueryParam('status', codecs.literal(['active', 'archived'] as const)),
   perPage: defineQueryParam('perPage', codecs.integer),
-}).use(withEffective())
+}).use(withRuntimeDefaults())
 
 const loading = ref(false)
 
@@ -46,7 +46,7 @@ function setPerPage(event: Event) {
     <div class="page-head">
       <h2>The three states</h2>
       <p>
-        <code>withEffective</code> layers runtime <code>defaults</code> (supplied at
+        <code>withRuntimeDefaults</code> layers runtime <code>defaults</code> (supplied at
         runtime, never serialized) under the bound <code>values</code> read model, and
         exposes <code>selected</code> (mirrors the URL). Clearing a value reverts it to its default.
       </p>

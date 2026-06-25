@@ -77,7 +77,7 @@ q.clear()                          // remove ?q
 ```
 
 Each ref routes back through `values`, so it inherits the same clearing rule —
-including the effective default under [`withEffective`](/modules/effective).
+including the effective default under [`withRuntimeDefaults`](/modules/runtime-defaults).
 Reaching for one param from the start? Use `useQueryState` instead.
 
 ### `setValues` — batch write

@@ -120,7 +120,7 @@ Omit it and `switchTo` throws; you can still drive navigation yourself with
 
 The module **never navigates on its own** — `active` is yours. Changing it (setting
 the ref, or navigating so a route-derived getter updates) makes param validity
-follow the new context and signals [`withEffective`](#composing) to clear its
+follow the new context and signals [`withRuntimeDefaults`](#composing) to clear its
 per-context defaults. Reconciling the URL is a separate, explicit step — that split
 is what keeps the switch a single navigation you control.
 
@@ -171,7 +171,7 @@ Either way, TypeScript rejects a `preserve` or `only` key that isn't in the sche
 ```vue
 <script setup lang="ts">
 import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
-import { withContext, withEffective } from 'vuqs/modules'
+import { withContext, withRuntimeDefaults } from 'vuqs/modules'
 import { useRoute, useRouter } from 'vue-router'
 
 type Tab = 'products' | 'orders'
@@ -187,7 +187,7 @@ const schema = {
 }
 
 const { values, selected, activeContext, switchTo } = useQueryStates(schema, { history: 'replace' })
-  .use(withEffective())
+  .use(withRuntimeDefaults())
   .use(withContext({
     active: () => (route.query.tab as Tab) ?? 'products', // context lives in the URL → deep-linkable
     preserve: ['q'],
@@ -221,9 +221,9 @@ Set a category on Products, `switchTo('orders')`, watch the URL: `q` stays,
 
 ## Composing
 
-[`withEffective`](/modules/effective)'s runtime defaults are per-context, so
-`withContext` signals a context change through `core` and `withEffective` clears
-its stale defaults in response. Apply `withEffective` first, then `withContext`,
+[`withRuntimeDefaults`](/modules/runtime-defaults)'s runtime defaults are per-context, so
+`withContext` signals a context change through `core` and `withRuntimeDefaults` clears
+its stale defaults in response. Apply `withRuntimeDefaults` first, then `withContext`,
 and re-call `setDefaults` after a switch.
 
 ## Nuxt

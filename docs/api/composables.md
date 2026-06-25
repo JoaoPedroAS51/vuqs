@@ -141,7 +141,7 @@ clear()                          // reset all
 
 ::: tip `.use(module)`
 `useQueryStates` returns a [`QueryComposable`](/modules/introduction#the-use-model) —
-call `.use()` to layer modules like [`withEffective`](/modules/effective) and
+call `.use()` to layer modules like [`withRuntimeDefaults`](/modules/runtime-defaults) and
 [`withContext`](/modules/context) onto it.
 :::
 
@@ -175,7 +175,7 @@ function toQueryRefs<T extends object>(map: T): ToQueryRefs<T>
 - A read-only map (`selected`/`defaults`) explodes into a `ComputedRef` per field.
 
 The helper carries no behavior of its own: writes route back through the source
-map. A ref off the effective `values` under [`withEffective`](/modules/effective)
+map. A ref off the effective `values` under [`withRuntimeDefaults`](/modules/runtime-defaults)
 clears against the *effective* default, exactly as `values.x = …` would.
 
 ### Example

@@ -83,7 +83,7 @@ const COMPOSABLE_IMPORTS = [
 
 const CODEC_IMPORTS = ['codecs', 'createCodec'] as const
 
-const MODULE_IMPORTS = ['withEffective', 'withContext'] as const
+const MODULE_IMPORTS = ['withRuntimeDefaults', 'withContext'] as const
 
 function resolveAutoImports(option: ModuleOptions['autoImports']): Required<AutoImportsOptions> {
   if (option === false) {

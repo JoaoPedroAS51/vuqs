@@ -6,7 +6,7 @@ import { codecs } from '../../src/core/codec'
 import { defineQueryParam } from '../../src/core/define-query-param'
 import { useQueryStates } from '../../src/core/use-query-states'
 import { withContext } from '../../src/modules/context'
-import { withEffective } from '../../src/modules/effective'
+import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
 
@@ -24,7 +24,7 @@ function setup(initial: ParsedQuery = {}) {
   return { query, navigate, build }
 }
 
-describe('withEffective', () => {
+describe('withRuntimeDefaults', () => {
   const schema = {
     currency: defineQueryParam('currency', codecs.string),
     region: defineQueryParam('region', codecs.string),
@@ -32,7 +32,7 @@ describe('withEffective', () => {
 
   it('separates selected, defaults, and resolved values', () => {
     const { build } = setup({ currency: 'EUR' })
-    const q = build(() => useQueryStates(schema).use(withEffective()))
+    const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
 
     q.setDefaults({ currency: 'USD', region: 'us' })
 
@@ -43,7 +43,7 @@ describe('withEffective', () => {
 
   it('falls back to the default in values when a field is cleared', async () => {
     const { build } = setup({ currency: 'EUR' })
-    const q = build(() => useQueryStates(schema).use(withEffective()))
+    const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
     q.setDefaults({ currency: 'USD' })
 
     q.values.currency = undefined
@@ -55,7 +55,7 @@ describe('withEffective', () => {
 
   it('clears provided defaults', () => {
     const { build } = setup()
-    const q = build(() => useQueryStates(schema).use(withEffective()))
+    const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
 
     q.setDefaults({ currency: 'USD' })
     q.clearDefaults()
@@ -64,7 +64,7 @@ describe('withEffective', () => {
   })
 })
 
-describe('withEffective + codec defaults', () => {
+describe('withRuntimeDefaults + codec defaults', () => {
   const schema = {
     q: defineQueryParam('q', codecs.string),
     page: defineQueryParam('page', codecs.integer.withDefault(1)),
@@ -72,7 +72,7 @@ describe('withEffective + codec defaults', () => {
 
   it('uses the codec default as the lowest fallback, keeping selected explicit', () => {
     const { build } = setup()
-    const q = build(() => useQueryStates(schema).use(withEffective()))
+    const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
 
     expect(q.selected).toEqual({}) // explicit only — no codec default here
     expect(q.defaults).toEqual({ page: 1 }) // codec default
@@ -82,7 +82,7 @@ describe('withEffective + codec defaults', () => {
 
   it('lets setDefaults override the codec default', () => {
     const { build } = setup()
-    const q = build(() => useQueryStates(schema).use(withEffective()))
+    const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
 
     q.setDefaults({ page: 5 })
 
@@ -92,7 +92,7 @@ describe('withEffective + codec defaults', () => {
 
   it('lets the URL selection override both', () => {
     const { build } = setup({ page: '3' })
-    const q = build(() => useQueryStates(schema).use(withEffective()))
+    const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
     q.setDefaults({ page: 5 })
 
     expect(q.selected).toEqual({ page: 3 })
@@ -100,14 +100,14 @@ describe('withEffective + codec defaults', () => {
   })
 })
 
-describe('withEffective layered clearing coherence', () => {
+describe('withRuntimeDefaults layered clearing coherence', () => {
   const schema = {
     page: defineQueryParam('page', codecs.integer.withDefault(1)),
   }
 
   it('persists an explicit write of the codec default when a runtime default differs', async () => {
     const { build } = setup()
-    const q = build(() => useQueryStates(schema).use(withEffective()))
+    const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
     q.setDefaults({ page: 5 })
 
     q.values.page = 1 // the codec default, but not the effective default (5)
@@ -119,7 +119,7 @@ describe('withEffective layered clearing coherence', () => {
 
   it('drops a write that equals the effective default, falling back to it', async () => {
     const { build } = setup()
-    const q = build(() => useQueryStates(schema).use(withEffective()))
+    const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
     q.setDefaults({ page: 5 })
 
     q.values.page = 5 // the effective default
@@ -131,7 +131,7 @@ describe('withEffective layered clearing coherence', () => {
 
   it('applies the same clearing to setValues', async () => {
     const { build } = setup()
-    const q = build(() => useQueryStates(schema).use(withEffective()))
+    const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
     q.setDefaults({ page: 5 })
 
     q.setValues({ page: 5 })
@@ -330,7 +330,7 @@ describe('module coordination via hooks', () => {
     const tab = ref<'products' | 'orders'>('products')
     const q = build(() =>
       useQueryStates(schema)
-        .use(withEffective())
+        .use(withRuntimeDefaults())
         .use(withContext({ active: tab, only: { category: ['products'] } })),
     )
 
@@ -353,7 +353,7 @@ describe('module coordination via hooks', () => {
     const tab = ref<'products' | 'orders'>('products')
     const q = build(() =>
       useQueryStates(schema)
-        .use(withEffective())
+        .use(withRuntimeDefaults())
         .use(withContext({ active: tab, only: { category: ['products'] } })),
     )
 

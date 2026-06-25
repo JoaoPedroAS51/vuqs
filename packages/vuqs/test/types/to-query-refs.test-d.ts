@@ -5,7 +5,7 @@ import { codecs } from '../../src/core/codec'
 import { defineQueryParam } from '../../src/core/define-query-param'
 import { toQueryRefs } from '../../src/core/to-query-refs'
 import { useQueryStates } from '../../src/core/use-query-states'
-import { withEffective } from '../../src/modules/effective'
+import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
 
 const schema = {
   q: defineQueryParam('q', codecs.string),
@@ -24,7 +24,7 @@ describe('toQueryRefs typing', () => {
   })
 
   it('explodes a read-only map into plain computed refs without set/clear', () => {
-    const q = useQueryStates(schema).use(withEffective())
+    const q = useQueryStates(schema).use(withRuntimeDefaults())
     const refs = toQueryRefs(q.selected)
 
     expectTypeOf(refs.q).toEqualTypeOf<ComputedRef<string | undefined>>()

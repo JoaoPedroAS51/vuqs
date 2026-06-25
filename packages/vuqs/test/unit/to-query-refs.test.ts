@@ -6,7 +6,7 @@ import { codecs } from '../../src/core/codec'
 import { defineQueryParam } from '../../src/core/define-query-param'
 import { toQueryRefs } from '../../src/core/to-query-refs'
 import { useQueryStates } from '../../src/core/use-query-states'
-import { withEffective } from '../../src/modules/effective'
+import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
 
@@ -82,7 +82,7 @@ describe('toQueryRefs over the writable values map', () => {
 describe('toQueryRefs over a read-only map', () => {
   it('reads each field and tracks updates without a writer', async () => {
     const { build } = setup({ q: 'sale' })
-    const q = build(() => useQueryStates(schema).use(withEffective()))
+    const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
     const { q: qRef } = toQueryRefs(q.selected)
 
     expect(qRef.value).toBe('sale')
@@ -95,10 +95,10 @@ describe('toQueryRefs over a read-only map', () => {
   })
 })
 
-describe('toQueryRefs coherence with withEffective', () => {
+describe('toQueryRefs coherence with withRuntimeDefaults', () => {
   it('clears against the effective default when writing through a ref', async () => {
     const { build } = setup()
-    const q = build(() => useQueryStates(schema).use(withEffective()))
+    const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
     q.setDefaults({ page: 5 })
 
     const { page } = toQueryRefs(q.values)

@@ -4,7 +4,7 @@ import { codecs } from '../../src/core/codec'
 import { defineQueryParam } from '../../src/core/define-query-param'
 import { useQueryStates } from '../../src/core/use-query-states'
 import { withContext } from '../../src/modules/context'
-import { withEffective } from '../../src/modules/effective'
+import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
 
 const schema = {
   q: defineQueryParam('q', codecs.string),
@@ -16,7 +16,7 @@ describe('module composition', () => {
     const tab = ref<'products' | 'orders'>('products')
 
     const q = useQueryStates(schema)
-      .use(withEffective())
+      .use(withRuntimeDefaults())
       .use(withContext({ active: tab, preserve: ['q'], only: { category: ['products'] } }))
 
     expectTypeOf(q.values.q).toEqualTypeOf<string | undefined>()

@@ -26,7 +26,7 @@ walkthroughs, see the [Guide](/guide/introduction) and
 - **[Types](/api/types)** — the exported type surface.
 
 Each optional extension documents its own API on its page: the
-[Modules](/modules/introduction) section (`withEffective`, `withContext`, and the
+[Modules](/modules/introduction) section (`withRuntimeDefaults`, `withContext`, and the
 [authoring](/modules/authoring) surface) and the [@vuqs/nuxt](/nuxt/introduction)
 section.
 
@@ -120,8 +120,8 @@ export type { VueRouterAdapterOptions }
 ### `vuqs/modules`
 
 ```ts
-export { withContext, withEffective }
-export type { ContextApi, ContextOptions, EffectiveApi }
+export { withContext, withRuntimeDefaults }
+export type { ContextApi, ContextOptions, RuntimeDefaultsApi }
 ```
 
 ### `vuqs/shared`

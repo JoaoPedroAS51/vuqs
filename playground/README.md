@@ -19,7 +19,7 @@ Then open http://localhost:5173.
 | ---------- | ------------ |
 | `/single`  | `useQueryState` across every codec (string, integer, float, boolean, literal, arrayOf, isoDate), defaults, and `.clear()` |
 | `/grouped` | `useQueryStates` driving a search/sort/page list, with a per-call `history: 'push' \| 'replace'` override |
-| `/store`   | `withEffective`: `selected` (URL) vs async-loaded `defaults` vs derived `effective` |
+| `/store`   | `withRuntimeDefaults`: `selected` (URL) vs async-loaded `defaults` vs derived `effective` |
 | `/context` | `withContext`: `preserve` / reset / `only` validity across tabs, in one navigation |
 
 ## How it resolves the packages

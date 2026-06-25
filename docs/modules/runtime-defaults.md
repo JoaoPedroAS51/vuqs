@@ -1,15 +1,15 @@
-# withEffective <Badge type="tip" text="vuqs/modules" />
+# withRuntimeDefaults <Badge type="tip" text="vuqs/modules" />
 
 Layers runtime defaults *under* the bound query state, so they shape what the UI
 reads without ever reaching the URL.
 
 ```ts
-import { withEffective } from 'vuqs/modules'
+import { withRuntimeDefaults } from 'vuqs/modules'
 ```
 
 ## Overview
 
-`withEffective` registers a runtime-default layer on the core's [layered
+`withRuntimeDefaults` registers a runtime-default layer on the core's [layered
 defaults](/modules/authoring#layered-defaults). The codec defaults are the base,
 the runtime defaults (`setDefaults`) sit above them, and an explicit URL selection
 sits above both. The bound `values` from [`useQueryStates`](/guide/use-query-states)
@@ -37,7 +37,7 @@ only `selected` is serialized.
 hands back:
 
 ```ts
-const { values, selected, defaults } = useQueryStates(schema).use(withEffective())
+const { values, selected, defaults } = useQueryStates(schema).use(withRuntimeDefaults())
 
 selected.status // string | undefined — the explicit choice
 defaults.status // the fallback in force
@@ -64,12 +64,12 @@ that equals the *resolved* default, which here is `eur`.
 
 ## API
 
-`withEffective()` takes no options and contributes `EffectiveApi`:
+`withRuntimeDefaults()` takes no options and contributes `RuntimeDefaultsApi`:
 
 ```ts
-function withEffective(): QueryModule<TSchema, EffectiveApi<TSchema>>
+function withRuntimeDefaults(): QueryModule<TSchema, RuntimeDefaultsApi<TSchema>>
 
-interface EffectiveApi<TSchema> {
+interface RuntimeDefaultsApi<TSchema> {
   selected: Readonly<QueryStateValues<TSchema>>
   defaults: Readonly<QueryStateValues<TSchema>>
   setDefaults: (values: QueryStateValues<TSchema>) => void
@@ -92,14 +92,14 @@ with [`toQueryRefs`](/api/composables#toqueryrefs).
 ```vue
 <script setup lang="ts">
 import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
-import { withEffective } from 'vuqs/modules'
+import { withRuntimeDefaults } from 'vuqs/modules'
 import { onMounted } from 'vue'
 
 const { values, selected, defaults, setDefaults, clear } = useQueryStates({
   q: defineQueryParam('q', codecs.string),
   status: defineQueryParam('status', codecs.literal(['active', 'archived'] as const)),
   perPage: defineQueryParam('perPage', codecs.integer),
-}).use(withEffective())
+}).use(withRuntimeDefaults())
 
 onMounted(async () => {
   // Saved preferences become the runtime defaults once they load.
@@ -131,14 +131,14 @@ the choice; clear it and `values` falls back again.
 ## Composing
 
 Runtime defaults are per-context. When you also apply
-[`withContext`](/modules/context), `withEffective` clears its runtime defaults on a
+[`withContext`](/modules/context), `withRuntimeDefaults` clears its runtime defaults on a
 context change — so a stale default from the previous tab never bleeds through.
 Re-call `setDefaults` after the switch, typically when the new context's data
 loads. The two modules coordinate through `core` with no direct dependency.
 
 ## Nuxt
 
-Under [`@vuqs/nuxt`](/nuxt/introduction#auto-imports), `withEffective` is
+Under [`@vuqs/nuxt`](/nuxt/introduction#auto-imports), `withRuntimeDefaults` is
 auto-imported with the other modules — drop the `import` line and call it directly.
 
 Next: **[withContext →](/modules/context)**

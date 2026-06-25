@@ -1,4 +1,4 @@
 export { withContext } from './context'
 export type { ContextApi, ContextOptions } from './context'
-export { withEffective } from './effective'
-export type { EffectiveApi } from './effective'
+export { withRuntimeDefaults } from './runtime-defaults'
+export type { RuntimeDefaultsApi } from './runtime-defaults'

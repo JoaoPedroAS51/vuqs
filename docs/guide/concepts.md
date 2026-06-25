@@ -112,7 +112,7 @@ vuqs follows one rule for what it hands back:
 - **A map of values → a reactive object** (dot-access). `useQueryStates` returns a
   reactive `values` where `values.q` *is* the value.
 
-[Modules](/modules/introduction) follow the same rule: `withEffective`'s
+[Modules](/modules/introduction) follow the same rule: `withRuntimeDefaults`'s
 `selected` and `defaults` are reactive objects (`selected.q`), while
 `withContext`'s `activeContext` — a single scalar — is a ref (`activeContext.value`).
 

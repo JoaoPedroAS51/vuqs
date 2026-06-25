@@ -67,7 +67,7 @@ describe('@vuqs/nuxt module', () => {
     await run({})
 
     const names = importedNames()
-    expect(names).toContain('withEffective')
+    expect(names).toContain('withRuntimeDefaults')
     expect(names).toContain('withContext')
   })
 
@@ -76,7 +76,7 @@ describe('@vuqs/nuxt module', () => {
 
     const names = importedNames()
     expect(names).toContain('useQueryState')
-    expect(names).not.toContain('withEffective')
+    expect(names).not.toContain('withRuntimeDefaults')
     expect(names).not.toContain('withContext')
   })
 

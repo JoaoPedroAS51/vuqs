@@ -186,7 +186,7 @@ interface ResolvedQueryStateOptions {
 
 ## Module types
 
-Module-specific types live with each module: [`EffectiveApi`](/modules/effective#api),
+Module-specific types live with each module: [`RuntimeDefaultsApi`](/modules/runtime-defaults#api),
 [`ContextOptions`](/modules/context#options) and
 [`ContextApi`](/modules/context#api), plus the
 [authoring types](/modules/authoring#authoring-types) (`QueryCore`, `QueryModule`,

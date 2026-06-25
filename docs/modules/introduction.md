@@ -11,13 +11,13 @@ stays small; you pull in only the modules you need.
 
 ```ts
 import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
-import { withContext, withEffective } from 'vuqs/modules'
+import { withContext, withRuntimeDefaults } from 'vuqs/modules'
 
 const { values, activeContext } = useQueryStates(schema)
-  .use(withEffective())
+  .use(withRuntimeDefaults())
   .use(withContext({ active: tab, preserve: ['q'] }))
 
-values.status       // reads through withEffective's runtime defaults
+values.status       // reads through withRuntimeDefaults's runtime defaults
 activeContext.value // from withContext
 ```
 
@@ -31,7 +31,7 @@ module applied:
 
 ```ts
 const { values, selected, switchTo } = useQueryStates(schema)
-  .use(withEffective())         // adds selected, defaults, setDefaults, clearDefaults
+  .use(withRuntimeDefaults())         // adds selected, defaults, setDefaults, clearDefaults
   .use(withContext({ active })) // adds activeContext, switchTo, buildContextQuery
 ```
 
@@ -39,7 +39,7 @@ A module is a function `(core) => addedApi`. Modules never reference each other 
 they coordinate only through the shared `core` the composable hands each one. That
 keeps them independent: any module works alone, and combinations compose without
 special-casing. Where two modules do interact (for example, [`withContext`](/modules/context)
-resetting the per-context defaults held by [`withEffective`](/modules/effective)),
+resetting the per-context defaults held by [`withRuntimeDefaults`](/modules/runtime-defaults)),
 they do it through `core`, not a direct dependency. The same `core` is the surface
 for [writing your own module](/modules/authoring).
 
@@ -49,7 +49,7 @@ Modules ship with the `vuqs` package but live under a separate entry point so th
 tree-shake independently of the core:
 
 ```ts
-import { withContext, withEffective } from 'vuqs/modules'
+import { withContext, withRuntimeDefaults } from 'vuqs/modules'
 ```
 
 Importing the core never pulls in module code. Under Nuxt, the
@@ -60,7 +60,7 @@ skip the import line entirely.
 
 | Module | Adds | |
 | --- | --- | --- |
-| [`withEffective`](/modules/effective) | runtime defaults layered under `values`, plus `selected` / `defaults` | [→](/modules/effective) |
+| [`withRuntimeDefaults`](/modules/runtime-defaults) | runtime defaults layered under `values`, plus `selected` / `defaults` | [→](/modules/runtime-defaults) |
 | [`withContext`](/modules/context) | context-aware param validity and reset/preserve on context change | [→](/modules/context) |
 
 The set is open-ended — new modules slot in here without changing the ones above.
@@ -73,4 +73,4 @@ with [`useQueryState`](/guide/use-query-state) /
 [schema](/guide/concepts#schema-a-map-of-params) works with or without them, so you
 can adopt one later without rewriting your params.
 
-Next: **[withEffective →](/modules/effective)**
+Next: **[withRuntimeDefaults →](/modules/runtime-defaults)**

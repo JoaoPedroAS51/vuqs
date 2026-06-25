@@ -5,7 +5,7 @@ import { onScopeDispose, ref } from 'vue'
 import { toReadonlyState } from '../shared'
 
 /**
- * API contributed by {@link withEffective}.
+ * API contributed by {@link withRuntimeDefaults}.
  *
  * @remarks
  * `selected` exposes the explicit URL selection and `defaults` the fallback
@@ -15,7 +15,7 @@ import { toReadonlyState } from '../shared'
  *
  * @typeParam TSchema - The schema being managed.
  */
-export interface EffectiveApi<TSchema extends QueryStateSchema> {
+export interface RuntimeDefaultsApi<TSchema extends QueryStateSchema> {
   /** Explicit URL selections, with no runtime or codec defaults. */
   selected: Readonly<QueryStateValues<TSchema>>
   /** Fallback values: runtime defaults from `setDefaults` over codec defaults. */
@@ -40,19 +40,19 @@ export interface EffectiveApi<TSchema extends QueryStateSchema> {
  * this module with {@link withContext} clears stale per-context defaults without
  * direct coupling.
  *
- * @returns A query module that contributes {@link EffectiveApi}.
+ * @returns A query module that contributes {@link RuntimeDefaultsApi}.
  *
  * @example
  * ```ts
  * const { values, setDefaults } = useQueryStates(schema)
- *   .use(withEffective())
+ *   .use(withRuntimeDefaults())
  *
  * setDefaults(await loadSavedPreferences())
  * values.currency // selection over the runtime default over the codec default
  * ```
  */
-export function withEffective(): <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>) => EffectiveApi<TSchema> {
-  return <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>): EffectiveApi<TSchema> => {
+export function withRuntimeDefaults(): <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>) => RuntimeDefaultsApi<TSchema> {
+  return <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>): RuntimeDefaultsApi<TSchema> => {
     const provided = ref<QueryStateValues<TSchema>>({}) as Ref<QueryStateValues<TSchema>>
 
     const stopLayer = core.defaults.register(provided)
