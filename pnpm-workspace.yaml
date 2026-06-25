@@ -1,10 +1,6 @@
 shellEmulator: true
 
 trustPolicy: no-downgrade
-
-# Old, well-known packages whose provenance attestation predates npm's signing
-# support. Pulled transitively by the @vuqs/nuxt dev toolchain (nuxt); the trust
-# downgrade is a historical gap, not a takeover signal.
 trustPolicyExclude:
   - semver@6.3.1
   - chokidar@4.0.3
@@ -15,7 +11,24 @@ packages:
   - docs
   - playground
 
-confirmModulesPurge: false
+catalog:
+  '@antfu/eslint-config': ^9.1.0
+  '@nuxt/kit': ^4.4.8
+  '@nuxt/module-builder': ^1.0.2
+  '@nuxt/schema': ^4.4.8
+  '@types/node': ^22.20.0
+  '@vitejs/plugin-vue': ^6.0.7
+  defu: ^6.1.7
+  eslint: ^10.5.0
+  nuxt: ^4.4.8
+  typescript: ^6.0.3
+  unbuild: ^3.6.1
+  vite: ^8.1.0
+  vitepress: 2.0.0-alpha.17
+  vitest: ^4.1.9
+  vue: ^3.5.38
+  vue-router: ^5.1.0
+  vue-tsc: ^3.3.5
 
 allowBuilds:
   '@parcel/watcher': false

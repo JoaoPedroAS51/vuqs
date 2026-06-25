@@ -11,14 +11,14 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "vue": "^3.5.38",
-    "vue-router": "^4.6.4",
+    "vue": "catalog:",
+    "vue-router": "catalog:",
     "vuqs": "workspace:*"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.2.0",
-    "typescript": "^5.9.3",
-    "vite": "^6.3.0",
-    "vue-tsc": "^2.2.0"
+    "@vitejs/plugin-vue": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vue-tsc": "catalog:"
   }
 }

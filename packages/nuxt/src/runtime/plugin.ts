@@ -1,6 +1,6 @@
-import { defineNuxtPlugin, useRouter, useRuntimeConfig } from '#imports'
 import { installQueryAdapter } from 'vuqs'
 import { createVueRouterAdapter } from 'vuqs/adapters/vue-router'
+import { defineNuxtPlugin, useRouter, useRuntimeConfig } from '#imports'
 
 export default defineNuxtPlugin((nuxtApp) => {
   const { defaultOptions } = useRuntimeConfig().public.vuqs?.adapter ?? {}

@@ -24,8 +24,9 @@
     "docs:build": "pnpm --filter vuqs build && pnpm --filter @vuqs/docs build"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^6.0.0",
-    "eslint": "^9.0.0",
-    "typescript": "^5.0.0"
+    "@antfu/eslint-config": "catalog:",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:"
   }
 }

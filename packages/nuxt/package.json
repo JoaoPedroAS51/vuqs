@@ -49,18 +49,18 @@
     "prepublishOnly": "nuxt-module-build prepare && nuxt-module-build build"
   },
   "dependencies": {
-    "@nuxt/kit": "^4.0.0",
-    "defu": "^6.0.0",
+    "@nuxt/kit": "catalog:",
+    "defu": "catalog:",
     "vuqs": "workspace:*"
   },
   "devDependencies": {
-    "@nuxt/module-builder": "^1.0.0",
-    "@nuxt/schema": "^4.0.0",
-    "@types/node": "^22.0.0",
-    "nuxt": "^4.0.0",
-    "typescript": "^5.0.0",
-    "vitest": "^3.0.0",
-    "vue-tsc": "^2.0.0"
+    "@nuxt/module-builder": "catalog:",
+    "@nuxt/schema": "catalog:",
+    "@types/node": "catalog:",
+    "nuxt": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "vue-tsc": "catalog:"
   },
   "publishConfig": {
     "access": "public"
