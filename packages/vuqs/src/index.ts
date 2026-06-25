@@ -5,7 +5,13 @@ export type { Codec, CodecInput, CodecWithDefault } from './core/codec'
 export { defineQueryParam } from './core/define-query-param'
 export type { QueryParamDefinition, QueryParamDefinitionInput, QueryParamDefinitionWithDefault } from './core/define-query-param'
 export { createQueryStateEngine } from './core/engine'
-export type { QueryStateEngine, QueryStateEngineOptions } from './core/engine'
+export type {
+  QueryDefaultsBus,
+  QueryStateEngine,
+  QueryStateEngineOptions,
+  QueryStateReads,
+  ResolvedQueryStateOptions,
+} from './core/engine'
 export { structuralEq } from './core/equality'
 export type { QueryHookBus, QueryHooks } from './core/hooks'
 export { deletePath, getPath, getQueryString, getQueryStringArray, setPath } from './core/path'

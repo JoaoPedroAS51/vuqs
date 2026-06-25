@@ -134,8 +134,8 @@ function toQueryStateRef<T>(
   const { engine, refs } = createQueryStateRefs({ field: definition }, options)
 
   return Object.assign(refs.field, {
-    set: (value: unknown, perCall?: NavigateOptions) => engine.setValue('field', value, perCall),
-    clear: (perCall?: NavigateOptions) => engine.setValue('field', undefined, perCall),
+    set: (value: unknown, perCall?: NavigateOptions) => engine.query.set('field', value, perCall),
+    clear: (perCall?: NavigateOptions) => engine.query.set('field', undefined, perCall),
   }) as QueryStateRef<T | undefined>
 }
 

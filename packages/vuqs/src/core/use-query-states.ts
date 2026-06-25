@@ -1,10 +1,10 @@
-import type { ComputedRef, MaybeRefOrGetter, WritableComputedRef } from 'vue'
-import type { QueryStateEngine } from './engine'
+import type { WritableComputedRef } from 'vue'
+import type { QueryDefaultsBus, QueryStateEngine, QueryStateReads, ResolvedQueryStateOptions } from './engine'
 import type { QueryHookBus } from './hooks'
 import type { QueryPipelineBus } from './pipeline'
-import type { QueryStateRefValue, QueryStateSchema, QueryStateValues, QueryStateWriteValues } from './schema'
+import type { QueryStateRefValue, QueryStateSchema, QueryStateWriteValues } from './schema'
 import type { NavigateOptions, ParsedQuery } from './types'
-import { computed, reactive, toValue } from 'vue'
+import { computed, reactive } from 'vue'
 import { useQueryAdapter } from './adapter'
 import { createQueryStateEngine } from './engine'
 import { createQueryHooks } from './hooks'
@@ -100,7 +100,6 @@ export function createQueryStateRefs<TSchema extends QueryStateSchema>(
 ): {
   engine: QueryStateEngine<TSchema>
   refs: Record<string, WritableComputedRef<unknown>>
-  query: MaybeRefOrGetter<ParsedQuery>
 } {
   assertUniquePaths(schema)
 
@@ -127,12 +126,12 @@ export function createQueryStateRefs<TSchema extends QueryStateSchema>(
 
   for (const key of Object.keys(schema) as Array<keyof TSchema & string>) {
     refs[key] = computed<unknown>({
-      get: () => (engine.values.value as Record<string, unknown>)[key],
-      set: value => engine.setValue(key, value),
+      get: () => (engine.state.values.value as Record<string, unknown>)[key],
+      set: value => engine.query.set(key, value),
     })
   }
 
-  return { engine, refs, query: querySource }
+  return { engine, refs }
 }
 
 /**
@@ -140,7 +139,7 @@ export function createQueryStateRefs<TSchema extends QueryStateSchema>(
  *
  * @remarks
  * Modules use this object to derive state from the current URL selection,
- * contribute pipeline transforms, write params through `setValue`, and coordinate
+ * contribute pipeline transforms, write params through `query.set`, and coordinate
  * with other modules through `hooks`. Treat it as an implementation surface for
  * module authors, not as app-facing state.
  *
@@ -149,21 +148,23 @@ export function createQueryStateRefs<TSchema extends QueryStateSchema>(
 export interface QueryCore<TSchema extends QueryStateSchema> {
   /** The schema being managed. */
   schema: TSchema
-  /**
-   * Explicit URL selections plus the optimistic overlay, with the read pipeline
-   * applied and without codec defaults.
-   */
-  selected: ComputedRef<QueryStateValues<TSchema>>
-  /** Optimistically sets one param. */
-  setValue: (key: keyof TSchema & string, value: unknown, options?: NavigateOptions) => void
-  /** Reads the current parsed query. */
-  currentQuery: () => ParsedQuery
-  /** The notification bus: one module emits an event, others react. */
-  hooks: QueryHookBus
+  /** The resolved reactive reads: `selected` (no defaults) and `values` (resolved). */
+  state: QueryStateReads<TSchema>
+  /** The defaults subsystem: read the merge or register a layer. */
+  defaults: QueryDefaultsBus<TSchema>
+  /** The resolved per-instance behavior baseline (`history`/`scroll`/`throttleMs`/`clearOnDefault`). */
+  options: ResolvedQueryStateOptions
   /** The transform pipeline: `tap` to contribute, `run` to shape a derived value map. */
   pipeline: QueryPipelineBus
-  /** The resolved `clearOnDefault` rule, so modules building queries match the engine's write behavior. */
-  clearOnDefault: boolean
+  /** The notification bus: one module emits an event, others react. */
+  hooks: QueryHookBus
+  /** The query I/O boundary: read the current query or set a param. */
+  query: {
+    /** Reads the current committed query, without the optimistic overlay. */
+    current: () => ParsedQuery
+    /** Optimistically sets one param. */
+    set: (key: keyof TSchema & string, value: unknown, options?: NavigateOptions) => void
+  }
 }
 
 /**
@@ -241,7 +242,7 @@ export function useQueryStates<TSchema extends QueryStateSchema>(
   schema: TSchema,
   options: UseQueryStatesOptions = {},
 ): QueryComposable<TSchema, UseQueryStatesReturn<TSchema>> {
-  const { engine, refs, query } = createQueryStateRefs(schema, options)
+  const { engine, refs } = createQueryStateRefs(schema, options)
 
   const values = reactive(refs) as QueryStatesValues<TSchema>
 
@@ -257,24 +258,24 @@ export function useQueryStates<TSchema extends QueryStateSchema>(
         continue
       }
 
-      engine.setValue(key, value === null ? undefined : value, perCall)
+      engine.query.set(key, value === null ? undefined : value, perCall)
     }
   }
 
   function clear(perCall?: NavigateOptions): void {
     for (const key of Object.keys(schema) as Array<keyof TSchema & string>) {
-      engine.setValue(key, undefined, perCall)
+      engine.query.set(key, undefined, perCall)
     }
   }
 
   const core: QueryCore<TSchema> = {
     schema,
-    selected: engine.rawValues,
-    setValue: (key, value, perCall) => engine.setValue(key, value, perCall),
-    currentQuery: () => toValue(query),
-    hooks: createQueryHooks(),
+    state: engine.state,
+    defaults: engine.defaults,
+    options: engine.options,
     pipeline: engine.pipeline,
-    clearOnDefault: engine.clearOnDefault,
+    hooks: createQueryHooks(),
+    query: engine.query,
   }
 
   const composable = { values, setValues, clear } as QueryComposable<TSchema, UseQueryStatesReturn<TSchema>>

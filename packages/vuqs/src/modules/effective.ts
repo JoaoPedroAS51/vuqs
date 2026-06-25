@@ -64,7 +64,7 @@ export function withEffective(): <TSchema extends QueryStateSchema>(core: QueryC
       }
     }
 
-    const selected = computed<QueryStateValues<TSchema>>(() => definedOnly(core.selected.value))
+    const selected = computed<QueryStateValues<TSchema>>(() => definedOnly(core.state.selected.value))
     const defaults = computed<QueryStateValues<TSchema>>(
       () => core.pipeline.run('read', { ...codecDefaults, ...definedOnly(provided.value) }) as QueryStateValues<TSchema>,
     )

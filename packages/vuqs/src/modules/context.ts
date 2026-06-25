@@ -160,7 +160,7 @@ export function withContext<TContext extends string>(
 
       const values = kept as QueryStateValues<TSchema>
 
-      return buildQuery(core.schema, currentQuery, core.clearOnDefault ? dropDefaults(core.schema, values) : values)
+      return buildQuery(core.schema, currentQuery, core.options.clearOnDefault ? dropDefaults(core.schema, values) : values)
     }
 
     function buildContextQuery(currentQuery: ParsedQuery, nextContext: TContext): ParsedQueryRaw {
@@ -172,7 +172,7 @@ export function withContext<TContext extends string>(
         throw new Error('[vuqs] withContext: provide a `navigate` option to use switchTo()')
       }
 
-      options.navigate(target, buildContextQuery(core.currentQuery(), target), navigateOptions)
+      options.navigate(target, buildContextQuery(core.query.current(), target), navigateOptions)
     }
 
     watch(active, (nextContext) => {
