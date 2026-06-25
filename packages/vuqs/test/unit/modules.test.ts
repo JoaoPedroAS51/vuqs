@@ -100,6 +100,48 @@ describe('withEffective + codec defaults', () => {
   })
 })
 
+describe('withEffective layered clearing coherence', () => {
+  const schema = {
+    page: defineQueryParam('page', codecs.integer.withDefault(1)),
+  }
+
+  it('persists an explicit write of the codec default when a runtime default differs', async () => {
+    const { build } = setup()
+    const q = build(() => useQueryStates(schema).use(withEffective()))
+    q.setDefaults({ page: 5 })
+
+    q.values.page = 1 // the codec default, but not the effective default (5)
+    await flush()
+
+    expect(q.selected).toEqual({ page: 1 }) // kept, not dropped as a default
+    expect(q.effective).toEqual({ page: 1 }) // reads back what was written
+  })
+
+  it('drops a write that equals the effective default, falling back to it', async () => {
+    const { build } = setup()
+    const q = build(() => useQueryStates(schema).use(withEffective()))
+    q.setDefaults({ page: 5 })
+
+    q.values.page = 5 // the effective default
+    await flush()
+
+    expect(q.selected).toEqual({})
+    expect(q.effective).toEqual({ page: 5 })
+  })
+
+  it('applies the same clearing to setValues', async () => {
+    const { build } = setup()
+    const q = build(() => useQueryStates(schema).use(withEffective()))
+    q.setDefaults({ page: 5 })
+
+    q.setValues({ page: 5 })
+    await flush()
+
+    expect(q.selected).toEqual({})
+    expect(q.effective).toEqual({ page: 5 })
+  })
+})
+
 describe('withContext', () => {
   const schema = {
     q: defineQueryParam('q', codecs.string),

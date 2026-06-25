@@ -205,35 +205,32 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     return next
   })
 
-  const values = computed<QueryStateValues<TSchema>>(() => {
-    const parsed = parseQueryStates(schema, optimisticQuery.value) as Record<string, unknown>
-    const defaults = mergedDefaults.value
-
-    for (const key of keys) {
-      if (parsed[key] === undefined && defaults[key] !== undefined) {
-        parsed[key] = defaults[key]
-      }
-    }
-
-    return pipeline.run('read', parsed) as QueryStateValues<TSchema>
-  })
-
-  // The explicit selection: params actually present in the URL (or written
-  // optimistically), WITHOUT defaults. A defaulted param that fell back to its
-  // default parses as present, so it is dropped unless one of its paths exists.
-  // Defined-only at the source, so a merge over it never clobbers a default.
-  const selected = computed<QueryStateValues<TSchema>>(() => {
+  // The explicit selection BEFORE the read pipeline: params whose path is present
+  // in the URL (or overlay) and that parse to a defined value. The parser injects
+  // codec defaults for absent params, so presence is checked against the paths,
+  // not the parsed value. Defined-only, so layering it over the defaults never
+  // clobbers one with `undefined`.
+  const rawSelection = computed<Record<string, unknown>>(() => {
     const query = optimisticQuery.value
     const parsed = parseQueryStates(schema, query) as Record<string, unknown>
+    const selection: Record<string, unknown> = {}
 
     for (const key of keys) {
-      if (!schema[key].paths.some(path => getPath(query, path) !== undefined)) {
-        delete parsed[key]
+      if (parsed[key] !== undefined && schema[key].paths.some(path => getPath(query, path) !== undefined)) {
+        selection[key] = parsed[key]
       }
     }
 
-    return definedOnly(pipeline.run('read', parsed)) as QueryStateValues<TSchema>
+    return selection
   })
+
+  const selected = computed<QueryStateValues<TSchema>>(
+    () => definedOnly(pipeline.run('read', { ...rawSelection.value })) as QueryStateValues<TSchema>,
+  )
+
+  const values = computed<QueryStateValues<TSchema>>(
+    () => pipeline.run('read', { ...mergedDefaults.value, ...rawSelection.value }) as QueryStateValues<TSchema>,
+  )
 
   // Committed model: drop a pending delta once the URL reflects it. Idempotent and
   // raw-compared, so any engine can reconcile any of its managed paths.

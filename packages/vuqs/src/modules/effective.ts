@@ -1,7 +1,8 @@
+import type { Ref } from 'vue'
 import type { QueryStateSchema, QueryStateValues } from '../core/schema'
 import type { QueryCore, QueryStatesValues } from '../core/use-query-states'
-import { computed, onScopeDispose, ref } from 'vue'
-import { definedOnly, toReadonlyState } from '../shared'
+import { onScopeDispose, ref } from 'vue'
+import { toReadonlyState } from '../shared'
 
 /**
  * API contributed by {@link withEffective}.
@@ -54,33 +55,21 @@ export interface EffectiveApi<TSchema extends QueryStateSchema> {
  */
 export function withEffective(): <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>) => EffectiveApi<TSchema> {
   return <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>): EffectiveApi<TSchema> => {
-    const provided = ref<QueryStateValues<TSchema>>({})
+    const provided = ref<QueryStateValues<TSchema>>({}) as Ref<QueryStateValues<TSchema>>
 
-    const codecDefaults: Record<string, unknown> = {}
-    for (const key of Object.keys(core.schema) as Array<keyof TSchema & string>) {
-      const value = core.schema[key].defaultValue
-      if (value !== undefined) {
-        codecDefaults[key] = value
-      }
-    }
-
-    const selected = computed<QueryStateValues<TSchema>>(() => definedOnly(core.state.selected.value))
-    const defaults = computed<QueryStateValues<TSchema>>(
-      () => core.pipeline.run('read', { ...codecDefaults, ...definedOnly(provided.value) }) as QueryStateValues<TSchema>,
-    )
-    const effective = computed<QueryStatesValues<TSchema>>(
-      () => ({ ...defaults.value, ...selected.value }) as QueryStatesValues<TSchema>,
-    )
-
+    const stopLayer = core.defaults.register(provided)
     const stopReset = core.hooks.on('context:change', () => {
       provided.value = {}
     })
-    onScopeDispose(stopReset)
+    onScopeDispose(() => {
+      stopLayer()
+      stopReset()
+    })
 
     return {
-      selected: toReadonlyState(selected),
-      defaults: toReadonlyState(defaults),
-      effective: toReadonlyState(effective),
+      selected: toReadonlyState(core.state.selected),
+      defaults: toReadonlyState(core.defaults.resolved),
+      effective: toReadonlyState(core.state.values) as Readonly<QueryStatesValues<TSchema>>,
       setDefaults: (values) => {
         provided.value = { ...values }
       },
