@@ -1,5 +1,5 @@
 import type { QueryAdapterDefaultOptions } from 'vuqs'
-import { addImports, addPlugin, createResolver, defineNuxtModule } from '@nuxt/kit'
+import { addImports, addPlugin, createResolver, defineNuxtModule, extendViteConfig } from '@nuxt/kit'
 import { defu } from 'defu'
 
 /**
@@ -128,6 +128,12 @@ export default defineNuxtModule<ModuleOptions>({
     if (imports.length > 0) {
       addImports(imports)
     }
+
+    extendViteConfig((config) => {
+      config.optimizeDeps ||= {}
+      config.optimizeDeps.include ||= []
+      config.optimizeDeps.include.push('vuqs', 'vuqs/modules')
+    })
 
     if (options.adapter !== false) {
       const adapter = options.adapter === true || options.adapter === undefined ? {} : options.adapter
