@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
 import { withEffective } from 'vuqs/modules'
-import { onMounted, ref } from 'vue'
 import PageLayout from '../components/PageLayout.vue'
 import StateBlock from '../components/StateBlock.vue'
 
@@ -61,7 +61,9 @@ function setPerPage(event: Event) {
           :value="q.selected.q ?? ''"
           @input="q.values.q = ($event.target as HTMLInputElement).value || undefined"
         >
-        <button class="clear-btn" type="button" @click="q.values.q = undefined">clear</button>
+        <button class="clear-btn" type="button" @click="q.values.q = undefined">
+          clear
+        </button>
       </div>
       <span class="type">string</span>
     </div>
@@ -70,11 +72,19 @@ function setPerPage(event: Event) {
       <span class="k">status</span>
       <div class="control">
         <select :value="q.selected.status ?? ''" @change="setStatus">
-          <option value="">— (default)</option>
-          <option value="active">active</option>
-          <option value="archived">archived</option>
+          <option value="">
+            — (default)
+          </option>
+          <option value="active">
+            active
+          </option>
+          <option value="archived">
+            archived
+          </option>
         </select>
-        <button class="clear-btn" type="button" @click="q.values.status = undefined">clear</button>
+        <button class="clear-btn" type="button" @click="q.values.status = undefined">
+          clear
+        </button>
       </div>
       <span class="type">literal</span>
     </div>
@@ -83,12 +93,22 @@ function setPerPage(event: Event) {
       <span class="k">perPage</span>
       <div class="control">
         <select :value="q.selected.perPage ?? ''" @change="setPerPage">
-          <option value="">— (default)</option>
-          <option value="10">10</option>
-          <option value="20">20</option>
-          <option value="50">50</option>
+          <option value="">
+            — (default)
+          </option>
+          <option value="10">
+            10
+          </option>
+          <option value="20">
+            20
+          </option>
+          <option value="50">
+            50
+          </option>
         </select>
-        <button class="clear-btn" type="button" @click="q.values.perPage = undefined">clear</button>
+        <button class="clear-btn" type="button" @click="q.values.perPage = undefined">
+          clear
+        </button>
       </div>
       <span class="type">integer</span>
     </div>
@@ -97,9 +117,15 @@ function setPerPage(event: Event) {
       <span class="k">actions</span>
       <div class="control">
         <div class="actions">
-          <button class="primary" type="button" @click="q.clear()">clear selections</button>
-          <button type="button" :disabled="loading" @click="loadDefaults()">{{ loading ? 'loading…' : 'reload defaults' }}</button>
-          <button type="button" @click="q.clearDefaults()">clear defaults</button>
+          <button class="primary" type="button" @click="q.clear()">
+            clear selections
+          </button>
+          <button type="button" :disabled="loading" @click="loadDefaults()">
+            {{ loading ? 'loading…' : 'reload defaults' }}
+          </button>
+          <button type="button" @click="q.clearDefaults()">
+            clear defaults
+          </button>
         </div>
       </div>
       <span class="type" />

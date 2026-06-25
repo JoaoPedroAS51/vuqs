@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
 import { computed, ref } from 'vue'
+import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
 import PageLayout from '../components/PageLayout.vue'
 import StateBlock from '../components/StateBlock.vue'
 
@@ -88,8 +88,12 @@ const value = computed(() => ({ q: values.q, sort: values.sort, page: currentPag
       <span class="k">sort</span>
       <div class="control">
         <select v-model="values.sort">
-          <option value="asc">price ascending</option>
-          <option value="desc">price descending</option>
+          <option value="asc">
+            price ascending
+          </option>
+          <option value="desc">
+            price descending
+          </option>
         </select>
       </div>
       <span class="type">literal</span>
@@ -115,14 +119,18 @@ const value = computed(() => ({ q: values.q, sort: values.sort, page: currentPag
       <span class="type">per-call</span>
     </div>
 
-    <div class="subhead">Results · {{ filtered.length }} match{{ filtered.length === 1 ? '' : 'es' }}</div>
+    <div class="subhead">
+      Results · {{ filtered.length }} match{{ filtered.length === 1 ? '' : 'es' }}
+    </div>
     <ul v-if="pageItems.length" class="results">
       <li v-for="item in pageItems" :key="item.name">
         <span>{{ item.name }}</span>
         <span class="meta">${{ item.price }}</span>
       </li>
     </ul>
-    <p v-else class="empty">No products match “{{ term }}”.</p>
+    <p v-else class="empty">
+      No products match “{{ term }}”.
+    </p>
 
     <template #panel>
       <StateBlock label="values" :value="value" accent />

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watchEffect } from 'vue'
-import { provideVueRouterAdapter } from 'vuqs/adapters/vue-router'
 import { RouterLink, RouterView } from 'vue-router'
+import { provideVueRouterAdapter } from 'vuqs/adapters/vue-router'
 
 // One adapter for the whole app: descendant useQueryState/useQueryStates calls
 // resolve `query` + `navigate` from here. Default to `replace` so the demos do
@@ -59,11 +59,21 @@ function setMode(next: Mode) {
       <span class="sub">playground</span>
     </div>
     <nav class="tabs">
-      <RouterLink to="/">Overview</RouterLink>
-      <RouterLink to="/single">Single + codecs</RouterLink>
-      <RouterLink to="/grouped">Grouped</RouterLink>
-      <RouterLink to="/store">Effective</RouterLink>
-      <RouterLink to="/context">Context</RouterLink>
+      <RouterLink to="/">
+        Overview
+      </RouterLink>
+      <RouterLink to="/single">
+        Single + codecs
+      </RouterLink>
+      <RouterLink to="/grouped">
+        Grouped
+      </RouterLink>
+      <RouterLink to="/store">
+        Effective
+      </RouterLink>
+      <RouterLink to="/context">
+        Context
+      </RouterLink>
     </nav>
     <div class="theme-switch" role="radiogroup" aria-label="Theme">
       <button

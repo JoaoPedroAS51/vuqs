@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { codecs, useQueryState } from 'vuqs'
 import { computed, ref, watch } from 'vue'
+import { codecs, useQueryState } from 'vuqs'
 import PageLayout from '../components/PageLayout.vue'
 import StateBlock from '../components/StateBlock.vue'
 
@@ -73,7 +73,9 @@ const value = computed(() => ({
       <span class="k">q</span>
       <div class="control">
         <input v-model="search" type="text" placeholder="search…">
-        <button class="clear-btn" type="button" @click="clear.q()">clear</button>
+        <button class="clear-btn" type="button" @click="clear.q()">
+          clear
+        </button>
       </div>
       <span class="type">string</span>
     </div>
@@ -82,7 +84,9 @@ const value = computed(() => ({
       <span class="k">count</span>
       <div class="control">
         <input v-model.number="count" type="number">
-        <button class="clear-btn" type="button" @click="clear.count()">clear</button>
+        <button class="clear-btn" type="button" @click="clear.count()">
+          clear
+        </button>
       </div>
       <span class="type">integer</span>
     </div>
@@ -91,7 +95,9 @@ const value = computed(() => ({
       <span class="k">ratio</span>
       <div class="control">
         <input v-model.number="ratio" type="number" step="0.1" placeholder="e.g. 1.5">
-        <button class="clear-btn" type="button" @click="clear.ratio()">clear</button>
+        <button class="clear-btn" type="button" @click="clear.ratio()">
+          clear
+        </button>
       </div>
       <span class="type">float</span>
     </div>
@@ -100,7 +106,9 @@ const value = computed(() => ({
       <span class="k">enabled</span>
       <div class="control">
         <label class="bool-row"><input v-model="enabled" type="checkbox"> {{ enabled }}</label>
-        <button class="clear-btn" type="button" @click="clear.enabled()">clear</button>
+        <button class="clear-btn" type="button" @click="clear.enabled()">
+          clear
+        </button>
       </div>
       <span class="type">boolean</span>
     </div>
@@ -109,12 +117,22 @@ const value = computed(() => ({
       <span class="k">color</span>
       <div class="control">
         <select v-model="color">
-          <option :value="undefined">—</option>
-          <option value="red">red</option>
-          <option value="green">green</option>
-          <option value="blue">blue</option>
+          <option :value="undefined">
+            —
+          </option>
+          <option value="red">
+            red
+          </option>
+          <option value="green">
+            green
+          </option>
+          <option value="blue">
+            blue
+          </option>
         </select>
-        <button class="clear-btn" type="button" @click="clear.color()">clear</button>
+        <button class="clear-btn" type="button" @click="clear.color()">
+          clear
+        </button>
       </div>
       <span class="type">literal</span>
     </div>
@@ -123,7 +141,9 @@ const value = computed(() => ({
       <span class="k">tags</span>
       <div class="control">
         <input v-model="tagsText" type="text" placeholder="comma, separated">
-        <button class="clear-btn" type="button" @click="clear.tags()">clear</button>
+        <button class="clear-btn" type="button" @click="clear.tags()">
+          clear
+        </button>
       </div>
       <span class="type">arrayOf</span>
     </div>
@@ -132,7 +152,9 @@ const value = computed(() => ({
       <span class="k">date</span>
       <div class="control">
         <input v-model="dateInput" type="date">
-        <button class="clear-btn" type="button" @click="clear.date()">clear</button>
+        <button class="clear-btn" type="button" @click="clear.date()">
+          clear
+        </button>
       </div>
       <span class="type">isoDate</span>
     </div>

@@ -33,11 +33,15 @@ const urlParts = computed<UrlPart[]>(() => {
     </section>
 
     <aside class="pane-console">
-      <div class="console-tab">live state</div>
+      <div class="console-tab">
+        live state
+      </div>
 
       <slot name="panel" />
 
-      <div class="panel-label">url</div>
+      <div class="panel-label">
+        url
+      </div>
       <div class="url-preview">
         <span class="u-path">{{ route.path }}</span>
         <template v-for="(part, index) in urlParts" :key="index">

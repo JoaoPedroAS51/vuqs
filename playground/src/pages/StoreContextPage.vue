@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
 import { createVueRouterAdapter } from 'vuqs/adapters/vue-router'
 import { withContext, withEffective } from 'vuqs/modules'
-import { ref } from 'vue'
 import PageLayout from '../components/PageLayout.vue'
 import StateBlock from '../components/StateBlock.vue'
 
@@ -66,8 +66,12 @@ function setField(key: 'q' | 'category' | 'status' | 'sort', event: Event) {
     </div>
 
     <div class="ctx-switch">
-      <button type="button" :class="{ active: tab === 'products' }" @click="switchTab('products')">Products</button>
-      <button type="button" :class="{ active: tab === 'orders' }" @click="switchTab('orders')">Orders</button>
+      <button type="button" :class="{ active: tab === 'products' }" @click="switchTab('products')">
+        Products
+      </button>
+      <button type="button" :class="{ active: tab === 'orders' }" @click="switchTab('orders')">
+        Orders
+      </button>
     </div>
 
     <div class="row">
@@ -82,9 +86,15 @@ function setField(key: 'q' | 'category' | 'status' | 'sort', event: Event) {
       <span class="k">sort</span>
       <div class="control">
         <select :value="q.selected.sort ?? ''" @change="setField('sort', $event)">
-          <option value="">—</option>
-          <option value="newest">newest</option>
-          <option value="oldest">oldest</option>
+          <option value="">
+            —
+          </option>
+          <option value="newest">
+            newest
+          </option>
+          <option value="oldest">
+            oldest
+          </option>
         </select>
       </div>
       <span class="type">resets</span>
@@ -94,10 +104,18 @@ function setField(key: 'q' | 'category' | 'status' | 'sort', event: Event) {
       <span class="k">category</span>
       <div class="control">
         <select :value="q.selected.category ?? ''" @change="setField('category', $event)">
-          <option value="">—</option>
-          <option value="cpu">cpu</option>
-          <option value="gpu">gpu</option>
-          <option value="ram">ram</option>
+          <option value="">
+            —
+          </option>
+          <option value="cpu">
+            cpu
+          </option>
+          <option value="gpu">
+            gpu
+          </option>
+          <option value="ram">
+            ram
+          </option>
         </select>
       </div>
       <span class="type">products</span>
@@ -107,18 +125,30 @@ function setField(key: 'q' | 'category' | 'status' | 'sort', event: Event) {
       <span class="k">status</span>
       <div class="control">
         <select :value="q.selected.status ?? ''" @change="setField('status', $event)">
-          <option value="">—</option>
-          <option value="open">open</option>
-          <option value="shipped">shipped</option>
-          <option value="cancelled">cancelled</option>
+          <option value="">
+            —
+          </option>
+          <option value="open">
+            open
+          </option>
+          <option value="shipped">
+            shipped
+          </option>
+          <option value="cancelled">
+            cancelled
+          </option>
         </select>
       </div>
       <span class="type">orders</span>
     </div>
 
     <template #panel>
-      <div class="panel-label accent">active context</div>
-      <div class="url-preview" style="margin-bottom: 4px;">{{ q.activeContext.value }}</div>
+      <div class="panel-label accent">
+        active context
+      </div>
+      <div class="url-preview" style="margin-bottom: 4px;">
+        {{ q.activeContext.value }}
+      </div>
       <StateBlock label="selected" :value="q.selected" />
       <StateBlock label="values" :value="q.values" />
     </template>

@@ -9,7 +9,9 @@ const html = computed(() => highlightJson(props.value))
 
 <template>
   <div class="state-block">
-    <div class="panel-label" :class="{ accent }">{{ label }}</div>
+    <div class="panel-label" :class="{ accent }">
+      {{ label }}
+    </div>
     <!-- eslint-disable-next-line vue/no-v-html -- highlightJson escapes its input -->
     <pre class="json" v-html="html" />
   </div>
