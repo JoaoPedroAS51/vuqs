@@ -21,6 +21,8 @@ export { assertUniquePaths, buildQuery, dropDefaults, getManagedKeys, omitManage
 export type { QueryStateRefValue, QueryStateSchema, QueryStateValueOf, QueryStateValues, QueryStateWriteValues } from './core/schema'
 export { createSerializer } from './core/serializer'
 export type { CreateSerializerOptions, Serializer, SerializerParse, SerializerStringify } from './core/serializer'
+export { toQueryRefs } from './core/to-query-refs'
+export type { ToQueryRefs } from './core/to-query-refs'
 export type { ParsedQuery, ParsedQueryRaw, ParsedQueryValue } from './core/types'
 export { useQueryState } from './core/use-query-state'
 export { useQueryStates } from './core/use-query-states'

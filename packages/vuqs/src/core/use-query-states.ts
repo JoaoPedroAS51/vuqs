@@ -77,6 +77,26 @@ export interface QueryStatesActions<TSchema extends QueryStateSchema> {
 }
 
 /**
+ * A non-enumerable marker attached to the writable `values` map carrying its
+ * option-aware batch writer, so {@link toQueryRefs} can restore per-field
+ * `.set`/`.clear`. Hidden from iteration, spread, and `v-model`.
+ *
+ * @internal
+ */
+export const WRITER = Symbol('vuqs.writer')
+
+/**
+ * The writable value map plus the hidden {@link WRITER} brand. The brand is an
+ * optional symbol key, so it stays invisible to normal use but lets
+ * {@link toQueryRefs} tell a writable map from a readonly one.
+ *
+ * @typeParam TSchema - The schema bound to the URL.
+ */
+export type WritableQueryValues<TSchema extends QueryStateSchema> = QueryStatesValues<TSchema> & {
+  readonly [WRITER]?: (values: QueryStateWriteValues<TSchema>, options?: NavigateOptions) => void
+}
+
+/**
  * The shape returned by {@link useQueryStates}: a reactive `values` map plus the
  * `setValues` and `clear` batch writers.
  *
@@ -84,7 +104,7 @@ export interface QueryStatesActions<TSchema extends QueryStateSchema> {
  */
 export interface UseQueryStatesReturn<TSchema extends QueryStateSchema> extends QueryStatesActions<TSchema> {
   /** The reactive, writable value map, one entry per param. */
-  values: QueryStatesValues<TSchema>
+  values: WritableQueryValues<TSchema>
 }
 
 /**
@@ -244,7 +264,7 @@ export function useQueryStates<TSchema extends QueryStateSchema>(
 ): QueryComposable<TSchema, UseQueryStatesReturn<TSchema>> {
   const { engine, refs } = createQueryStateRefs(schema, options)
 
-  const values = reactive(refs) as QueryStatesValues<TSchema>
+  const values = reactive(refs) as WritableQueryValues<TSchema>
 
   function setValues(next: QueryStateWriteValues<TSchema>, perCall?: NavigateOptions): void {
     for (const key of Object.keys(next) as Array<keyof TSchema & string>) {
@@ -267,6 +287,8 @@ export function useQueryStates<TSchema extends QueryStateSchema>(
       engine.query.set(key, undefined, perCall)
     }
   }
+
+  Object.defineProperty(values, WRITER, { value: setValues, enumerable: false })
 
   const core: QueryCore<TSchema> = {
     schema,
