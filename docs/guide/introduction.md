@@ -71,7 +71,6 @@ ground-up Vue implementation, not a port:
 | Value ⇄ URL | ✅ parsers | ✅ codecs |
 | Runtime defaults | — | ✅ [`withEffective`](/modules/effective) |
 | Context-aware reset | — | ✅ [`withContext`](/modules/context) |
-| Adapter | required | optional |
 
 The runtime defaults layer and context machinery are vuqs's own — they grew out of
 real Vue app filtering needs, packaged as composable [modules](/modules/introduction).
