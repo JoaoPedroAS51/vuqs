@@ -209,10 +209,80 @@ isAllowed('status') // false → `status` is filtered out of `values` and the UR
 It reads `core` only — `pickBy` on the pipeline, `emit` on the hooks bus — so it
 composes with any other module without knowing it exists.
 
+## Authoring types <Badge type="info" text="vuqs" />
+
+The exact shapes a module works with, exported from `vuqs` (the
+[`vuqs/shared`](#vuqs-shared-helpers) helpers below come from their own subpath).
+
+```ts
+type QueryModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
+
+interface QueryCore<TSchema> {
+  schema: TSchema
+  selected: ComputedRef<QueryStateValues<TSchema>>      // selections + overlay, `read` applied, no codec defaults
+  setValue: (key, value, options?: NavigateOptions) => void
+  navigate: (query: ParsedQueryRaw, options?: NavigateOptions) => void // applies a full query; runs the `navigate` stage
+  currentQuery: () => ParsedQuery
+  hooks: QueryHookBus
+  pipeline: QueryPipelineBus
+  clearOnDefault: boolean
+}
+```
+
+### Hooks
+
+`QueryHooks` is empty in the core; a module declares its event via
+`declare module 'vuqs'`. Handlers run synchronously, in an unspecified order, and
+must be commutative; a throwing handler is isolated and logged.
+
+```ts
+interface QueryHooks {} // augment to add typed events, e.g. 'context:change'
+
+interface QueryHookBus {
+  on: <E extends keyof QueryHooks>(event: E, handler: QueryHooks[E]) => () => void
+  emit: <E extends keyof QueryHooks>(event: E, ...args: Parameters<QueryHooks[E]>) => void
+}
+```
+
+### Pipeline
+
+Stages are core-owned and closed; transforms must be pure.
+
+```ts
+interface QueryPipeline {
+  read: (values: QueryValues) => QueryValues          // values the app reads
+  write: (values: QueryValues) => QueryValues          // values written to the URL
+  navigate: (query: ParsedQueryRaw) => ParsedQueryRaw  // serialized query at the navigation boundary
+}
+type QueryPipelineStage = keyof QueryPipeline // 'read' | 'write' | 'navigate'
+type Enforce = 'pre' | 'default' | 'post'
+
+interface QueryPipelineBus {
+  tap: <S extends QueryPipelineStage>(
+    stage: S | S[],
+    transform: QueryPipeline[S],
+    options?: { enforce?: Enforce },
+  ) => () => void
+  run: <S extends QueryPipelineStage>(stage: S, value: Parameters<QueryPipeline[S]>[0]) => ReturnType<QueryPipeline[S]>
+}
+type QueryValues = Record<string, unknown>
+```
+
+### `vuqs/shared` helpers <Badge type="tip" text="vuqs/shared" />
+
+```ts
+function pickBy(predicate: (key: string) => boolean): <T>(values: T) => Partial<T>
+function omitBy(predicate: (key: string) => boolean): <T>(values: T) => Partial<T>
+function definedOnly<T>(values: T): T
+function toReadonlyState<T>(source: ComputedRef<T>): Readonly<T>
+```
+
+- `pickBy` / `omitBy` — build a pipeline transform that keeps / drops matching keys.
+- `definedOnly` — copy without `undefined`-valued keys (a cleared param reads as absent).
+- `toReadonlyState` — expose a `ComputedRef<record>` as a readonly reactive object.
+
 ## Nuxt
 
 Auto-imports cover the published modules. A module you write lives in your app, so
 import it normally — or register it under Nuxt's `imports` if you want it
 auto-imported alongside the [`vuqs/modules` group](/nuxt/introduction#auto-imports).
-
-See the [API reference](/api/modules#authoring) for the exact authoring types.

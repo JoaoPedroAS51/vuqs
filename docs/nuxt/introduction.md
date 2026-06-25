@@ -71,7 +71,26 @@ export default defineNuxtConfig({
 | `autoImports` | `boolean \| { composables?, codecs?, modules? }` | `true` | Register vuqs APIs as auto-imports. `false` registers none; an object toggles each group. |
 | `adapter` | `boolean \| { defaultOptions? }` | `true` | Provide the vue-router adapter app-wide. `false` disables it so you can provide your own. |
 
-See the [API reference](/api/nuxt) for the exact types.
+The full option types:
+
+```ts
+interface ModuleOptions {
+  autoImports?: boolean | AutoImportsOptions // default: true
+  adapter?: boolean | AdapterOptions         // default: true
+}
+
+interface AutoImportsOptions {
+  composables?: boolean // useQueryState(s), use/provideQueryAdapter, defineQueryParam, createSerializer
+  codecs?: boolean      // the `codecs` namespace and `createCodec`
+  modules?: boolean     // the composable modules from `vuqs/modules`
+}
+
+interface AdapterOptions {
+  defaultOptions?: QueryAdapterDefaultOptions
+}
+```
+
+An object enables the listed groups; omitted groups default to `true`.
 
 ### Pick which groups to auto-import
 
@@ -101,7 +120,9 @@ export default defineNuxtConfig({
 ```
 
 These sit at the bottom of the [precedence chain](/guide/navigation-options#precedence):
-a per-call or per-composable option still wins.
+a per-call or per-composable option still wins. They're also exposed through
+`runtimeConfig.public.vuqs.adapter`, so they can be overridden per environment like
+any public runtime config.
 
 ## Bring your own adapter
 
@@ -152,5 +173,3 @@ both rely on it.
 ## Compatibility
 
 Works with **Nuxt 3 and Nuxt 4** (`compatibility: { nuxt: '>=3.0.0' }`).
-
-Next: **[API reference →](/api/nuxt)**

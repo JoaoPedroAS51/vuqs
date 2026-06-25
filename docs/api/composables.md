@@ -136,9 +136,9 @@ clear()                          // reset all
 ```
 
 ::: tip `.use(module)`
-`useQueryStates` returns a [`QueryComposable`](/api/modules#use-module) — call
-`.use()` to layer modules like [`withEffective`](/api/modules#witheffective) and
-[`withContext`](/api/modules#withcontext) onto it.
+`useQueryStates` returns a [`QueryComposable`](/modules/introduction#the-use-model) —
+call `.use()` to layer modules like [`withEffective`](/modules/effective) and
+[`withContext`](/modules/context) onto it.
 :::
 
 ## UseQueryStatesOptions <Badge type="info" text="vuqs" />

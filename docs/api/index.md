@@ -10,11 +10,11 @@ walkthroughs, see the [Guide](/guide/introduction) and
 | --- | --- | --- |
 | `vuqs` | `import { … } from 'vuqs'` | The core: codecs, composables, adapters, serializer. |
 | `vuqs/adapters/vue-router` | `import { … } from 'vuqs/adapters/vue-router'` | The vue-router adapter. |
-| `vuqs/modules` | `import { … } from 'vuqs/modules'` | Composable modules applied with `.use()`. |
+| `vuqs/modules` | `import { … } from 'vuqs/modules'` | [Composable modules](/modules/introduction) applied with `.use()`. |
 | `vuqs/shared` | `import { … } from 'vuqs/shared'` | Helpers for [writing your own module](/modules/authoring). |
 | `vuqs/adapters/testing` | `import { … } from 'vuqs/adapters/testing'` | The [testing](/api/testing) adapter and helpers. |
 | `vuqs/testing` | `import { … } from 'vuqs/testing'` | Codec bijectivity [test helpers](/api/testing#vuqs-testing). |
-| `@vuqs/nuxt` | `modules: ['@vuqs/nuxt']` | The Nuxt module: auto-imports + the adapter out of the box. |
+| `@vuqs/nuxt` | `modules: ['@vuqs/nuxt']` | The [Nuxt module](/nuxt/introduction): auto-imports + the adapter out of the box. |
 
 ## Reference pages
 
@@ -22,10 +22,13 @@ walkthroughs, see the [Guide](/guide/introduction) and
 - **[Composables](/api/composables)** — `useQueryState`, `useQueryStates`, `defineQueryParam`, the adapter.
 - **[Adapters](/api/adapters)** — `createVueRouterAdapter`, `provideVueRouterAdapter`, `QueryAdapter`.
 - **[Serializer & pure functions](/api/serializer)** — `createSerializer` and the framework-free helpers.
-- **[Modules](/api/modules)** — `.use()`, `withEffective`, `withContext`, and the [authoring](/api/modules#authoring) surface.
 - **[Testing](/api/testing)** — `createTestingAdapter`, `withVuqsTestingAdapter`, and codec bijectivity helpers.
-- **[@vuqs/nuxt](/api/nuxt)** — the Nuxt module and its `ModuleOptions`.
 - **[Types](/api/types)** — the exported type surface.
+
+Each optional extension documents its own API on its page: the
+[Modules](/modules/introduction) section (`withEffective`, `withContext`, and the
+[authoring](/modules/authoring) surface) and the [@vuqs/nuxt](/nuxt/introduction)
+section.
 
 ## Full export list
 

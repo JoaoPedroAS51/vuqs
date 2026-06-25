@@ -79,7 +79,7 @@ type QueryStatesValues<TSchema>  // the reactive values map type
 interface QueryStatesActions<TSchema> { setValues; clear }
 interface UseQueryStatesReturn<TSchema> extends QueryStatesActions<TSchema> { values }
 
-// Module composition (see Modules)
+// Module composition — details in /modules/authoring
 type QueryComposable<TSchema, TApi> = TApi & {
   use: <TAdded>(module: QueryModule<TSchema, TAdded>) => QueryComposable<TSchema, TApi & TAdded>
 }
@@ -158,28 +158,10 @@ interface QueryStateEngine<TSchema> {
 }
 ```
 
-## Module types <Badge type="tip" text="vuqs/modules" />
+## Module types
 
-```ts
-interface EffectiveApi<TSchema> { selected; defaults; effective; setDefaults; clearDefaults }
-interface ContextOptions<TSchema, TContext> { active; preserve?; only?; navigate? }
-interface ContextApi<TContext> { activeContext; buildContextQuery; switchTo }
-```
-
-## Module authoring types <Badge type="info" text="vuqs" />
-
-```ts
-interface QueryCore<TSchema> { schema; selected; setValue; navigate; currentQuery; hooks; pipeline; clearOnDefault }
-type QueryModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
-
-interface QueryHooks {} // augment via `declare module 'vuqs'`
-interface QueryHookBus { on; emit }
-
-interface QueryPipeline { read; write; navigate }
-type QueryPipelineStage = keyof QueryPipeline
-type Enforce = 'pre' | 'default' | 'post'
-interface QueryPipelineBus { tap; run }
-type QueryValues = Record<string, unknown>
-```
-
-See [API: modules](/api/modules#authoring) for the full shapes.
+Module-specific types live with each module: [`EffectiveApi`](/modules/effective#api),
+[`ContextOptions`](/modules/context#options) and
+[`ContextApi`](/modules/context#api), plus the
+[authoring types](/modules/authoring#authoring-types) (`QueryCore`, `QueryModule`,
+`QueryHooks`, `QueryPipeline`, and the `vuqs/shared` helpers).
