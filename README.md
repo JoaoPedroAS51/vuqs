@@ -2,6 +2,11 @@
 
 **Typed URL state for Vue 3 — without the boilerplate.**
 
+[![npm version](https://img.shields.io/npm/v/vuqs.svg)](https://www.npmjs.com/package/vuqs)
+[![CI](https://img.shields.io/github/actions/workflow/status/JoaoPedroAS51/vuqs/ci.yml?branch=main&label=CI)](https://github.com/JoaoPedroAS51/vuqs/actions/workflows/ci.yml)
+[![bundle size](https://img.shields.io/bundlejs/size/vuqs?label=bundle%20%28gzip%29)](https://bundlejs.com/?q=vuqs)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+
 Keep search, filters, sort, and pagination in the URL with full type safety. The
 URL becomes the single source of truth for view state — typed, reactive, and
 bound to your router.
