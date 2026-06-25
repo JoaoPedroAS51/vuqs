@@ -1,6 +1,7 @@
 # API: @vuqs/nuxt
 
-The Nuxt module. See the [Nuxt guide](/nuxt/introduction) for the narrative.
+The Nuxt module — auto-imports plus the adapter, out of the box. See the
+[Nuxt guide](/nuxt/introduction) for the narrative.
 
 ```ts
 // nuxt.config.ts
@@ -12,26 +13,31 @@ export default defineNuxtConfig({
 
 Config key: **`vuqs`**. Compatibility: **Nuxt `>=3.0.0`** (3 and 4).
 
-## `ModuleOptions`
+## ModuleOptions <Badge type="warning" text="@vuqs/nuxt" />
+
+The options under the `vuqs` config key.
+
+### Properties
 
 ```ts
 interface ModuleOptions {
   autoImports?: boolean | AutoImportsOptions // default: true
-  adapter?: boolean | AdapterOptions // default: true
+  adapter?: boolean | AdapterOptions         // default: true
 }
 ```
 
-### `AutoImportsOptions`
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `autoImports` | `boolean \| AutoImportsOptions` | `true` | Auto-import composables, codecs, and modules. |
+| `adapter` | `boolean \| AdapterOptions` | `true` | Provide the vue-router adapter app-wide via a plugin. |
+
+### AutoImportsOptions
 
 ```ts
 interface AutoImportsOptions {
-  // useQueryState, useQueryStates, useQueryAdapter, provideQueryAdapter,
-  // defineQueryParam, createSerializer
-  composables?: boolean
-  // the `codecs` namespace and `createCodec`
-  codecs?: boolean
-  // the composable modules from `vuqs/modules`
-  modules?: boolean
+  composables?: boolean // useQueryState(s), use/provideQueryAdapter, defineQueryParam, createSerializer
+  codecs?: boolean      // the `codecs` namespace and `createCodec`
+  modules?: boolean     // the composable modules from `vuqs/modules`
 }
 ```
 
@@ -42,7 +48,7 @@ interface AutoImportsOptions {
 The `modules` group registers every module exported from `vuqs/modules`. Because
 modules ship with `vuqs`, the group is always available — no extra install.
 
-### `AdapterOptions`
+### AdapterOptions
 
 ```ts
 interface AdapterOptions {
@@ -51,14 +57,13 @@ interface AdapterOptions {
 ```
 
 - `adapter: true` (default) provides the
-  [vue-router adapter](/api/adapters#createvuerouteradapter) app-wide via a
-  plugin.
+  [vue-router adapter](/api/adapters#createvuerouteradapter) app-wide via a plugin.
 - `adapter: false` skips the plugin so you can
   [provide your own](/nuxt/introduction#bring-your-own-adapter).
 - `adapter.defaultOptions` are forwarded to the adapter as its
   [`defaultOptions`](/api/adapters#createvuerouteradapter); see
-  [`QueryAdapterDefaultOptions`](/api/types). They sit at the bottom of the
-  [precedence chain](/guide/navigation-options#precedence).
+  [`QueryAdapterDefaultOptions`](/api/types#adapter-navigation-types). They sit at
+  the bottom of the [precedence chain](/guide/navigation-options#precedence).
 
 The defaults are exposed through `runtimeConfig.public.vuqs.adapter`, so they can
 be overridden per environment like any public runtime config.

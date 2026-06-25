@@ -3,9 +3,11 @@
 The adapter is the boundary where vuqs reads and writes the URL. See the
 [Adapters guide](/guide/adapters) for the full picture.
 
-## `QueryAdapter`
+## QueryAdapter <Badge type="info" text="vuqs" />
 
-`import type { QueryAdapter } from 'vuqs'`
+The contract every adapter satisfies.
+
+### Properties
 
 ```ts
 interface QueryAdapter {
@@ -15,13 +17,17 @@ interface QueryAdapter {
 }
 ```
 
-- `query` — the current parsed query, as a ref, getter, or plain value.
-- `navigate` — stringify the next query and apply it (push or replace per
-  `options.history`). May be sync or async.
-- `defaultOptions` — app-wide defaults at the bottom of the
-  [precedence chain](/guide/navigation-options#precedence).
+| Property | Type | Description |
+| --- | --- | --- |
+| `query` | `MaybeRefOrGetter<ParsedQuery>` | The current parsed query, as a ref, getter, or plain value. |
+| `navigate` | `(query, options) => void \| Promise<void>` | Stringify the next query and apply it (push or replace per `options.history`). May be sync or async. |
+| `defaultOptions` | `QueryAdapterDefaultOptions` | App-wide defaults at the bottom of the [precedence chain](/guide/navigation-options#precedence). |
 
-## `QueryAdapterDefaultOptions`
+## QueryAdapterDefaultOptions <Badge type="info" text="vuqs" />
+
+Defaults an adapter applies to every write.
+
+### Properties
 
 ```ts
 interface QueryAdapterDefaultOptions extends NavigateOptions {
@@ -32,14 +38,15 @@ interface QueryAdapterDefaultOptions extends NavigateOptions {
 }
 ```
 
-## vue-router adapter
+See [Navigation options](/guide/navigation-options#precedence) for how these
+compose with per-instance and per-call options.
 
-`import { createVueRouterAdapter, provideVueRouterAdapter } from 'vuqs/adapters/vue-router'`
+## createVueRouterAdapter <Badge type="tip" text="vuqs/adapters/vue-router" />
 
-`vue-router` is an **optional** peer dependency — installed only if you use this
-subpath.
+Builds a [`QueryAdapter`](#queryadapter) backed by `vue-router`. `vue-router` is
+an **optional** peer dependency — pulled in only if you import this subpath.
 
-### `createVueRouterAdapter`
+### Signature
 
 ```ts
 function createVueRouterAdapter(options?: VueRouterAdapterOptions): QueryAdapter
@@ -50,14 +57,28 @@ interface VueRouterAdapterOptions {
 }
 ```
 
-Builds a `QueryAdapter` backed by `vue-router`. Reads
-`router.currentRoute.value.query`; writes with `router.replace`, switching to
-`router.push` when `history` is `'push'`. The router defaults to `useRouter()`, so
-call it inside `setup` unless you pass `router` explicitly.
+### Parameters
 
-Returns the adapter **without** providing it — pass it to
+| Name | Type | Description |
+| --- | --- | --- |
+| `options.router` | `Router` | The router instance. Defaults to `useRouter()`, so call inside `setup` unless passed. |
+| `options.defaultOptions` | `QueryAdapterDefaultOptions` | Adapter-level navigation defaults. |
+
+### Returns
+
+A `QueryAdapter` — returned **without** providing it. Pass it to
 [`installQueryAdapter`](/api/composables#installqueryadapter) or
-[`provideQueryAdapter`](/api/composables#providequeryadapter).
+[`provideQueryAdapter`](/api/composables#providequeryadapter). It reads
+`router.currentRoute.value.query` and writes with `router.replace`, switching to
+`router.push` when `history` is `'push'`.
+
+### Example
+
+```ts
+import { createVueRouterAdapter } from 'vuqs/adapters/vue-router'
+
+const adapter = createVueRouterAdapter({ defaultOptions: { history: 'replace' } })
+```
 
 ::: tip Nested keys
 Dotted keys (`filters.sort`) and array values require `vue-router` configured with
@@ -69,22 +90,35 @@ Dotted keys (`filters.sort`) and array values require `vue-router` configured wi
 option is ignored by this adapter.
 :::
 
-### `provideVueRouterAdapter`
+## provideVueRouterAdapter <Badge type="tip" text="vuqs/adapters/vue-router" />
+
+`provideQueryAdapter(createVueRouterAdapter(options))` in one call.
+
+### Signature
 
 ```ts
 function provideVueRouterAdapter(options?: VueRouterAdapterOptions): QueryAdapter
 ```
 
-`provideQueryAdapter(createVueRouterAdapter(options))` in one call. Returns the
-created adapter. Works for both Vue SPAs and Nuxt (Nuxt's router *is*
-`vue-router`).
+### Parameters
+
+Same as [`createVueRouterAdapter`](#createvuerouteradapter).
+
+### Returns
+
+The created `QueryAdapter`, already provided to descendants. Works for both Vue
+SPAs and Nuxt (Nuxt's router *is* `vue-router`).
+
+### Example
 
 ```ts
+import { provideVueRouterAdapter } from 'vuqs/adapters/vue-router'
+
 provideVueRouterAdapter({ defaultOptions: { history: 'replace' } })
 ```
 
 ## Manual adapters
 
-Any object satisfying `QueryAdapter` works. See
+Any object satisfying [`QueryAdapter`](#queryadapter) works. See
 [Manual adapter](/guide/adapters#manual-adapter) for framework-free and
 custom-provider recipes.

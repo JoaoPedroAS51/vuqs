@@ -1,9 +1,9 @@
 # API: types
 
-The exported type surface, grouped by area. All are `import type` from `vuqs`
-unless noted.
+The exported type surface, grouped by area. Each group's <Badge type="info" text="badge" />
+shows the entry point it's imported from.
 
-## Codec types
+## Codec types <Badge type="info" text="vuqs" />
 
 ```ts
 interface Codec<T> {
@@ -26,7 +26,7 @@ interface CodecInput<T> {
 }
 ```
 
-## Param & schema types
+## Param & schema types <Badge type="info" text="vuqs" />
 
 ```ts
 interface QueryParamDefinition<T> {
@@ -60,7 +60,7 @@ type QueryStateWriteValues<TSchema>  // { [K]?: value | null } — the write pro
 `QueryStateWriteValues` is the three-state write map: omit/`undefined` skips,
 `null` clears, a value sets. See [null vs undefined](/guide/null-vs-undefined).
 
-## Composable types
+## Composable types <Badge type="info" text="vuqs" />
 
 ```ts
 interface QueryStateRef<T> extends WritableComputedRef<T> {
@@ -69,8 +69,8 @@ interface QueryStateRef<T> extends WritableComputedRef<T> {
 }
 
 interface UseQueryStatesOptions extends NavigateOptions {
-  query?: MaybeRefOrGetter<ParsedQuery>
-  navigate?: QueryStateNavigate
+  history?: 'replace' | 'push'
+  scroll?: boolean
   throttleMs?: number
   clearOnDefault?: boolean
 }
@@ -87,7 +87,7 @@ type QueryModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
 interface QueryCore<TSchema> { /* the shared core passed to a module */ }
 ```
 
-## Adapter & navigation types
+## Adapter & navigation types <Badge type="info" text="vuqs" />
 
 ```ts
 interface QueryAdapter {
@@ -109,7 +109,7 @@ interface NavigateOptions {
 type QueryStateNavigate = (query: ParsedQueryRaw, options: NavigateOptions) => void | Promise<void>
 ```
 
-## Query value types
+## Query value types <Badge type="info" text="vuqs" />
 
 ```ts
 type ParsedQueryValue =
@@ -121,7 +121,7 @@ type ParsedQuery = Record<string, ParsedQueryValue>    // input side (from the U
 type ParsedQueryRaw = Record<string, ParsedQueryValue> // output side (to the URL)
 ```
 
-## Serializer types
+## Serializer types <Badge type="info" text="vuqs" />
 
 ```ts
 interface CreateSerializerOptions {
@@ -139,7 +139,7 @@ type SerializerStringify = (query: ParsedQueryRaw) => string
 type SerializerParse = (search: string) => ParsedQuery
 ```
 
-## Engine types
+## Engine types <Badge type="info" text="vuqs" />
 
 ```ts
 interface QueryStateEngineOptions<TSchema> extends NavigateOptions {
@@ -158,9 +158,7 @@ interface QueryStateEngine<TSchema> {
 }
 ```
 
-## Module types
-
-`import type { … } from 'vuqs/modules'`
+## Module types <Badge type="tip" text="vuqs/modules" />
 
 ```ts
 interface EffectiveApi<TSchema> { selected; defaults; effective; setDefaults; clearDefaults }
@@ -168,12 +166,10 @@ interface ContextOptions<TSchema, TContext> { active; preserve?; only?; navigate
 interface ContextApi<TContext> { activeContext; buildContextQuery; switchTo }
 ```
 
-## Module authoring types
-
-`import type { … } from 'vuqs'`
+## Module authoring types <Badge type="info" text="vuqs" />
 
 ```ts
-interface QueryCore<TSchema> { schema; selected; setValue; currentQuery; hooks; pipeline; clearOnDefault }
+interface QueryCore<TSchema> { schema; selected; setValue; navigate; currentQuery; hooks; pipeline; clearOnDefault }
 type QueryModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
 
 interface QueryHooks {} // augment via `declare module 'vuqs'`
@@ -186,4 +182,4 @@ interface QueryPipelineBus { tap; run }
 type QueryValues = Record<string, unknown>
 ```
 
-See [API: Modules](/api/modules#authoring) for the full shapes.
+See [API: modules](/api/modules#authoring) for the full shapes.

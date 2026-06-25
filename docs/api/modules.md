@@ -1,12 +1,16 @@
-# API: vuqs/modules
+# API: modules
 
-`import { withContext, withEffective } from 'vuqs/modules'`
+Composable modules layered onto [`useQueryStates`](/api/composables#usequerystates)
+with `.use()`. See the [Modules guide](/modules/introduction) for the narrative. A
+module is a function `(core) => addedApi` whose return type is merged onto the
+composable.
 
-Composable modules applied with [`useQueryStates(...).use(module)`](/api/composables#usequerystates).
-See the [Modules guide](/modules/introduction) for the narrative. A module is a
-function `(core) => addedApi` whose return type is merged onto the composable.
+## .use(module) <Badge type="info" text="vuqs" />
 
-## `.use(module)`
+Applies a module to the composable, merging its contributed API and widening the
+return type. Calls chain.
+
+### Signature
 
 ```ts
 interface QueryComposable<TSchema, TApi> {
@@ -17,20 +21,31 @@ interface QueryComposable<TSchema, TApi> {
 type QueryModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
 ```
 
-`useQueryStates` returns a `QueryComposable`. Each `.use()` runs the module against
-the shared `core`, merges the contributed API onto the composable, and widens the
-return type. Calls chain.
+### Example
 
-## `withEffective`
+```ts
+import { useQueryStates } from 'vuqs'
+import { withContext, withEffective } from 'vuqs/modules'
+
+const filters = useQueryStates(schema)
+  .use(withEffective())
+  .use(withContext({ active: tab, preserve: ['q'] }))
+```
+
+## withEffective <Badge type="tip" text="vuqs/modules" />
+
+Adds the `selected` / `defaults` / `effective` states and runtime-default writers.
+See the [withEffective guide](/modules/effective).
+
+### Signature
 
 ```ts
 function withEffective(): QueryModule<TSchema, EffectiveApi<TSchema>>
 ```
 
-Adds `selected` / `defaults` / `effective` states and runtime-default writers. See
-the [withEffective guide](/modules/effective).
+### Returns
 
-### `EffectiveApi`
+A module contributing `EffectiveApi`:
 
 ```ts
 interface EffectiveApi<TSchema> {
@@ -45,9 +60,22 @@ interface EffectiveApi<TSchema> {
 - States are **readonly reactive objects** — `selected.field`, no `.value`. Only
   `selected` is serialized.
 - `setDefaults` replaces the runtime defaults; it doesn't merge. They never reach
-  the URL and reset on a context change (see `withContext`).
+  the URL and reset on a context change (see [`withContext`](#withcontext)).
 
-## `withContext`
+### Example
+
+```ts
+const { effective, setDefaults } = useQueryStates(schema).use(withEffective())
+
+setDefaults({ status: 'active', perPage: 20 }) // e.g. from an API
+```
+
+## withContext <Badge type="tip" text="vuqs/modules" />
+
+Adds context-aware param validity, plus reset/preserve on a context change. It
+never navigates on its own. See the [withContext guide](/modules/context).
+
+### Signature
 
 ```ts
 // Inferred from the chained schema:
@@ -62,25 +90,30 @@ function withContext<TSchema, TContext extends string>(
 ): QueryModule<TSchema, ContextApi<TContext>>
 ```
 
-Adds context-aware param validity and reset/preserve on context change. It never
-navigates on its own — drive the switch with `switchTo` (via the `navigate` option)
-or with `buildContextQuery`. See the [withContext guide](/modules/context).
-
-### `ContextOptions`
+### Parameters
 
 ```ts
 interface ContextOptions<TSchema, TContext extends string> {
   active: MaybeRefOrGetter<TContext>                                   // external, opaque
   preserve?: ReadonlyArray<keyof TSchema & string>                    // kept on a switch
   only?: Partial<Record<keyof TSchema & string, readonly TContext[]>> // validity per context
-  navigate?: (target: TContext, query: ParsedQueryRaw, options?: NavigateOptions) => void // how `switchTo` navigates
+  navigate?: (target: TContext, query: ParsedQueryRaw, options?: NavigateOptions) => void // how switchTo navigates
 }
 ```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `active` | `MaybeRefOrGetter<TContext>` | The current context — external and opaque; the store never derives it. |
+| `preserve` | `(keyof TSchema)[]` | Params kept across a context change; everything else resets. |
+| `only` | `Partial<Record<key, TContext[]>>` | The contexts each param exists in. Omit a param to make it valid everywhere. |
+| `navigate` | `(target, query, options?) => void` | How `switchTo` navigates. Required only if you call `switchTo`. |
 
 `preserve` and `only` are type-checked against the schema — either the one chained
 through `use`, or the one passed to the schema-bound overload.
 
-### `ContextApi`
+### Returns
+
+A module contributing `ContextApi`:
 
 ```ts
 interface ContextApi<TContext extends string> {
@@ -93,17 +126,27 @@ interface ContextApi<TContext extends string> {
 - `activeContext` is a **ref** (`.value`) because it's a single scalar.
 - `buildContextQuery` returns the reconciled switch query without navigating — for
   links or SSR.
-- `switchTo` reconciles and navigates in one step via the `navigate` option;
-  throws if `navigate` is not configured.
+- `switchTo` reconciles and navigates in one step via the `navigate` option; throws
+  if `navigate` is not configured.
+
+### Example
+
+```ts
+const filters = useQueryStates(schema).use(withContext({
+  active: tab,
+  preserve: ['q'],
+  only: { category: ['products'], status: ['orders'] },
+}))
+```
 
 ## Authoring
 
 Types and helpers for writing your own module. See the
 [authoring guide](/modules/authoring) for the narrative.
 
-### `QueryCore`
+### QueryCore <Badge type="info" text="vuqs" />
 
-The shared object passed to every module, exported from `vuqs`.
+The shared object passed to every module.
 
 ```ts
 interface QueryCore<TSchema> {
@@ -118,7 +161,7 @@ interface QueryCore<TSchema> {
 }
 ```
 
-### Hooks
+### Hooks <Badge type="info" text="vuqs" />
 
 The coordination bus. `QueryHooks` is empty in the core; a module declares its
 event via `declare module 'vuqs'`.
@@ -135,15 +178,15 @@ interface QueryHookBus {
 Fire-and-forget: handlers run synchronously, in an unspecified order, and must be
 commutative. A throwing handler is isolated and logged.
 
-### Pipeline
+### Pipeline <Badge type="info" text="vuqs" />
 
 The transform pipeline. Stages are core-owned and closed; transforms must be pure.
 
 ```ts
 interface QueryPipeline {
-  read: (values: QueryValues) => QueryValues       // values the app reads
-  write: (values: QueryValues) => QueryValues       // values written to the URL
-  navigate: (query: ParsedQueryRaw) => ParsedQueryRaw // serialized query at the navigation boundary
+  read: (values: QueryValues) => QueryValues          // values the app reads
+  write: (values: QueryValues) => QueryValues          // values written to the URL
+  navigate: (query: ParsedQueryRaw) => ParsedQueryRaw  // serialized query at the navigation boundary
 }
 type QueryPipelineStage = keyof QueryPipeline // 'read' | 'write' | 'navigate'
 type Enforce = 'pre' | 'default' | 'post'
@@ -161,9 +204,7 @@ interface QueryPipelineBus {
 `tap` registers a transform and returns a disposer; `run` applies a stage's
 composed transforms to a value map a module derived itself.
 
-### `vuqs/shared` helpers
-
-`import { … } from 'vuqs/shared'`
+### Shared helpers <Badge type="tip" text="vuqs/shared" />
 
 ```ts
 function pickBy(predicate: (key: string) => boolean): <T>(values: T) => Partial<T>
