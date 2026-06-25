@@ -3,6 +3,24 @@
   "type": "module",
   "version": "0.0.0",
   "description": "Nuxt module for vuqs — auto-imported query-state composables and an out-of-box vue-router adapter.",
+  "author": "João Pedro Antunes Silva <hi@joaopedroas.com>",
+  "license": "MIT",
+  "homepage": "https://JoaoPedroAS51.github.io/vuqs/nuxt/introduction",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JoaoPedroAS51/vuqs.git",
+    "directory": "packages/nuxt"
+  },
+  "keywords": [
+    "nuxt",
+    "vue",
+    "query",
+    "state",
+    "url",
+    "router",
+    "type-safe",
+    "composable"
+  ],
   "sideEffects": false,
   "exports": {
     ".": {
