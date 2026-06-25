@@ -117,6 +117,10 @@ interface UseQueryStatesReturn<TSchema> {
   skips, a value sets. Coalesced into one navigation.
 - `clear(options?)` — reset every param.
 
+The grouped `values` map drops the per-field `.set`/`.clear` that
+[`useQueryState`](#usequerystate) gives a single param. Explode it with
+[`toQueryRefs`](#toqueryrefs) to get them back per field.
+
 **Throws** if two params declare the same query path, or if no adapter has been
 provided (see [`provideQueryAdapter`](#providequeryadapter)).
 
@@ -139,6 +143,62 @@ clear()                          // reset all
 `useQueryStates` returns a [`QueryComposable`](/modules/introduction#the-use-model) —
 call `.use()` to layer modules like [`withEffective`](/modules/effective) and
 [`withContext`](/modules/context) onto it.
+:::
+
+## toQueryRefs <Badge type="info" text="vuqs" />
+
+Explodes a value map into one ref per field, the way Pinia's `storeToRefs` explodes
+a store. Use it to recover the per-field `.set`/`.clear` that the grouped `values`
+map drops, or to pass a single field around. For one param from the start, reach for
+[`useQueryState`](#usequerystate) instead.
+
+### Signature
+
+```ts
+function toQueryRefs<T extends object>(map: T): ToQueryRefs<T>
+```
+
+### Parameters
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `map` | `T` | A value map from [`useQueryStates`](#usequerystates) (`values`) or a module (`selected`/`defaults`). |
+
+### Returns
+
+`ToQueryRefs<T>` — one ref per field, keyed by param:
+
+- The writable [`values`](#usequerystates) map explodes into a
+  [`QueryStateRef`](#usequerystate) per field: writable `.value`, plus `.set(value,
+  options?)` and `.clear(options?)` for per-call navigation options. Assigning
+  `undefined` clears, like `.clear()`.
+- A read-only map (`selected`/`defaults`) explodes into a `ComputedRef` per field.
+
+The helper carries no behavior of its own: writes route back through the source
+map. A ref off the effective `values` under [`withEffective`](/modules/effective)
+clears against the *effective* default, exactly as `values.x = …` would.
+
+### Example
+
+```ts
+import { codecs, defineQueryParam, toQueryRefs, useQueryStates } from 'vuqs'
+
+const { values } = useQueryStates({
+  q: defineQueryParam('q', codecs.string),
+  sort: defineQueryParam('sort', codecs.literal(['asc', 'desc'] as const)),
+})
+
+const { q, sort } = toQueryRefs(values)
+
+q.value = 'sale'                  // write
+sort.set('desc', { history: 'push' }) // per-call options
+q.clear()                         // remove ?q
+```
+
+::: tip Writable vs read-only
+The writable `values` map explodes into writable refs with `.set`/`.clear`; a
+read-only map (`selected`/`defaults`) explodes into read-only refs. `toQueryRefs`
+detects which on its own — nothing to annotate on your side.
 :::
 
 ## UseQueryStatesOptions <Badge type="info" text="vuqs" />

@@ -79,12 +79,14 @@ type QueryStatesValues<TSchema>  // the reactive values map type
 interface QueryStatesActions<TSchema> { setValues; clear }
 interface UseQueryStatesReturn<TSchema> extends QueryStatesActions<TSchema> { values }
 
+type ToQueryRefs<T> // one ref per field; QueryStateRef for values, ComputedRef for read-only maps
+
 // Module composition — details in /modules/authoring
 type QueryComposable<TSchema, TApi> = TApi & {
   use: <TAdded>(module: QueryModule<TSchema, TAdded>) => QueryComposable<TSchema, TApi & TAdded>
 }
 type QueryModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
-interface QueryCore<TSchema> { /* the shared core passed to a module */ }
+interface QueryCore<TSchema> { /* the faceted core passed to a module */ }
 ```
 
 ## Adapter & navigation types <Badge type="info" text="vuqs" />
@@ -141,20 +143,44 @@ type SerializerParse = (search: string) => ParsedQuery
 
 ## Engine types <Badge type="info" text="vuqs" />
 
+The advanced surface behind [`createQueryStateEngine`](/api/serializer). The engine
+is organized into facets, shared with the [`QueryCore`](/modules/authoring#authoring-types)
+a module receives.
+
 ```ts
 interface QueryStateEngineOptions<TSchema> extends NavigateOptions {
   schema: TSchema
-  query: MaybeRefOrGetter<ParsedQuery>
-  navigate: QueryStateNavigate
-  parse: (query: ParsedQuery) => QueryStateValues<TSchema>
-  build: (currentQuery: ParsedQuery, values: QueryStateValues<TSchema>) => ParsedQueryRaw
+  adapter: { query: MaybeRefOrGetter<ParsedQuery>; navigate: QueryStateNavigate }
   throttleMs?: number
   clearOnDefault?: boolean
 }
 
 interface QueryStateEngine<TSchema> {
-  values: ComputedRef<QueryStateValues<TSchema>>
-  setValue: (key: keyof TSchema & string, value: unknown, options?: NavigateOptions) => void
+  state: QueryStateReads<TSchema>      // { selected, values }
+  defaults: QueryDefaultsBus<TSchema>  // { resolved, register }
+  query: {
+    current: () => ParsedQuery
+    set: (key: keyof TSchema & string, value: unknown, options?: NavigateOptions) => void
+  }
+  options: ResolvedQueryStateOptions
+  pipeline: QueryPipelineBus
+}
+
+interface QueryStateReads<TSchema> {
+  selected: ComputedRef<QueryStateValues<TSchema>> // selections, no defaults
+  values: ComputedRef<QueryStateValues<TSchema>>   // selection over the resolved defaults
+}
+
+interface QueryDefaultsBus<TSchema> {
+  resolved: ComputedRef<QueryStateValues<TSchema>> // merged default layers
+  register: (source: MaybeRefOrGetter<QueryStateValues<TSchema>>) => () => void
+}
+
+interface ResolvedQueryStateOptions {
+  history?: 'replace' | 'push'
+  scroll?: boolean
+  throttleMs: number
+  clearOnDefault: boolean
 }
 ```
 

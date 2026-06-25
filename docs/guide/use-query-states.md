@@ -59,7 +59,26 @@ values.tags.push('new')               // ❌ no navigation
 ```
 :::
 
-Need an individual ref to pass around? Use Vue's `toRefs(values)`.
+### Per-field refs with `toQueryRefs`
+
+The grouped `values` map drops the per-field `.set`/`.clear` a single
+[`useQueryState`](/guide/use-query-state) ref carries. To get them back — or to pass
+one field around as a ref — explode `values` with
+[`toQueryRefs`](/api/composables#toqueryrefs):
+
+```ts
+import { toQueryRefs } from 'vuqs'
+
+const { q, page } = toQueryRefs(values)
+
+q.value = 'laptop'                 // write, like values.q = 'laptop'
+page.set(2, { history: 'push' })   // per-call options, back on a field
+q.clear()                          // remove ?q
+```
+
+Each ref routes back through `values`, so it inherits the same clearing rule —
+including the effective default under [`withEffective`](/modules/effective).
+Reaching for one param from the start? Use `useQueryState` instead.
 
 ### `setValues` — batch write
 
@@ -148,7 +167,7 @@ function search(term: string) {
 | Returns | a `QueryStateRef` (`.value`, `.set`, `.clear`) | `{ values, setValues, clear }` |
 | Per-param options | ✅ on `.set` / `.clear` | via `setValues` (whole batch) |
 | Multi-param coalescing | — | ✅ |
-| A ref to pass around | ✅ | `toRefs(values)` |
+| A ref to pass around | ✅ | [`toQueryRefs(values)`](/api/composables#toqueryrefs) |
 
 Reach for `useQueryStates` when params move together; reach for `useQueryState`
 when you want rich control over one param.

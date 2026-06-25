@@ -52,8 +52,8 @@ or "resetting filters when you change tabs" — those are [modules](/modules/int
 Opt-in behavior you compose onto `useQueryStates` with `.use()`, imported from the
 [`vuqs/modules`](/modules/introduction) subpath of the same package:
 
-- **[`withEffective`](/modules/effective)** — three states: `selected` (the URL),
-  `defaults` (supplied at runtime), and a derived `effective` read model.
+- **[`withEffective`](/modules/effective)** — runtime defaults layered under the
+  bound state, so `values` reads through them while only `selected` reaches the URL.
 - **[`withContext`](/modules/context)** — preserve some filters and reset others
   when the user switches tabs, steps through a wizard, or changes route.
 

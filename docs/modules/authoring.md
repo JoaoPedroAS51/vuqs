@@ -12,7 +12,7 @@ import { computed } from 'vue'
 
 export function withCount(): <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>) => { count: ComputedRef<number> } {
   return core => ({
-    count: computed(() => Object.keys(core.selected.value).length),
+    count: computed(() => Object.keys(core.state.selected.value).length),
   })
 }
 ```
@@ -26,38 +26,67 @@ does.
 ## The core
 
 `core` is the only thing a module touches — it never references another module.
+Its members are grouped into facets:
 
-| Member | What it is |
-| --- | --- |
-| `schema` | The schema being managed. |
-| `selected` | `ComputedRef` of explicit URL selections plus the optimistic overlay, with the `read` pipeline applied and no codec defaults. Derive read state from this. |
-| `setValue(key, value, options?)` | Optimistically write one param. |
-| `currentQuery()` | Read the current parsed query. |
-| `hooks` | The notification bus for module-to-module coordination. |
-| `pipeline` | The transform pipeline for reshaping reads and writes. |
-| `clearOnDefault` | The resolved rule, so a query you build matches the engine's write behavior. |
+| Facet | Member | What it is |
+| --- | --- | --- |
+| | `schema` | The schema being managed. |
+| `state` | `selected` | `ComputedRef` of explicit URL selections plus the optimistic overlay, with the `read` pipeline applied and no defaults. Derive read state from this. |
+| | `values` | `ComputedRef` of the resolved reads: the selection layered over `defaults.resolved`. |
+| `defaults` | `resolved` | `ComputedRef` of the merged default layers (codec base + registered), `read` applied. |
+| | `register(source)` | Register a reactive default layer above the codec base; later layers win. Returns a disposer. |
+| `query` | `current()` | Read the current committed query. |
+| | `set(key, value, options?)` | Optimistically write one param. |
+| `options` | | The resolved behavior baseline (`history`/`scroll`/`throttleMs`/`clearOnDefault`), so a query you build matches the engine's write behavior. |
+| `pipeline` | | The transform pipeline for reshaping reads and writes. |
+| `hooks` | | The notification bus for module-to-module coordination. |
 
 Treat `core` as the authoring surface — it's not app-facing state.
 
 ## Deriving state
 
-Build read models off `core.selected` with `computed`. To expose a *map*, wrap it
-with `toReadonlyState` so consumers get dot-access (`state.field`), matching
-`values`:
+Build read models off `core.state.selected` with `computed`. To expose a *map*,
+wrap it with `toReadonlyState` so consumers get dot-access (`state.field`),
+matching `values`:
 
 ```ts
 import { computed } from 'vue'
 import { toReadonlyState } from 'vuqs/shared'
 
-const visible = computed(() => /* derive a record from core.selected.value */)
+const visible = computed(() => /* derive a record from core.state.selected.value */)
 
 return { visible: toReadonlyState(visible) }
 ```
 
 `toReadonlyState` turns a `ComputedRef<record>` into a `Readonly<record>` whose keys
-track the computed live — the shape `withEffective` exposes for
-`selected`/`defaults`/`effective`. A single scalar stays a plain `ComputedRef`
-(`.value`), like `withContext`'s `activeContext`.
+track the computed live — the shape `withEffective` exposes for `selected` and
+`defaults`. A single scalar stays a plain `ComputedRef` (`.value`), like
+`withContext`'s `activeContext`.
+
+## Layered defaults
+
+The engine resolves values through a stack of default layers. The codec defaults
+are the base; a module contributes a reactive layer above them with
+`core.defaults.register(source)`, and later registrations win. `core.state.values`
+is the selection layered over `core.defaults.resolved`, the merged read.
+
+```ts
+import { onScopeDispose, ref } from 'vue'
+
+const runtimeDefaults = ref({})
+const stop = core.defaults.register(runtimeDefaults)
+onScopeDispose(stop)
+```
+
+The `source` is a `MaybeRefOrGetter`, so the layer stays reactive — update the ref
+and `values`/`resolved` re-resolve. Only defined values participate, so a layer
+never clobbers a lower one with `undefined`.
+
+Registering a layer also moves [`clearOnDefault`](/guide/navigation-options#clearondefault):
+a write clears when it equals the *resolved* default, not just the codec default.
+Reads and writes share one notion of "the default", which is what lets
+`withEffective` persist a write of the codec default while a differing runtime
+default exists.
 
 ## Shaping reads and writes — the pipeline
 
@@ -92,11 +121,12 @@ When a module derives a value map itself and wants it shaped like the engine's o
 reads, push it through a stage with `run`:
 
 ```ts
-const defaults = computed(() => core.pipeline.run('read', { ...codecDefaults }))
+const shaped = computed(() => core.pipeline.run('read', { ...someMap }))
 ```
 
-That's how `withEffective` keeps its `defaults` consistent with a filter
-`withContext` taps onto `read`.
+The engine already runs `read` over `core.defaults.resolved` and
+`core.state.values`, so a layer you `register` is shaped consistently with a filter
+`withContext` taps onto `read` — no manual `run` needed for it.
 
 ## Coordinating with other modules — hooks
 
@@ -219,12 +249,37 @@ type QueryModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
 
 interface QueryCore<TSchema> {
   schema: TSchema
-  selected: ComputedRef<QueryStateValues<TSchema>>      // selections + overlay, `read` applied, no codec defaults
-  setValue: (key, value, options?: NavigateOptions) => void
-  navigate: (query: ParsedQueryRaw, options?: NavigateOptions) => void // applies a full query; runs the `navigate` stage
-  currentQuery: () => ParsedQuery
-  hooks: QueryHookBus
+  state: QueryStateReads<TSchema>          // { selected, values }
+  defaults: QueryDefaultsBus<TSchema>      // { resolved, register }
+  options: ResolvedQueryStateOptions       // resolved history/scroll/throttleMs/clearOnDefault
   pipeline: QueryPipelineBus
+  hooks: QueryHookBus
+  query: {
+    current: () => ParsedQuery             // the current committed query
+    set: (key, value, options?: NavigateOptions) => void // optimistically set one param
+  }
+}
+```
+
+### State, defaults, and options <Badge type="info" text="vuqs" />
+
+The facets are exported from `vuqs`, so a module can name them.
+
+```ts
+interface QueryStateReads<TSchema> {
+  selected: ComputedRef<QueryStateValues<TSchema>> // selections + overlay, `read` applied, no defaults
+  values: ComputedRef<QueryStateValues<TSchema>>   // selection over the resolved defaults
+}
+
+interface QueryDefaultsBus<TSchema> {
+  resolved: ComputedRef<QueryStateValues<TSchema>> // merged layers, `read` applied
+  register: (source: MaybeRefOrGetter<QueryStateValues<TSchema>>) => () => void
+}
+
+interface ResolvedQueryStateOptions {
+  history?: 'replace' | 'push'
+  scroll?: boolean
+  throttleMs: number
   clearOnDefault: boolean
 }
 ```

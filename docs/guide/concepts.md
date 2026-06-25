@@ -113,7 +113,7 @@ vuqs follows one rule for what it hands back:
   reactive `values` where `values.q` *is* the value.
 
 [Modules](/modules/introduction) follow the same rule: `withEffective`'s
-`selected` / `defaults` / `effective` are reactive objects (`selected.q`), while
+`selected` and `defaults` are reactive objects (`selected.q`), while
 `withContext`'s `activeContext` — a single scalar — is a ref (`activeContext.value`).
 
 ::: warning Replace, don't mutate

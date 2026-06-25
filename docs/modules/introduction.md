@@ -13,11 +13,11 @@ stays small; you pull in only the modules you need.
 import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
 import { withContext, withEffective } from 'vuqs/modules'
 
-const { effective, activeContext } = useQueryStates(schema)
+const { values, activeContext } = useQueryStates(schema)
   .use(withEffective())
   .use(withContext({ active: tab, preserve: ['q'] }))
 
-effective.status    // from withEffective
+values.status       // reads through withEffective's runtime defaults
 activeContext.value // from withContext
 ```
 
@@ -30,8 +30,8 @@ return type with that API. Calls chain, and the accumulated type reflects every
 module applied:
 
 ```ts
-const { values, effective, switchTo } = useQueryStates(schema)
-  .use(withEffective())         // adds selected, defaults, effective, setDefaults, …
+const { values, selected, switchTo } = useQueryStates(schema)
+  .use(withEffective())         // adds selected, defaults, setDefaults, clearDefaults
   .use(withContext({ active })) // adds activeContext, switchTo, buildContextQuery
 ```
 
@@ -60,7 +60,7 @@ skip the import line entirely.
 
 | Module | Adds | |
 | --- | --- | --- |
-| [`withEffective`](/modules/effective) | `selected` / `defaults` / `effective` states and runtime defaults | [→](/modules/effective) |
+| [`withEffective`](/modules/effective) | runtime defaults layered under `values`, plus `selected` / `defaults` | [→](/modules/effective) |
 | [`withContext`](/modules/context) | context-aware param validity and reset/preserve on context change | [→](/modules/context) |
 
 The set is open-ended — new modules slot in here without changing the ones above.
