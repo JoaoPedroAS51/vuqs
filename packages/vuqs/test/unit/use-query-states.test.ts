@@ -1,6 +1,7 @@
 import type { ParsedQuery, ParsedQueryRaw } from '../../src/core/types'
 import { describe, expect, it, vi } from 'vitest'
-import { createApp, ref } from 'vue'
+import { createApp } from 'vue'
+import { createTestingAdapter } from '../../src/adapters/testing'
 import { installQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
 import { defineQueryParam } from '../../src/core/define-query-param'
@@ -11,12 +12,12 @@ const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0)
 
 // Provides the adapter through app-level inject, so composables resolve
 // `query`/`navigate` the way they do in a real app. `run` wraps composable
-// creation in the adapter's injection context.
+// creation in the adapter's injection context. `hasMemory` mirrors a real
+// adapter, writing each navigation back to the query a `navigate` spy wraps.
 function setup(initial: ParsedQuery = {}) {
-  const query = ref<ParsedQuery>(initial)
-  const navigate = vi.fn((next: ParsedQueryRaw) => {
-    query.value = next
-  })
+  const adapter = createTestingAdapter({ searchParams: initial, hasMemory: true })
+  const { query } = adapter
+  const navigate = vi.fn(adapter.navigate)
   const app = createApp({})
   installQueryAdapter(app, { query, navigate })
   const run = <T>(create: () => T): T => app.runWithContext(create)

@@ -21,7 +21,9 @@ equality), and a `.withDefault()` — exactly like the built-ins.
 1. **`parse` returns `undefined` for absent *or invalid* input.** Never throw.
    A bad URL should degrade to the default, not crash the page.
 2. **`serialize` and `parse` must round-trip.** `parse(serialize(x))` should equal
-   `x` for every valid `x`. Pairing them in one codec is what keeps that true.
+   `x` for every valid `x`. Pairing them in one codec is what keeps that true —
+   and [`vuqs/testing`](/guide/testing#testing-custom-codecs) turns it into an
+   assertion.
 
 ## Reading the raw value
 

@@ -13,6 +13,14 @@
       "types": "./dist/adapters/vue-router.d.ts",
       "import": "./dist/adapters/vue-router.mjs"
     },
+    "./adapters/testing": {
+      "types": "./dist/adapters/testing.d.ts",
+      "import": "./dist/adapters/testing.mjs"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.mjs"
+    },
     "./modules": {
       "types": "./dist/modules/index.d.ts",
       "import": "./dist/modules/index.mjs"

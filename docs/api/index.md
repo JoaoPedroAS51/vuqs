@@ -12,6 +12,8 @@ walkthroughs, see the [Guide](/guide/introduction) and
 | `vuqs/adapters/vue-router` | `import { … } from 'vuqs/adapters/vue-router'` | The vue-router adapter. |
 | `vuqs/modules` | `import { … } from 'vuqs/modules'` | Composable modules applied with `.use()`. |
 | `vuqs/shared` | `import { … } from 'vuqs/shared'` | Helpers for [writing your own module](/modules/authoring). |
+| `vuqs/adapters/testing` | `import { … } from 'vuqs/adapters/testing'` | The [testing](/api/testing) adapter and helpers. |
+| `vuqs/testing` | `import { … } from 'vuqs/testing'` | Codec bijectivity [test helpers](/api/testing#vuqs-testing). |
 | `@vuqs/nuxt` | `modules: ['@vuqs/nuxt']` | The Nuxt module: auto-imports + the adapter out of the box. |
 
 ## Reference pages
@@ -21,6 +23,7 @@ walkthroughs, see the [Guide](/guide/introduction) and
 - **[Adapters](/api/adapters)** — `createVueRouterAdapter`, `provideVueRouterAdapter`, `QueryAdapter`.
 - **[Serializer & pure functions](/api/serializer)** — `createSerializer` and the framework-free helpers.
 - **[Modules](/api/modules)** — `.use()`, `withEffective`, `withContext`, and the [authoring](/api/modules#authoring) surface.
+- **[Testing](/api/testing)** — `createTestingAdapter`, `withVuqsTestingAdapter`, and codec bijectivity helpers.
 - **[@vuqs/nuxt](/api/nuxt)** — the Nuxt module and its `ModuleOptions`.
 - **[Types](/api/types)** — the exported type surface.
 
@@ -120,6 +123,19 @@ export type { ContextApi, ContextOptions, EffectiveApi }
 // Helpers for writing your own module
 export { pickBy, omitBy, definedOnly, toReadonlyState }
 export type { NoInferType }
+```
+
+### `vuqs/adapters/testing`
+
+```ts
+export { createTestingAdapter, withVuqsTestingAdapter, resetQueues }
+export type { TestingAdapter, TestingAdapterOptions, UrlUpdateEvent, OnUrlUpdateFunction }
+```
+
+### `vuqs/testing`
+
+```ts
+export { isCodecBijective, testSerializeThenParse, testParseThenSerialize }
 ```
 
 ### `@vuqs/nuxt`

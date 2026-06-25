@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { codecs, createCodec } from '../../src/core/codec'
+import { isCodecBijective } from '../../src/testing'
 
 describe('codecs.string', () => {
   it('parses and serializes', () => {
@@ -10,6 +11,10 @@ describe('codecs.string', () => {
   it('parses absent as undefined', () => {
     expect(codecs.string.parse(undefined)).toBeUndefined()
     expect(codecs.string.parse('')).toBeUndefined()
+  })
+
+  it('is bijective', () => {
+    expect(isCodecBijective(codecs.string, 'lease', 'lease')).toBe(true)
   })
 })
 
@@ -33,6 +38,11 @@ describe('codecs.integer', () => {
     expect(codecs.integer.serialize(42)).toBe('42')
     expect(codecs.integer.serialize(42.9)).toBe('42')
   })
+
+  it('is bijective', () => {
+    expect(isCodecBijective(codecs.integer, '42', 42)).toBe(true)
+    expect(isCodecBijective(codecs.integer, '-7', -7)).toBe(true)
+  })
 })
 
 describe('codecs.index', () => {
@@ -53,8 +63,8 @@ describe('codecs.index', () => {
     expect(codecs.index.serialize(41)).toBe('42')
   })
 
-  it('round-trips', () => {
-    expect(codecs.index.parse(codecs.index.serialize(7))).toBe(7)
+  it('is bijective', () => {
+    expect(isCodecBijective(codecs.index, '8', 7)).toBe(true)
   })
 })
 
@@ -76,8 +86,9 @@ describe('codecs.hex', () => {
     expect(codecs.hex.serialize(10)).toBe('0a')
   })
 
-  it('round-trips', () => {
-    expect(codecs.hex.parse(codecs.hex.serialize(4095))).toBe(4095)
+  it('is bijective', () => {
+    expect(isCodecBijective(codecs.hex, 'ff', 255)).toBe(true)
+    expect(isCodecBijective(codecs.hex, '0a', 10)).toBe(true)
   })
 })
 
@@ -97,10 +108,10 @@ describe('codecs.timestamp', () => {
     expect(codecs.timestamp.serialize(new Date(1000))).toBe('1000')
   })
 
-  it('round-trips', () => {
+  it('is bijective', () => {
     const date = new Date(1_700_000_000_000)
 
-    expect(codecs.timestamp.parse(codecs.timestamp.serialize(date))).toEqual(date)
+    expect(isCodecBijective(codecs.timestamp, '1700000000000', date)).toBe(true)
   })
 
   it('compares by instant', () => {
@@ -123,10 +134,10 @@ describe('codecs.isoDateTime', () => {
     expect(codecs.isoDateTime.serialize(new Date('2026-06-22T12:00:00.000Z'))).toBe('2026-06-22T12:00:00.000Z')
   })
 
-  it('round-trips', () => {
+  it('is bijective', () => {
     const date = new Date('2026-06-22T12:34:56.789Z')
 
-    expect(codecs.isoDateTime.parse(codecs.isoDateTime.serialize(date))).toEqual(date)
+    expect(isCodecBijective(codecs.isoDateTime, '2026-06-22T12:34:56.789Z', date)).toBe(true)
   })
 
   it('compares by instant', () => {
@@ -158,10 +169,10 @@ describe('codecs.isoDate', () => {
     expect(codecs.isoDate.serialize(new Date('2026-06-22T12:00:00.000Z'))).toBe('2026-06-22')
   })
 
-  it('round-trips', () => {
+  it('is bijective', () => {
     const date = new Date('2026-06-22')
 
-    expect(codecs.isoDate.parse(codecs.isoDate.serialize(date))).toEqual(date)
+    expect(isCodecBijective(codecs.isoDate, '2026-06-22', date)).toBe(true)
   })
 
   it('compares by instant', () => {
@@ -188,8 +199,8 @@ describe('codecs.numberLiteral', () => {
     expect(level.serialize(2)).toBe('2')
   })
 
-  it('round-trips', () => {
-    expect(level.parse(level.serialize(2))).toBe(2)
+  it('is bijective', () => {
+    expect(isCodecBijective(level, '2', 2)).toBe(true)
   })
 })
 
@@ -205,6 +216,10 @@ describe('codecs.float', () => {
     expect(codecs.float.parse('NaN')).toBeUndefined()
     expect(codecs.float.parse('4.5abc')).toBeUndefined()
   })
+
+  it('is bijective', () => {
+    expect(isCodecBijective(codecs.float, '4.5', 4.5)).toBe(true)
+  })
 })
 
 describe('codecs.boolean', () => {
@@ -219,6 +234,11 @@ describe('codecs.boolean', () => {
 
   it('serializes', () => {
     expect(codecs.boolean.serialize(true)).toBe('true')
+  })
+
+  it('is bijective', () => {
+    expect(isCodecBijective(codecs.boolean, 'true', true)).toBe(true)
+    expect(isCodecBijective(codecs.boolean, 'false', false)).toBe(true)
   })
 })
 
@@ -242,6 +262,10 @@ describe('codecs.arrayOf', () => {
     expect(numbers.eq([1, 2], [1, 2])).toBe(true)
     expect(numbers.eq([1, 2], [1, 3])).toBe(false)
   })
+
+  it('is bijective', () => {
+    expect(isCodecBijective(numbers, ['1', '2', '3'], [1, 2, 3])).toBe(true)
+  })
 })
 
 describe('codecs.literal', () => {
@@ -254,6 +278,11 @@ describe('codecs.literal', () => {
   it('rejects disallowed values', () => {
     expect(sort.parse('sideways')).toBeUndefined()
   })
+
+  it('is bijective', () => {
+    expect(isCodecBijective(sort, 'asc', 'asc')).toBe(true)
+    expect(isCodecBijective(sort, 'desc', 'desc')).toBe(true)
+  })
 })
 
 describe('codecs.json', () => {
@@ -262,6 +291,10 @@ describe('codecs.json', () => {
   it('round-trips', () => {
     expect(json.parse('{"a":1}')).toEqual({ a: 1 })
     expect(json.serialize({ a: 1 })).toBe('{"a":1}')
+  })
+
+  it('is bijective', () => {
+    expect(isCodecBijective(json, '{"a":1}', { a: 1 })).toBe(true)
   })
 
   it('parses invalid json as undefined', () => {
