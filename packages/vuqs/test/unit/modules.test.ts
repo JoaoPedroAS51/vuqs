@@ -30,7 +30,7 @@ describe('withEffective', () => {
     region: defineQueryParam('region', codecs.string),
   }
 
-  it('separates selected, defaults, and effective', () => {
+  it('separates selected, defaults, and resolved values', () => {
     const { build } = setup({ currency: 'EUR' })
     const q = build(() => useQueryStates(schema).use(withEffective()))
 
@@ -38,10 +38,10 @@ describe('withEffective', () => {
 
     expect(q.selected).toEqual({ currency: 'EUR' })
     expect(q.defaults).toEqual({ currency: 'USD', region: 'us' })
-    expect(q.effective).toEqual({ currency: 'EUR', region: 'us' })
+    expect(q.values).toEqual({ currency: 'EUR', region: 'us' })
   })
 
-  it('falls back to the default in effective when a field is cleared', async () => {
+  it('falls back to the default in values when a field is cleared', async () => {
     const { build } = setup({ currency: 'EUR' })
     const q = build(() => useQueryStates(schema).use(withEffective()))
     q.setDefaults({ currency: 'USD' })
@@ -50,7 +50,7 @@ describe('withEffective', () => {
     await flush()
 
     expect(q.selected).toEqual({})
-    expect(q.effective).toEqual({ currency: 'USD' })
+    expect(q.values).toEqual({ currency: 'USD' })
   })
 
   it('clears provided defaults', () => {
@@ -60,7 +60,7 @@ describe('withEffective', () => {
     q.setDefaults({ currency: 'USD' })
     q.clearDefaults()
 
-    expect(q.effective).toEqual({})
+    expect(q.values).toEqual({})
   })
 })
 
@@ -76,7 +76,7 @@ describe('withEffective + codec defaults', () => {
 
     expect(q.selected).toEqual({}) // explicit only — no codec default here
     expect(q.defaults).toEqual({ page: 1 }) // codec default
-    expect(q.effective).toEqual({ page: 1 }) // falls through to the codec default
+    expect(q.values).toEqual({ page: 1 }) // falls through to the codec default
     expect(q.values.page).toBe(1) // values keeps its codec-default behavior
   })
 
@@ -87,7 +87,7 @@ describe('withEffective + codec defaults', () => {
     q.setDefaults({ page: 5 })
 
     expect(q.defaults).toEqual({ page: 5 })
-    expect(q.effective).toEqual({ page: 5 })
+    expect(q.values).toEqual({ page: 5 })
   })
 
   it('lets the URL selection override both', () => {
@@ -96,7 +96,7 @@ describe('withEffective + codec defaults', () => {
     q.setDefaults({ page: 5 })
 
     expect(q.selected).toEqual({ page: 3 })
-    expect(q.effective).toEqual({ page: 3 })
+    expect(q.values).toEqual({ page: 3 })
   })
 })
 
@@ -114,7 +114,7 @@ describe('withEffective layered clearing coherence', () => {
     await flush()
 
     expect(q.selected).toEqual({ page: 1 }) // kept, not dropped as a default
-    expect(q.effective).toEqual({ page: 1 }) // reads back what was written
+    expect(q.values).toEqual({ page: 1 }) // reads back what was written
   })
 
   it('drops a write that equals the effective default, falling back to it', async () => {
@@ -126,7 +126,7 @@ describe('withEffective layered clearing coherence', () => {
     await flush()
 
     expect(q.selected).toEqual({})
-    expect(q.effective).toEqual({ page: 5 })
+    expect(q.values).toEqual({ page: 5 })
   })
 
   it('applies the same clearing to setValues', async () => {
@@ -138,7 +138,7 @@ describe('withEffective layered clearing coherence', () => {
     await flush()
 
     expect(q.selected).toEqual({})
-    expect(q.effective).toEqual({ page: 5 })
+    expect(q.values).toEqual({ page: 5 })
   })
 })
 
@@ -344,7 +344,7 @@ describe('module coordination via hooks', () => {
     expect(q.defaults).toEqual({})
   })
 
-  it('keeps a context-invalid field out of defaults and effective (even with a codec default)', async () => {
+  it('keeps a context-invalid field out of defaults and values (even with a codec default)', async () => {
     const schema = {
       q: defineQueryParam('q', codecs.string),
       category: defineQueryParam('category', codecs.literal(['cpu', 'gpu'] as const).withDefault('cpu')),
@@ -357,14 +357,14 @@ describe('module coordination via hooks', () => {
         .use(withContext({ active: tab, only: { category: ['products'] } })),
     )
 
-    expect(q.effective.category).toBe('cpu')
+    expect(q.values.category).toBe('cpu')
 
     tab.value = 'orders'
     await nextTick()
     await flush()
 
     expect(q.defaults.category).toBeUndefined()
-    expect(q.effective.category).toBeUndefined()
+    expect(q.values.category).toBeUndefined()
   })
 })
 

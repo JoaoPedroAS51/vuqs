@@ -21,7 +21,6 @@ describe('module composition', () => {
 
     expectTypeOf(q.values.q).toEqualTypeOf<string | undefined>()
     expectTypeOf(q.selected.q).toEqualTypeOf<string | undefined>()
-    expectTypeOf(q.effective.q).toEqualTypeOf<string | undefined>()
     expectTypeOf(q.activeContext.value).toEqualTypeOf<'products' | 'orders'>()
     expectTypeOf(q.setDefaults).toBeFunction()
   })

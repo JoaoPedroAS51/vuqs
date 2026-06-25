@@ -26,7 +26,7 @@ const schema = {
 const q = useQueryStates(schema)
   .use(withEffective())
   // `q` survives a context switch; everything not preserved resets. Field validity
-  // per context: invalid fields never enter selected/URL/effective, and are dropped
+  // per context: invalid fields never enter selected/URL/values, and are dropped
   // when you switch away (or paste a stale link).
   .use(withContext({
     active: tab,
@@ -120,7 +120,7 @@ function setField(key: 'q' | 'category' | 'status' | 'sort', event: Event) {
       <div class="panel-label accent">active context</div>
       <div class="url-preview" style="margin-bottom: 4px;">{{ q.activeContext.value }}</div>
       <StateBlock label="selected" :value="q.selected" />
-      <StateBlock label="effective" :value="q.effective" />
+      <StateBlock label="values" :value="q.values" />
     </template>
   </PageLayout>
 </template>

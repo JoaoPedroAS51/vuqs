@@ -25,7 +25,7 @@ describe('toQueryRefs typing', () => {
 
   it('explodes a read-only map into plain computed refs without set/clear', () => {
     const q = useQueryStates(schema).use(withEffective())
-    const refs = toQueryRefs(q.effective)
+    const refs = toQueryRefs(q.selected)
 
     expectTypeOf(refs.q).toEqualTypeOf<ComputedRef<string | undefined>>()
     expectTypeOf(refs).not.toHaveProperty('set')

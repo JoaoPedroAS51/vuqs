@@ -83,7 +83,7 @@ describe('toQueryRefs over a read-only map', () => {
   it('reads each field and tracks updates without a writer', async () => {
     const { build } = setup({ q: 'sale' })
     const q = build(() => useQueryStates(schema).use(withEffective()))
-    const { q: qRef } = toQueryRefs(q.effective)
+    const { q: qRef } = toQueryRefs(q.selected)
 
     expect(qRef.value).toBe('sale')
     expect('set' in qRef).toBe(false)
@@ -110,6 +110,6 @@ describe('toQueryRefs coherence with withEffective', () => {
     page.value = 5 // the effective default
     await flush()
     expect(q.selected).toEqual({})
-    expect(q.effective).toEqual({ page: 5 })
+    expect(q.values).toEqual({ page: 5 })
   })
 })

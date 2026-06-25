@@ -8,15 +8,15 @@ import { WRITER } from './use-query-states'
  *
  * @remarks
  * The writable `values` map carries the hidden {@link WRITER} brand, so it
- * explodes into a {@link QueryStateRef} per field — writable, with `.set`/
- * `.clear`. A read-only map (`selected`/`defaults`/`effective`) has no brand, so
- * it explodes into a read-only ref per field.
+ * explodes into a {@link QueryStateRef} per field: writable, with `.set`/
+ * `.clear`. A read-only map (`selected`/`defaults`) has no brand, so it explodes
+ * into a read-only ref per field.
  *
  * @typeParam T - The map being exploded into refs.
  */
 export type ToQueryRefs<T> = typeof WRITER extends keyof T
   ? { [K in Exclude<keyof T, typeof WRITER>]: QueryStateRef<T[K]> }
-  : { [K in keyof T]: ComputedRef<T[K]> }
+  : { [K in keyof T]-?: ComputedRef<T[K]> }
 
 /**
  * Explodes a query value map into one ref per field, the way Pinia's
@@ -26,12 +26,12 @@ export type ToQueryRefs<T> = typeof WRITER extends keyof T
  * Pass the writable `values` map and each ref is a {@link QueryStateRef}: a
  * writable ref whose `.value` reads and writes, plus `.set(value, options)` and
  * `.clear(options)` for per-call navigation options. Pass a read-only map
- * (`selected`/`defaults`/`effective`) and each ref is read-only.
+ * (`selected`/`defaults`) and each ref is read-only.
  *
  * The helper carries no behavior of its own: writes route back through the map,
  * so a ref off the effective `values` clears against the effective default
- * exactly as `values.x = …` would. Assigning `undefined` to a writable ref, like
- * `.clear()`, removes the param.
+ * exactly as `values.x = undefined` would. Assigning `undefined` to a writable
+ * ref, like `.clear()`, removes the param.
  *
  * @typeParam T - The map being exploded.
  * @param map - A query value map from {@link useQueryStates} or a module.

@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import type { QueryStateSchema, QueryStateValues } from '../core/schema'
-import type { QueryCore, QueryStatesValues } from '../core/use-query-states'
+import type { QueryCore } from '../core/use-query-states'
 import { onScopeDispose, ref } from 'vue'
 import { toReadonlyState } from '../shared'
 
@@ -8,8 +8,10 @@ import { toReadonlyState } from '../shared'
  * API contributed by {@link withEffective}.
  *
  * @remarks
- * `selected` stores explicit URL selections, `defaults` stores fallback values,
- * and `effective` is the read model layered from both.
+ * `selected` exposes the explicit URL selection and `defaults` the fallback
+ * values. The module also registers those defaults as a layer, so the bound
+ * `values` from {@link useQueryStates} resolve over them, making `values` the
+ * effective read.
  *
  * @typeParam TSchema - The schema being managed.
  */
@@ -18,8 +20,6 @@ export interface EffectiveApi<TSchema extends QueryStateSchema> {
   selected: Readonly<QueryStateValues<TSchema>>
   /** Fallback values: runtime defaults from `setDefaults` over codec defaults. */
   defaults: Readonly<QueryStateValues<TSchema>>
-  /** The resolved read model: `selected` layered over `defaults`. */
-  effective: Readonly<QueryStatesValues<TSchema>>
   /** Replaces runtime defaults with a snapshot. */
   setDefaults: (values: QueryStateValues<TSchema>) => void
   /** Removes runtime defaults, leaving codec defaults in place. */
@@ -27,30 +27,28 @@ export interface EffectiveApi<TSchema extends QueryStateSchema> {
 }
 
 /**
- * Creates a module that separates selected, default, and effective state.
+ * Creates a module that layers runtime defaults under the bound query state.
  *
  * @remarks
- * The module derives `selected` from explicit URL selections, `defaults` from
- * codec defaults layered with runtime defaults, and `effective` from `selected`
- * layered over `defaults`.
+ * The module registers the `setDefaults` snapshot as a default layer over the
+ * codec defaults, so `values` resolve as the selection over the runtime default
+ * over the codec default. Explicit URL selections override both. It also exposes
+ * `selected` (the selection alone) and `defaults` (the merged fallback values).
  *
- * Runtime defaults from `setDefaults` override codec defaults. Explicit URL
- * selections override both. A param with neither falls back to its codec default
- * when one exists.
- *
- * Pipeline `read` transforms apply to all three states. Runtime defaults reset
- * on the `'context:change'` hook, so pairing this module with {@link withContext}
- * clears stale per-context defaults without direct coupling.
+ * Pipeline `read` transforms apply to `selected`, `defaults`, and the resolved
+ * `values`. Runtime defaults reset on the `'context:change'` hook, so pairing
+ * this module with {@link withContext} clears stale per-context defaults without
+ * direct coupling.
  *
  * @returns A query module that contributes {@link EffectiveApi}.
  *
  * @example
  * ```ts
- * const { effective, setDefaults } = useQueryStates(schema)
+ * const { values, setDefaults } = useQueryStates(schema)
  *   .use(withEffective())
  *
  * setDefaults(await loadSavedPreferences())
- * effective.currency // selection over the runtime default over the codec default
+ * values.currency // selection over the runtime default over the codec default
  * ```
  */
 export function withEffective(): <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>) => EffectiveApi<TSchema> {
@@ -69,7 +67,6 @@ export function withEffective(): <TSchema extends QueryStateSchema>(core: QueryC
     return {
       selected: toReadonlyState(core.state.selected),
       defaults: toReadonlyState(core.defaults.resolved),
-      effective: toReadonlyState(core.state.values) as Readonly<QueryStatesValues<TSchema>>,
       setDefaults: (values) => {
         provided.value = { ...values }
       },
