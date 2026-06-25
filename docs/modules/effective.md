@@ -1,4 +1,4 @@
-# withEffective
+# withEffective <Badge type="tip" text="vuqs/modules" />
 
 Separates a param's value into three layers so runtime defaults can sit *under*
 explicit selections without ever reaching the URL.
@@ -7,7 +7,7 @@ explicit selections without ever reaching the URL.
 import { withEffective } from 'vuqs/modules'
 ```
 
-## What it adds
+## Overview
 
 Instead of one value per param, `withEffective` exposes three read models plus two
 writers for the runtime defaults:
@@ -38,9 +38,21 @@ defaults.status   // the fallback in force
 effective.status  // what the UI shows
 ```
 
+### Why runtime defaults stay out of the URL
+
+- **Honest links.** The URL captures what the user *chose*, not what their account
+  happens to default to. A shared link reproduces the selection; the recipient's
+  own defaults fill the rest.
+- **Defaults can change.** If the runtime default for `perPage` moves from 20 to
+  50, every user sees 50 immediately — no stale `?perPage=20` baked into bookmarks.
+
 ## API
 
+`withEffective()` takes no options and contributes `EffectiveApi`:
+
 ```ts
+function withEffective(): QueryModule<TSchema, EffectiveApi<TSchema>>
+
 interface EffectiveApi<TSchema> {
   selected: Readonly<QueryStateValues<TSchema>>
   defaults: Readonly<QueryStateValues<TSchema>>
@@ -56,14 +68,6 @@ interface EffectiveApi<TSchema> {
 
 Writes still go through the base composable: assign `values.field` or call
 `setValues(...)`. `selected`/`defaults`/`effective` are the read side.
-
-## Why keep runtime defaults out of the URL
-
-- **Honest links.** The URL captures what the user *chose*, not what their account
-  happens to default to. A shared link reproduces the selection; the recipient's
-  own defaults fill the rest.
-- **Defaults can change.** If the runtime default for `perPage` moves from 20 to
-  50, every user sees 50 immediately — no stale `?perPage=20` baked into bookmarks.
 
 ## Example
 
@@ -106,7 +110,7 @@ is whatever `setDefaults` supplied, and `effective.status` shows the default. Th
 moment the user picks `archived`, `?status=archived` appears and `effective`
 follows the choice; clear it and `effective` falls back again.
 
-## Pairing with `withContext`
+## Composing
 
 Runtime defaults are per-context. When you also apply
 [`withContext`](/modules/context), `withEffective` clears its runtime defaults on a

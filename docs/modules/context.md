@@ -1,4 +1,4 @@
-# withContext
+# withContext <Badge type="tip" text="vuqs/modules" />
 
 Makes one schema behave differently across **contexts** — tabs, wizard steps, view
 modes. Switching to a context preserves some params, resets the rest, and drops
@@ -8,7 +8,7 @@ params that don't exist there — reconciled into a single navigation you trigge
 import { withContext } from 'vuqs/modules'
 ```
 
-## The problem it solves
+## Overview
 
 Picture two tabs, Products and Orders, sharing one search box:
 
@@ -19,9 +19,17 @@ Picture two tabs, Products and Orders, sharing one search box:
 
 Hand-rolling this is fiddly. `withContext` declares it.
 
-## What it adds
+## API
+
+`withContext(options)` — or `withContext(schema, options)` for explicit key
+checking (see [Typing `preserve` and `only`](#typing-preserve-and-only)) —
+contributes `ContextApi`:
 
 ```ts
+function withContext<TSchema, TContext extends string>(
+  options: ContextOptions<TSchema, TContext>,
+): QueryModule<TSchema, ContextApi<TContext>>
+
 interface ContextApi<TContext extends string> {
   activeContext: ComputedRef<TContext>
   buildContextQuery: (currentQuery: ParsedQuery, nextContext: TContext) => ParsedQueryRaw
@@ -102,15 +110,17 @@ navigate: (target, query) => router.replace({ query: { ...query, tab: target } }
 ```
 
 Omit it and `switchTo` throws; you can still drive navigation yourself with
-[`buildContextQuery`](#what-it-adds).
+[`buildContextQuery`](#api).
 
-## Switching context
+## How it works
+
+### Switching context
 
 The module **never navigates on its own** — `active` is yours. Changing it (setting
 the ref, or navigating so a route-derived getter updates) makes param validity
-follow the new context and signals [`withEffective`](#pairing-with-witheffective)
-to clear its per-context defaults. Reconciling the URL is a separate, explicit
-step — that split is what keeps the switch a single navigation you control.
+follow the new context and signals [`withEffective`](#composing) to clear its
+per-context defaults. Reconciling the URL is a separate, explicit step — that split
+is what keeps the switch a single navigation you control.
 
 `switchTo` is the ergonomic path: it reconciles the query and hands it to your
 `navigate` option, so the route change and the param reset land together.
@@ -139,7 +149,7 @@ const query = buildContextQuery(route.query, 'orders')
 // <RouterLink :to="{ params: { tab: 'orders' }, query }">Orders</RouterLink>
 ```
 
-## Typing `preserve` and `only`
+### Typing `preserve` and `only`
 
 `withContext` has two overloads, so the param keys in `preserve`/`only` are always
 type-checked:
@@ -207,7 +217,7 @@ const { values, selected, activeContext, switchTo } = useQueryStates(schema, { h
 Set a category on Products, `switchTo('orders')`, watch the URL: `q` stays,
 `category` disappears, all in one navigation.
 
-## Pairing with `withEffective`
+## Composing
 
 [`withEffective`](/modules/effective)'s runtime defaults are per-context, so
 `withContext` signals a context change through `core` and `withEffective` clears
