@@ -37,7 +37,7 @@ only `selected` is serialized.
 hands back:
 
 ```ts
-const { values, selected, defaults } = q
+const { values, selected, defaults } = useQueryStates(schema).use(withEffective())
 
 selected.status // string | undefined — the explicit choice
 defaults.status // the fallback in force

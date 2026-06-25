@@ -137,7 +137,7 @@ Returns a variant of a codec whose `parse` falls back to `defaultValue` instead 
 ### Signature
 
 ```ts
-withDefault(defaultValue: T): CodecWithDefault<T>
+function withDefault<T>(defaultValue: T): CodecWithDefault<T>
 ```
 
 ### Parameters

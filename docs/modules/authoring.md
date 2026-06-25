@@ -53,7 +53,7 @@ matching `values`:
 import { computed } from 'vue'
 import { toReadonlyState } from 'vuqs/shared'
 
-const visible = computed(() => /* derive a record from core.state.selected.value */)
+const visible = computed(() => { /* derive a record from core.state.selected.value */ })
 
 return { visible: toReadonlyState(visible) }
 ```

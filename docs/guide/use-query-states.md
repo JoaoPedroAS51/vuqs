@@ -20,10 +20,10 @@ logical names to [params](/guide/defining-params).
 ## What you get back
 
 ```ts
-{
+interface UseQueryStatesApi {
   values: { q: string; sort: 'asc' | 'desc'; page: number }  // reactive, writable
-  setValues: (values, options?) => void                       // batch write
-  clear: (options?) => void                                   // reset all
+  setValues: (values: QueryStateWriteValues<typeof schema>, options?: NavigateOptions) => void // batch write
+  clear: (options?: NavigateOptions) => void                   // reset all
 }
 ```
 

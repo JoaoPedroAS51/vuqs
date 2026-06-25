@@ -93,7 +93,7 @@ values.range = undefined // clears BOTH keys
 ```ts
 defineQueryParam({
   paths: ['from', 'to'],
-  parse: /* … */,
+  parse: () => { /* … */ },
   serialize: value => ({ from: value.from, to: value.to, extra: 1 }),
   //                                                      ^^^^^ ❌ throws: "extra" not in declared paths
 })
@@ -112,8 +112,8 @@ The object form also takes:
 ```ts
 defineQueryParam<DateRange>({
   paths: ['from', 'to'],
-  parse: /* … */,
-  serialize: /* … */,
+  parse: () => { /* … */ },
+  serialize: () => { /* … */ },
   eq: (a, b) => a.from === b.from && a.to === b.to,
   default: { from: '', to: '' },
 })

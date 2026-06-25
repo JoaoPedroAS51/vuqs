@@ -14,7 +14,7 @@ Builds a reusable, schema-bound function that turns values into a query.
 function createSerializer<TSchema>(
   schema: TSchema,
   options?: CreateSerializerOptions,
-): Serializer<TSchema, …>
+): Serializer<TSchema, ParsedQuery, ParsedQueryRaw | string>
 ```
 
 ### Parameters

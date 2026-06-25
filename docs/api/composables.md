@@ -105,7 +105,7 @@ function useQueryStates<TSchema extends QueryStateSchema>(
 
 ```ts
 interface UseQueryStatesReturn<TSchema> {
-  values: { [K in keyof TSchema]: /* T, or T | undefined without a default */ }
+  values: { [K in keyof TSchema]: QueryStateRefValue<TSchema[K]> }
   setValues: (values: QueryStateWriteValues<TSchema>, options?: NavigateOptions) => void
   clear: (options?: NavigateOptions) => void
 }

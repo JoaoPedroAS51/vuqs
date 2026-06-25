@@ -51,10 +51,10 @@ interface QueryParamDefinitionInput<T> {
 
 type QueryStateSchema = Record<string, QueryParamDefinition<any>>
 
-type QueryStateValueOf<TDefinition> // the decoded value type of a definition
-type QueryStateRefValue<TDefinition> // T with a default, else T | undefined
-type QueryStateValues<TSchema>       // { [K]?: value } — every param optional
-type QueryStateWriteValues<TSchema>  // { [K]?: value | null } — the write protocol
+type QueryStateValueOf<TDefinition> = unknown // the decoded value type of a definition
+type QueryStateRefValue<TDefinition> = unknown // T with a default, else T | undefined
+type QueryStateValues<TSchema> = Partial<Record<keyof TSchema, unknown>> // every param optional
+type QueryStateWriteValues<TSchema> = Partial<Record<keyof TSchema, unknown | null>> // the write protocol
 ```
 
 `QueryStateWriteValues` is the three-state write map: omit/`undefined` skips,
@@ -75,11 +75,11 @@ interface UseQueryStatesOptions extends NavigateOptions {
   clearOnDefault?: boolean
 }
 
-type QueryStatesValues<TSchema>  // the reactive values map type
-interface QueryStatesActions<TSchema> { setValues; clear }
-interface UseQueryStatesReturn<TSchema> extends QueryStatesActions<TSchema> { values }
+type QueryStatesValues<TSchema> = { [K in keyof TSchema]: unknown } // the reactive values map type
+interface QueryStatesActions<TSchema> { setValues: unknown; clear: unknown }
+interface UseQueryStatesReturn<TSchema> extends QueryStatesActions<TSchema> { values: QueryStatesValues<TSchema> }
 
-type ToQueryRefs<T> // one ref per field; QueryStateRef for values, ComputedRef for read-only maps
+type ToQueryRefs<T> = { [K in keyof T]: unknown } // one ref per field; QueryStateRef for values, ComputedRef for read-only maps
 
 // Module composition — details in /modules/authoring
 type QueryComposable<TSchema, TApi> = TApi & {

@@ -7,9 +7,9 @@ self-contained object — `createCodec` is the only entry point you need.
 import { createCodec } from 'vuqs'
 
 const codec = createCodec<T>({
-  parse: raw => /* T | undefined */,
-  serialize: value => /* a query value */,
-  eq: (a, b) => /* optional equality */,
+  parse: (raw): T | undefined => { /* … */ },
+  serialize: (value): ParsedQueryValue => { /* … */ },
+  eq: (a, b): boolean => { /* … */ },
 })
 ```
 
@@ -109,7 +109,7 @@ equality is wrong or wasteful — for example, comparing dates by timestamp:
 
 ```ts
 const day = createCodec<Date>({
-  parse: raw => /* … */,
+  parse: (raw): Date | undefined => { /* … */ },
   serialize: value => value.toISOString().slice(0, 10),
   eq: (a, b) => a.valueOf() === b.valueOf(), // two Date objects, same instant
 })

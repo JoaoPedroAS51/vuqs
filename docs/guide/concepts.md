@@ -11,7 +11,7 @@ A **codec** is the atom of vuqs. It pairs a `parse` (URL → value) with a
 ```ts
 interface Codec<T> {
   parse: (raw) => T | undefined
-  serialize: (value: T) => /* query value */
+  serialize: (value: T) => ParsedQueryValue
   eq: (a: T, b: T) => boolean
   withDefault: (value: T) => CodecWithDefault<T>
 }

@@ -67,8 +67,8 @@ An **external, opaque** identifier (`MaybeRefOrGetter`). The module never derive
 it — you own it, whether it's a tab `ref`, a route param, or a wizard step.
 
 ```ts
-active: tab                     // a ref
-active: () => route.params.tab  // a getter
+withContext({ active: tab })                     // a ref
+withContext({ active: () => route.params.tab })  // a getter
 ```
 
 ### `preserve` — what survives a switch
@@ -78,7 +78,7 @@ is irreducible — two params can both be valid in both contexts yet one should
 persist and the other shouldn't.
 
 ```ts
-preserve: ['q'] // q carries over; everything else resets
+withContext({ preserve: ['q'] }) // q carries over; everything else resets
 ```
 
 ### `only` — param validity per context
@@ -89,10 +89,12 @@ is auto-dropped if a stale link pastes it into the wrong context. Omit a param t
 make it valid everywhere.
 
 ```ts
-only: {
-  category: ['products'], // category exists only on Products
-  status: ['orders'],     // status exists only on Orders
-}
+withContext({
+  only: {
+    category: ['products'], // category exists only on Products
+    status: ['orders'],     // status exists only on Orders
+  },
+})
 ```
 
 ### `navigate` — how to switch
@@ -104,9 +106,9 @@ context maps to a route, so you own that mapping.
 
 ```ts
 // context lives in a route param:
-navigate: (target, query) => router.push({ params: { tab: target }, query })
+withContext({ navigate: (target, query) => router.push({ params: { tab: target }, query }) })
 // or in the query string:
-navigate: (target, query) => router.replace({ query: { ...query, tab: target } })
+withContext({ navigate: (target, query) => router.replace({ query: { ...query, tab: target } }) })
 ```
 
 Omit it and `switchTo` throws; you can still drive navigation yourself with
