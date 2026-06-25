@@ -1,12 +1,11 @@
-import type { ParsedQuery } from '../../src/core/types'
 import { describe, expect, it, vi } from 'vitest'
 import { createApp } from 'vue'
+import { createTestingAdapter, resetQueues, withVuqsTestingAdapter } from '../../src/adapters/testing'
 import { installQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
 import { defineQueryParam } from '../../src/core/define-query-param'
 import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
-import { createTestingAdapter, resetQueues, withVuqsTestingAdapter } from '../../src/adapters/testing'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
 

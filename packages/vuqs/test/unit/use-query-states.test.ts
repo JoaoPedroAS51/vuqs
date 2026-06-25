@@ -1,4 +1,4 @@
-import type { ParsedQuery, ParsedQueryRaw } from '../../src/core/types'
+import type { ParsedQuery } from '../../src/core/types'
 import { describe, expect, it, vi } from 'vitest'
 import { createApp } from 'vue'
 import { createTestingAdapter } from '../../src/adapters/testing'

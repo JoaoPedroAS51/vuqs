@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createCodec, codecs } from '../../src/core/codec'
+import { codecs, createCodec } from '../../src/core/codec'
 import { isCodecBijective, testParseThenSerialize, testSerializeThenParse } from '../../src/testing'
 
 describe('testSerializeThenParse', () => {
@@ -51,7 +51,7 @@ describe('testSerializeThenParse', () => {
   })
 
   it('throws for NaN (integer codec rejects NaN serialized form)', () => {
-    expect(() => testSerializeThenParse(codecs.integer, NaN)).toThrowError(
+    expect(() => testSerializeThenParse(codecs.integer, Number.NaN)).toThrowError(
       '[vuqs] testSerializeThenParse: parsed value is undefined',
     )
   })
