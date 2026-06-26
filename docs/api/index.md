@@ -13,7 +13,7 @@ walkthroughs, see the [Guide](/guide/introduction) and
 | `@vuqs/core/modules` | `import { … } from '@vuqs/core/modules'` | [Composable modules](/modules/introduction) applied with `.use()`. |
 | `@vuqs/core/shared` | `import { … } from '@vuqs/core/shared'` | Helpers for [writing your own module](/modules/authoring). |
 | `@vuqs/core/adapters/testing` | `import { … } from '@vuqs/core/adapters/testing'` | The [testing](/api/testing) adapter and helpers. |
-| `@vuqs/core/testing` | `import { … } from '@vuqs/core/testing'` | Codec bijectivity [test helpers](/api/testing#vuqs-testing). |
+| `@vuqs/core/testing` | `import { … } from '@vuqs/core/testing'` | Codec bijectivity [test helpers](/api/testing#iscodecbijective). |
 | `@vuqs/nuxt` | `modules: ['@vuqs/nuxt']` | The [Nuxt module](/nuxt/introduction): auto-imports + the adapter out of the box. |
 
 ## Reference pages
