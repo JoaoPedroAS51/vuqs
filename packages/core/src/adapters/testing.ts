@@ -127,8 +127,8 @@ function parseSearchParams(input: TestingAdapterOptions['searchParams']): Parsed
  * @example
  * ```ts
  * import { createApp } from 'vue'
- * import { installQueryAdapter } from 'vuqs'
- * import { createTestingAdapter } from 'vuqs/adapters/testing'
+ * import { installQueryAdapter } from '@vuqs/core'
+ * import { createTestingAdapter } from '@vuqs/core/adapters/testing'
  *
  * const onUrlUpdate = vi.fn()
  * const adapter = createTestingAdapter({ searchParams: '?count=42', onUrlUpdate })
@@ -170,7 +170,7 @@ export function createTestingAdapter(options: TestingAdapterOptions = {}): Testi
  * @example
  * ```ts
  * import { mount } from '@vue/test-utils'
- * import { withVuqsTestingAdapter } from 'vuqs/adapters/testing'
+ * import { withVuqsTestingAdapter } from '@vuqs/core/adapters/testing'
  *
  * mount(MyComponent, {
  *   global: { plugins: [withVuqsTestingAdapter({ searchParams: '?count=42', onUrlUpdate })] },

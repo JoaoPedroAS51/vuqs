@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { codecs, useQueryState } from '@vuqs/core'
 import { computed, ref, watch } from 'vue'
-import { codecs, useQueryState } from 'vuqs'
 import PageLayout from '../components/PageLayout.vue'
 import StateBlock from '../components/StateBlock.vue'
 

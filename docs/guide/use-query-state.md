@@ -4,7 +4,7 @@ Binds a **single** query key to a writable ref. This is the workhorse for one
 param — a search box, a page number, a toggle.
 
 ```ts
-import { codecs, useQueryState } from 'vuqs'
+import { codecs, useQueryState } from '@vuqs/core'
 
 const q = useQueryState('q', codecs.string.withDefault(''))
 //    ^? QueryStateRef<string>
@@ -134,7 +134,7 @@ bridge it with a `computed`:
 
 ```vue
 <script setup lang="ts">
-import { codecs, useQueryState } from 'vuqs'
+import { codecs, useQueryState } from '@vuqs/core'
 import { computed } from 'vue'
 
 const date = useQueryState('date', codecs.isoDate)

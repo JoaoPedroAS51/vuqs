@@ -6,7 +6,7 @@ server for SSR. [`createSerializer`](/api/serializer#createserializer) builds a
 reusable, schema-bound function that turns values into a query.
 
 ```ts
-import { codecs, createSerializer, defineQueryParam } from 'vuqs'
+import { codecs, createSerializer, defineQueryParam } from '@vuqs/core'
 
 const schema = {
   q: defineQueryParam('q', codecs.string.withDefault('')),

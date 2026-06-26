@@ -1,4 +1,4 @@
-import type { QueryAdapterDefaultOptions } from 'vuqs'
+import type { QueryAdapterDefaultOptions } from '@vuqs/core'
 import { addImports, addPlugin, createResolver, defineNuxtModule, extendViteConfig } from '@nuxt/kit'
 import { defu } from 'defu'
 
@@ -23,7 +23,7 @@ export interface AutoImportsOptions {
    */
   codecs?: boolean
   /**
-   * The composable modules from `vuqs/modules`. Each module adds one global
+   * The composable modules from `@vuqs/core/modules`. Each module adds one global
    * name, so the set grows as new modules ship.
    *
    * @default true
@@ -114,15 +114,15 @@ export default defineNuxtModule<ModuleOptions>({
     const imports: { name: string, from: string }[] = []
 
     if (autoImports.composables) {
-      imports.push(...COMPOSABLE_IMPORTS.map(name => ({ name, from: 'vuqs' })))
+      imports.push(...COMPOSABLE_IMPORTS.map(name => ({ name, from: '@vuqs/core' })))
     }
 
     if (autoImports.codecs) {
-      imports.push(...CODEC_IMPORTS.map(name => ({ name, from: 'vuqs' })))
+      imports.push(...CODEC_IMPORTS.map(name => ({ name, from: '@vuqs/core' })))
     }
 
     if (autoImports.modules) {
-      imports.push(...MODULE_IMPORTS.map(name => ({ name, from: 'vuqs/modules' })))
+      imports.push(...MODULE_IMPORTS.map(name => ({ name, from: '@vuqs/core/modules' })))
     }
 
     if (imports.length > 0) {
@@ -132,7 +132,7 @@ export default defineNuxtModule<ModuleOptions>({
     extendViteConfig((config) => {
       config.optimizeDeps ||= {}
       config.optimizeDeps.include ||= []
-      config.optimizeDeps.include.push('vuqs', 'vuqs/modules')
+      config.optimizeDeps.include.push('@vuqs/core', '@vuqs/core/modules')
     })
 
     if (options.adapter !== false) {

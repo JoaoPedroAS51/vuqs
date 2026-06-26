@@ -3,7 +3,7 @@
 The reactive composables — bind query params to refs — plus the functions that
 wire up the [adapter](/api/adapters) they read and write through.
 
-## useQueryState <Badge type="info" text="vuqs" />
+## useQueryState <Badge type="info" text="@vuqs/core" />
 
 Binds a single query key to a writable ref.
 
@@ -64,7 +64,7 @@ interface QueryStateRef<T> extends WritableComputedRef<T> {
 ### Example
 
 ```ts
-import { codecs, useQueryState } from 'vuqs'
+import { codecs, useQueryState } from '@vuqs/core'
 
 const page = useQueryState('page', codecs.integer.withDefault(1))
 
@@ -78,7 +78,7 @@ Vue auto-unwraps a top-level ref in templates, so call them from a function in
 `<script setup>`. See [the guide](/guide/use-query-state#using-it-in-templates).
 :::
 
-## useQueryStates <Badge type="info" text="vuqs" />
+## useQueryStates <Badge type="info" text="@vuqs/core" />
 
 Binds a [schema](/guide/concepts#schema-a-map-of-params) of params to a reactive
 value map plus batch writers.
@@ -127,7 +127,7 @@ provided (see [`provideQueryAdapter`](#providequeryadapter)).
 ### Example
 
 ```ts
-import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
+import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
 
 const { values, setValues, clear } = useQueryStates({
   q: defineQueryParam('q', codecs.string.withDefault('')),
@@ -145,7 +145,7 @@ call `.use()` to layer modules like [`withRuntimeDefaults`](/modules/runtime-def
 [`withContext`](/modules/context) onto it.
 :::
 
-## toQueryRefs <Badge type="info" text="vuqs" />
+## toQueryRefs <Badge type="info" text="@vuqs/core" />
 
 Explodes a value map into one ref per field, the way Pinia's `storeToRefs` explodes
 a store. Use it to recover the per-field `.set`/`.clear` that the grouped `values`
@@ -181,7 +181,7 @@ clears against the *effective* default, exactly as `values.x = …` would.
 ### Example
 
 ```ts
-import { codecs, defineQueryParam, toQueryRefs, useQueryStates } from 'vuqs'
+import { codecs, defineQueryParam, toQueryRefs, useQueryStates } from '@vuqs/core'
 
 const { values } = useQueryStates({
   q: defineQueryParam('q', codecs.string),
@@ -201,7 +201,7 @@ read-only map (`selected`/`defaults`) explodes into read-only refs. `toQueryRefs
 detects which on its own — nothing to annotate on your side.
 :::
 
-## UseQueryStatesOptions <Badge type="info" text="vuqs" />
+## UseQueryStatesOptions <Badge type="info" text="@vuqs/core" />
 
 Per-instance behavior for both composables. The query source and URL writer come
 from the [adapter](/api/adapters#queryadapter), never from here.
@@ -226,7 +226,7 @@ interface UseQueryStatesOptions extends NavigateOptions {
 
 See [Navigation options](/guide/navigation-options) for behavior and precedence.
 
-## defineQueryParam <Badge type="info" text="vuqs" />
+## defineQueryParam <Badge type="info" text="@vuqs/core" />
 
 Builds a reusable [param](/guide/defining-params) from a path + codec, or a
 custom multi-key definition.
@@ -269,12 +269,12 @@ a key outside `paths`. See [composite params](/guide/nested-keys#composite-param
 ### Example
 
 ```ts
-import { codecs, defineQueryParam } from 'vuqs'
+import { codecs, defineQueryParam } from '@vuqs/core'
 
 const sort = defineQueryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc'))
 ```
 
-## provideQueryAdapter <Badge type="info" text="vuqs" />
+## provideQueryAdapter <Badge type="info" text="@vuqs/core" />
 
 Provides a [`QueryAdapter`](/api/adapters#queryadapter) to descendant components,
 so their composables resolve `query` / `navigate` automatically.
@@ -294,13 +294,13 @@ function provideQueryAdapter(adapter: QueryAdapter): void
 ### Example
 
 ```ts
-import { provideQueryAdapter } from 'vuqs'
-import { createVueRouterAdapter } from 'vuqs/adapters/vue-router'
+import { provideQueryAdapter } from '@vuqs/core'
+import { createVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
 
 provideQueryAdapter(createVueRouterAdapter())
 ```
 
-## installQueryAdapter <Badge type="info" text="vuqs" />
+## installQueryAdapter <Badge type="info" text="@vuqs/core" />
 
 The app-level counterpart to `provideQueryAdapter`: provides the adapter on the
 Vue `App` rather than the current component instance.
@@ -327,7 +327,7 @@ which is what the [Nuxt module](/nuxt/introduction) does under the hood:
 installQueryAdapter(nuxtApp.vueApp, createVueRouterAdapter())
 ```
 
-## useQueryAdapter <Badge type="info" text="vuqs" />
+## useQueryAdapter <Badge type="info" text="@vuqs/core" />
 
 Reads the adapter provided by an ancestor.
 

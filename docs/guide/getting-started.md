@@ -8,15 +8,15 @@ about five minutes.
 ::: code-group
 
 ```bash [pnpm]
-pnpm add vuqs
+pnpm add @vuqs/core
 ```
 
 ```bash [npm]
-npm install vuqs
+npm install @vuqs/core
 ```
 
 ```bash [yarn]
-yarn add vuqs
+yarn add @vuqs/core
 ```
 
 :::
@@ -26,7 +26,7 @@ dependency the built-in adapter needs.
 
 ::: tip
 Want runtime defaults and context features too? Compose them onto
-`useQueryStates` with [modules](/modules/introduction) from `vuqs/modules` — no
+`useQueryStates` with [modules](/modules/introduction) from `@vuqs/core/modules` — no
 extra package.
 :::
 
@@ -41,7 +41,7 @@ With `vue-router`, that's one line:
 ```vue
 <!-- App.vue -->
 <script setup lang="ts">
-import { provideVueRouterAdapter } from 'vuqs/adapters/vue-router'
+import { provideVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
 
 provideVueRouterAdapter()
 </script>
@@ -91,7 +91,7 @@ ref. Pass the key and a [codec](/guide/codecs) describing its type:
 
 ```vue
 <script setup lang="ts">
-import { codecs, useQueryState } from 'vuqs'
+import { codecs, useQueryState } from '@vuqs/core'
 
 const q = useQueryState('q', codecs.string.withDefault(''))
 //    ^? QueryStateRef<string>
@@ -118,7 +118,7 @@ writers:
 
 ```vue
 <script setup lang="ts">
-import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
+import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
 
 const { values, setValues, clear } = useQueryStates({
   q: defineQueryParam('q', codecs.string.withDefault('')),

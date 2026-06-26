@@ -6,7 +6,7 @@ never disagree. vuqs ships codecs for every common shape; for anything else,
 [build your own](/guide/custom-codecs).
 
 ```ts
-import { codecs } from 'vuqs'
+import { codecs } from '@vuqs/core'
 
 codecs.string          // a ready-made codec
 codecs.arrayOf(codecs.integer) // a factory — call it to get a codec

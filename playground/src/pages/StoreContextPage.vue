@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
+import { createVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
+import { withContext, withRuntimeDefaults } from '@vuqs/core/modules'
 import { ref } from 'vue'
-import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
-import { createVueRouterAdapter } from 'vuqs/adapters/vue-router'
-import { withContext, withRuntimeDefaults } from 'vuqs/modules'
 import PageLayout from '../components/PageLayout.vue'
 import StateBlock from '../components/StateBlock.vue'
 

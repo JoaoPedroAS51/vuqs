@@ -7,14 +7,14 @@ const src = (path: string) => new URL(path, import.meta.url).pathname
 // convention): editing the library reflects instantly via HMR, no rebuild needed.
 // The `dist` stubs (`unbuild --stub`) are jiti-backed and run in Node only, so a
 // browser playground aliases to `src` instead. The more specific subpath alias
-// must come before the bare `vuqs` alias so it matches first.
+// must come before the bare `@vuqs/core` alias so it matches first.
 export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: [
-      { find: 'vuqs/adapters/vue-router', replacement: src('../packages/vuqs/src/adapters/vue-router.ts') },
-      { find: 'vuqs/modules', replacement: src('../packages/vuqs/src/modules/index.ts') },
-      { find: 'vuqs', replacement: src('../packages/vuqs/src/index.ts') },
+      { find: '@vuqs/core/adapters/vue-router', replacement: src('../packages/core/src/adapters/vue-router.ts') },
+      { find: '@vuqs/core/modules', replacement: src('../packages/core/src/modules/index.ts') },
+      { find: '@vuqs/core', replacement: src('../packages/core/src/index.ts') },
     ],
     dedupe: ['vue', 'vue-router'],
   },

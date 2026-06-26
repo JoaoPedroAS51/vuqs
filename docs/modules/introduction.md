@@ -10,8 +10,8 @@ compose onto [`useQueryStates`](/guide/use-query-states) with `.use()`. The core
 stays small; you pull in only the modules you need.
 
 ```ts
-import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
-import { withContext, withRuntimeDefaults } from 'vuqs/modules'
+import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
+import { withContext, withRuntimeDefaults } from '@vuqs/core/modules'
 
 const { values, activeContext } = useQueryStates(schema)
   .use(withRuntimeDefaults())
@@ -43,13 +43,13 @@ resetting the per-context defaults held by [`withRuntimeDefaults`](/modules/runt
 they do it through `core`, not a direct dependency. The same `core` is the surface
 for [writing your own module](/modules/authoring).
 
-## The `vuqs/modules` subpath
+## The `@vuqs/core/modules` subpath
 
-Modules ship with the `vuqs` package but live under a separate entry point so they
+Modules ship with the `@vuqs/core` package but live under a separate entry point so they
 tree-shake independently of the core:
 
 ```ts
-import { withContext, withRuntimeDefaults } from 'vuqs/modules'
+import { withContext, withRuntimeDefaults } from '@vuqs/core/modules'
 ```
 
 Importing the core never pulls in module code. Under Nuxt, the

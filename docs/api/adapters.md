@@ -3,7 +3,7 @@
 The adapter is the boundary where vuqs reads and writes the URL. See the
 [Adapters guide](/guide/adapters) for the full picture.
 
-## QueryAdapter <Badge type="info" text="vuqs" />
+## QueryAdapter <Badge type="info" text="@vuqs/core" />
 
 The contract every adapter satisfies.
 
@@ -23,7 +23,7 @@ interface QueryAdapter {
 | `navigate` | `(query, options) => void \| Promise<void>` | Stringify the next query and apply it (push or replace per `options.history`). May be sync or async. |
 | `defaultOptions` | `QueryAdapterDefaultOptions` | App-wide defaults at the bottom of the [precedence chain](/guide/navigation-options#precedence). |
 
-## QueryAdapterDefaultOptions <Badge type="info" text="vuqs" />
+## QueryAdapterDefaultOptions <Badge type="info" text="@vuqs/core" />
 
 Defaults an adapter applies to every write.
 
@@ -41,7 +41,7 @@ interface QueryAdapterDefaultOptions extends NavigateOptions {
 See [Navigation options](/guide/navigation-options#precedence) for how these
 compose with per-instance and per-call options.
 
-## createVueRouterAdapter <Badge type="tip" text="vuqs/adapters/vue-router" />
+## createVueRouterAdapter <Badge type="tip" text="@vuqs/core/adapters/vue-router" />
 
 Builds a [`QueryAdapter`](#queryadapter) backed by `vue-router`. `vue-router` is
 an **optional** peer dependency — pulled in only if you import this subpath.
@@ -75,7 +75,7 @@ A `QueryAdapter` — returned **without** providing it. Pass it to
 ### Example
 
 ```ts
-import { createVueRouterAdapter } from 'vuqs/adapters/vue-router'
+import { createVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
 
 const adapter = createVueRouterAdapter({ defaultOptions: { history: 'replace' } })
 ```
@@ -90,7 +90,7 @@ Dotted keys (`filters.sort`) and array values require `vue-router` configured wi
 option is ignored by this adapter.
 :::
 
-## provideVueRouterAdapter <Badge type="tip" text="vuqs/adapters/vue-router" />
+## provideVueRouterAdapter <Badge type="tip" text="@vuqs/core/adapters/vue-router" />
 
 `provideQueryAdapter(createVueRouterAdapter(options))` in one call.
 
@@ -112,7 +112,7 @@ SPAs and Nuxt (Nuxt's router *is* `vue-router`).
 ### Example
 
 ```ts
-import { provideVueRouterAdapter } from 'vuqs/adapters/vue-router'
+import { provideVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
 
 provideVueRouterAdapter({ defaultOptions: { history: 'replace' } })
 ```

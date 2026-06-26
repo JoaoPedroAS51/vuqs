@@ -1,11 +1,11 @@
-# withContext <Badge type="tip" text="vuqs/modules" />
+# withContext <Badge type="tip" text="@vuqs/core/modules" />
 
 Makes one schema behave differently across **contexts** — tabs, wizard steps, view
 modes. Switching to a context preserves some params, resets the rest, and drops
 params that don't exist there — reconciled into a single navigation you trigger.
 
 ```ts
-import { withContext } from 'vuqs/modules'
+import { withContext } from '@vuqs/core/modules'
 ```
 
 ## Overview
@@ -170,8 +170,8 @@ Either way, TypeScript rejects a `preserve` or `only` key that isn't in the sche
 
 ```vue
 <script setup lang="ts">
-import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
-import { withContext, withRuntimeDefaults } from 'vuqs/modules'
+import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
+import { withContext, withRuntimeDefaults } from '@vuqs/core/modules'
 import { useRoute, useRouter } from 'vue-router'
 
 type Tab = 'products' | 'orders'

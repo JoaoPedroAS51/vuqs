@@ -8,8 +8,8 @@ You can unit-test components and composables that use `useQueryState` /
 Both live at dedicated subpaths so they're never pulled into your app bundle:
 
 ```ts
-import { createTestingAdapter, withVuqsTestingAdapter } from 'vuqs/adapters/testing'
-import { isCodecBijective } from 'vuqs/testing'
+import { createTestingAdapter, withVuqsTestingAdapter } from '@vuqs/core/adapters/testing'
+import { isCodecBijective } from '@vuqs/core/testing'
 ```
 
 ## Testing composables
@@ -22,8 +22,8 @@ app's [injection context](/api/composables#installqueryadapter).
 ```ts
 import { describe, expect, it } from 'vitest'
 import { createApp } from 'vue'
-import { codecs, installQueryAdapter, useQueryState } from 'vuqs'
-import { createTestingAdapter } from 'vuqs/adapters/testing'
+import { codecs, installQueryAdapter, useQueryState } from '@vuqs/core'
+import { createTestingAdapter } from '@vuqs/core/adapters/testing'
 
 it('reads the initial value', () => {
   const adapter = createTestingAdapter({ searchParams: '?count=42' })
@@ -100,7 +100,7 @@ between tests to keep one test's pending writes from leaking into the next:
 
 ```ts
 import { beforeEach } from 'vitest'
-import { resetQueues } from 'vuqs/adapters/testing'
+import { resetQueues } from '@vuqs/core/adapters/testing'
 
 beforeEach(() => {
   resetQueues()
@@ -115,7 +115,7 @@ into `@vue/test-utils`' `global.plugins`:
 ```ts
 import { mount } from '@vue/test-utils'
 import { vi } from 'vitest'
-import { withVuqsTestingAdapter } from 'vuqs/adapters/testing'
+import { withVuqsTestingAdapter } from '@vuqs/core/adapters/testing'
 import CounterButton from './CounterButton.vue'
 
 it('increments the count when clicked', async () => {
@@ -160,12 +160,12 @@ app. Repeated keys collapse into arrays — `'?tags=a&tags=b'` reads as
 ## Testing custom codecs
 
 A [custom codec](/guide/custom-codecs) must be **bijective**: `parse` and
-`serialize` round-trip in both directions. `vuqs/testing` turns that contract into
+`serialize` round-trip in both directions. `@vuqs/core/testing` turns that contract into
 assertions. All three return `true` on success and **throw** on failure, with a
 message that pinpoints which side broke:
 
 ```ts
-import { isCodecBijective, testParseThenSerialize, testSerializeThenParse } from 'vuqs/testing'
+import { isCodecBijective, testParseThenSerialize, testSerializeThenParse } from '@vuqs/core/testing'
 
 it('is bijective', () => {
   // Both directions plus the exact serialized form, in one call:

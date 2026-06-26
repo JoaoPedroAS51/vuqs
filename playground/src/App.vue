@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { provideVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
 import { computed, ref, watchEffect } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
-import { provideVueRouterAdapter } from 'vuqs/adapters/vue-router'
 
 // One adapter for the whole app: descendant useQueryState/useQueryStates calls
 // resolve `query` + `navigate` from here. Default to `replace` so the demos do

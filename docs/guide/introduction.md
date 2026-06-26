@@ -6,7 +6,7 @@ sort order, and pagination in local component state, you bind them to query keys
 and get reactive, typed refs back.
 
 ```ts
-import { codecs, useQueryState } from 'vuqs'
+import { codecs, useQueryState } from '@vuqs/core'
 
 const page = useQueryState('page', codecs.integer.withDefault(1))
 //    ^? QueryStateRef<number>
@@ -50,7 +50,7 @@ or "resetting filters when you change tabs" — those are [modules](/modules/int
 ### Modules
 
 Opt-in behavior you compose onto `useQueryStates` with `.use()`, imported from the
-[`vuqs/modules`](/modules/introduction) subpath of the same package:
+[`@vuqs/core/modules`](/modules/introduction) subpath of the same package:
 
 - **[`withRuntimeDefaults`](/modules/runtime-defaults)** — runtime defaults layered under the
   bound state, so `values` reads through them while only `selected` reaches the URL.

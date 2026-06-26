@@ -4,7 +4,7 @@ When no [built-in codec](/guide/codecs) fits, build one. A codec is a small,
 self-contained object — `createCodec` is the only entry point you need.
 
 ```ts
-import { createCodec } from 'vuqs'
+import { createCodec } from '@vuqs/core'
 
 const codec = createCodec<T>({
   parse: (raw): T | undefined => { /* … */ },
@@ -22,7 +22,7 @@ equality), and a `.withDefault()` — exactly like the built-ins.
    A bad URL should degrade to the default, not crash the page.
 2. **`serialize` and `parse` must round-trip.** `parse(serialize(x))` should equal
    `x` for every valid `x`. Pairing them in one codec is what keeps that true —
-   and [`vuqs/testing`](/guide/testing#testing-custom-codecs) turns it into an
+   and [`@vuqs/core/testing`](/guide/testing#testing-custom-codecs) turns it into an
    assertion.
 
 ## Reading the raw value
@@ -33,7 +33,7 @@ array, a nested object, or `undefined`. For scalar codecs, the helper
 `string | undefined`:
 
 ```ts
-import { createCodec, getQueryString } from 'vuqs'
+import { createCodec, getQueryString } from '@vuqs/core'
 
 const upper = createCodec<string>({
   parse: (raw) => {
@@ -49,7 +49,7 @@ const upper = createCodec<string>({
 A codec that only accepts integers in `0–100`:
 
 ```ts
-import { createCodec, getQueryString } from 'vuqs'
+import { createCodec, getQueryString } from '@vuqs/core'
 
 const percent = createCodec<number>({
   parse: (raw) => {
@@ -75,7 +75,7 @@ encode/decode:
 
 ```ts
 import type { SortingState } from '@tanstack/vue-table'
-import { createCodec, getQueryString } from 'vuqs'
+import { createCodec, getQueryString } from '@vuqs/core'
 
 // Encode as `id.dir` pairs: ?sort=name.asc,price.desc
 const tableSorting = createCodec<SortingState>({

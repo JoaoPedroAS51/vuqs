@@ -7,7 +7,7 @@ import { computed, onScopeDispose, toValue, watch } from 'vue'
 import { buildQuery, dropDefaults, parseQueryStates } from '../core/schema'
 import { pickBy } from '../shared'
 
-declare module 'vuqs' {
+declare module '@vuqs/core' {
   interface QueryHooks {
     /** Published by {@link withContext} when the active context changes. */
     'context:change': (context: string) => void

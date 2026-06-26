@@ -3,7 +3,7 @@
 The built-in codecs, the factories that build them, and `createCodec` for your
 own. For a narrative tour, see the [Codecs guide](/guide/codecs).
 
-## codecs <Badge type="info" text="vuqs" />
+## codecs <Badge type="info" text="@vuqs/core" />
 
 A namespace of built-in codecs and codec factories. Every codec's `parse` returns
 `undefined` for absent **or invalid** input.
@@ -74,7 +74,7 @@ schema parser like Zod's `.parse` works directly.
 const range = useQueryState('range', codecs.json({ validate: priceSchema.parse }))
 ```
 
-## createCodec <Badge type="info" text="vuqs" />
+## createCodec <Badge type="info" text="@vuqs/core" />
 
 Builds a codec from a `parse`/`serialize` pair — the extension point for custom
 and adapted value shapes. See [Custom codecs](/guide/custom-codecs).
@@ -118,7 +118,7 @@ interface Codec<T> {
 ### Example
 
 ```ts
-import { createCodec, getQueryString } from 'vuqs'
+import { createCodec, getQueryString } from '@vuqs/core'
 
 const percent = createCodec<number>({
   parse: (raw) => {
@@ -129,7 +129,7 @@ const percent = createCodec<number>({
 })
 ```
 
-## Codec.withDefault <Badge type="info" text="vuqs" />
+## Codec.withDefault <Badge type="info" text="@vuqs/core" />
 
 Returns a variant of a codec whose `parse` falls back to `defaultValue` instead of
 `undefined`.

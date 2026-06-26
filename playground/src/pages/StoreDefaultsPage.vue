@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
+import { withRuntimeDefaults } from '@vuqs/core/modules'
 import { onMounted, ref } from 'vue'
-import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
-import { withRuntimeDefaults } from 'vuqs/modules'
 import PageLayout from '../components/PageLayout.vue'
 import StateBlock from '../components/StateBlock.vue'
 

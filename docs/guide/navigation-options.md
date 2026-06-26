@@ -113,7 +113,7 @@ Let the user choose whether paging is a back-button stop:
 
 ```vue
 <script setup lang="ts">
-import { codecs, useQueryStates } from 'vuqs'
+import { codecs, useQueryStates } from '@vuqs/core'
 import { ref } from 'vue'
 
 const mode = ref<'replace' | 'push'>('replace')

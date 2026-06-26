@@ -3,13 +3,13 @@
  *
  * @remarks
  * Empty in the core. A module that publishes a coordination event declares its
- * key and handler signature here via `declare module 'vuqs'`, so other modules
+ * key and handler signature here via `declare module '@vuqs/core'`, so other modules
  * can listen without importing it. Key names are namespaced by module, for
  * example `'context:change'`.
  *
  * @example
  * ```ts
- * declare module 'vuqs' {
+ * declare module '@vuqs/core' {
  *   interface QueryHooks {
  *     'context:change': (context: string) => void
  *   }

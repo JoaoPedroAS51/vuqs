@@ -3,7 +3,7 @@
 The exported type surface, grouped by area. Each group's <Badge type="info" text="badge" />
 shows the entry point it's imported from.
 
-## Codec types <Badge type="info" text="vuqs" />
+## Codec types <Badge type="info" text="@vuqs/core" />
 
 ```ts
 interface Codec<T> {
@@ -26,7 +26,7 @@ interface CodecInput<T> {
 }
 ```
 
-## Param & schema types <Badge type="info" text="vuqs" />
+## Param & schema types <Badge type="info" text="@vuqs/core" />
 
 ```ts
 interface QueryParamDefinition<T> {
@@ -60,7 +60,7 @@ type QueryStateWriteValues<TSchema> = Partial<Record<keyof TSchema, unknown | nu
 `QueryStateWriteValues` is the three-state write map: omit/`undefined` skips,
 `null` clears, a value sets. See [null vs undefined](/guide/null-vs-undefined).
 
-## Composable types <Badge type="info" text="vuqs" />
+## Composable types <Badge type="info" text="@vuqs/core" />
 
 ```ts
 interface QueryStateRef<T> extends WritableComputedRef<T> {
@@ -89,7 +89,7 @@ type QueryModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
 interface QueryCore<TSchema> { /* the faceted core passed to a module */ }
 ```
 
-## Adapter & navigation types <Badge type="info" text="vuqs" />
+## Adapter & navigation types <Badge type="info" text="@vuqs/core" />
 
 ```ts
 interface QueryAdapter {
@@ -111,7 +111,7 @@ interface NavigateOptions {
 type QueryStateNavigate = (query: ParsedQueryRaw, options: NavigateOptions) => void | Promise<void>
 ```
 
-## Query value types <Badge type="info" text="vuqs" />
+## Query value types <Badge type="info" text="@vuqs/core" />
 
 ```ts
 type ParsedQueryValue =
@@ -123,7 +123,7 @@ type ParsedQuery = Record<string, ParsedQueryValue>    // input side (from the U
 type ParsedQueryRaw = Record<string, ParsedQueryValue> // output side (to the URL)
 ```
 
-## Serializer types <Badge type="info" text="vuqs" />
+## Serializer types <Badge type="info" text="@vuqs/core" />
 
 ```ts
 interface CreateSerializerOptions {
@@ -141,7 +141,7 @@ type SerializerStringify = (query: ParsedQueryRaw) => string
 type SerializerParse = (search: string) => ParsedQuery
 ```
 
-## Engine types <Badge type="info" text="vuqs" />
+## Engine types <Badge type="info" text="@vuqs/core" />
 
 The advanced surface behind [`createQueryStateEngine`](/api/serializer). The engine
 is organized into facets, shared with the [`QueryCore`](/modules/authoring#authoring-types)
@@ -190,4 +190,4 @@ Module-specific types live with each module: [`RuntimeDefaultsApi`](/modules/run
 [`ContextOptions`](/modules/context#options) and
 [`ContextApi`](/modules/context#api), plus the
 [authoring types](/modules/authoring#authoring-types) (`QueryCore`, `QueryModule`,
-`QueryHooks`, `QueryPipeline`, and the `vuqs/shared` helpers).
+`QueryHooks`, `QueryPipeline`, and the `@vuqs/core/shared` helpers).

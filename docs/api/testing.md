@@ -4,7 +4,7 @@ Utilities for testing code that uses vuqs. Both subpaths are dev-only — they'r
 never imported by your app code. See the [Testing guide](/guide/testing) for
 task-oriented walkthroughs.
 
-## createTestingAdapter <Badge type="tip" text="vuqs/adapters/testing" />
+## createTestingAdapter <Badge type="tip" text="@vuqs/core/adapters/testing" />
 
 Builds a [`QueryAdapter`](/api/adapters#queryadapter) backed by an in-memory ref,
 so a composable can run in tests without a router.
@@ -52,8 +52,8 @@ Pass it to [`installQueryAdapter`](/api/composables#installqueryadapter) or
 
 ```ts
 import { createApp } from 'vue'
-import { codecs, installQueryAdapter, useQueryState } from 'vuqs'
-import { createTestingAdapter } from 'vuqs/adapters/testing'
+import { codecs, installQueryAdapter, useQueryState } from '@vuqs/core'
+import { createTestingAdapter } from '@vuqs/core/adapters/testing'
 
 const adapter = createTestingAdapter({ searchParams: '?count=42' })
 const app = createApp({})
@@ -63,7 +63,7 @@ const count = app.runWithContext(() => useQueryState('count', codecs.integer.wit
 expect(count.value).toBe(42)
 ```
 
-## withVuqsTestingAdapter <Badge type="tip" text="vuqs/adapters/testing" />
+## withVuqsTestingAdapter <Badge type="tip" text="@vuqs/core/adapters/testing" />
 
 Returns a Vue plugin that builds a testing adapter and installs it on an app, for
 use with `@vue/test-utils`' `global.plugins`.
@@ -88,14 +88,14 @@ it yourself instead.
 
 ```ts
 import { mount } from '@vue/test-utils'
-import { withVuqsTestingAdapter } from 'vuqs/adapters/testing'
+import { withVuqsTestingAdapter } from '@vuqs/core/adapters/testing'
 
 mount(MyComponent, {
   global: { plugins: [withVuqsTestingAdapter({ searchParams: '?count=42' })] },
 })
 ```
 
-## resetQueues <Badge type="tip" text="vuqs/adapters/testing" />
+## resetQueues <Badge type="tip" text="@vuqs/core/adapters/testing" />
 
 Clears the module-level update queue shared by every engine, so pending writes
 from one test don't leak into the next.
@@ -110,16 +110,16 @@ function resetQueues(): void
 
 ```ts
 import { beforeEach } from 'vitest'
-import { resetQueues } from 'vuqs/adapters/testing'
+import { resetQueues } from '@vuqs/core/adapters/testing'
 
 beforeEach(() => {
   resetQueues()
 })
 ```
 
-Also re-exported from the core ([`vuqs`](/api/)) for convenience.
+Also re-exported from the core ([`@vuqs/core`](/api/)) for convenience.
 
-## Testing-adapter types <Badge type="tip" text="vuqs/adapters/testing" />
+## Testing-adapter types <Badge type="tip" text="@vuqs/core/adapters/testing" />
 
 ```ts
 interface UrlUpdateEvent {
@@ -130,7 +130,7 @@ interface UrlUpdateEvent {
 type OnUrlUpdateFunction = (event: UrlUpdateEvent) => void
 ```
 
-## isCodecBijective <Badge type="tip" text="vuqs/testing" />
+## isCodecBijective <Badge type="tip" text="@vuqs/core/testing" />
 
 The full bijectivity check for a [custom codec](/guide/custom-codecs): both
 round-trip directions hold, and the serialized/parsed forms match the expected
@@ -159,13 +159,13 @@ function isCodecBijective<T>(codec: Codec<T>, serialized: ParsedQueryValue, inpu
 ### Example
 
 ```ts
-import { isCodecBijective } from 'vuqs/testing'
+import { isCodecBijective } from '@vuqs/core/testing'
 
 expect(isCodecBijective(codecs.integer, '42', 42)).toBe(true)
 expect(() => isCodecBijective(codecs.integer, '42', 47)).toThrow()
 ```
 
-## testSerializeThenParse <Badge type="tip" text="vuqs/testing" />
+## testSerializeThenParse <Badge type="tip" text="@vuqs/core/testing" />
 
 Checks one direction: `parse(serialize(input))` equals `input` (by `codec.eq`).
 
@@ -190,13 +190,13 @@ output, or if the round-tripped value differs.
 ### Example
 
 ```ts
-import { testSerializeThenParse } from 'vuqs/testing'
+import { testSerializeThenParse } from '@vuqs/core/testing'
 
 expect(testSerializeThenParse(codecs.integer, 42)).toBe(true)
 expect(() => testSerializeThenParse(codecs.integer, Number.NaN)).toThrow()
 ```
 
-## testParseThenSerialize <Badge type="tip" text="vuqs/testing" />
+## testParseThenSerialize <Badge type="tip" text="@vuqs/core/testing" />
 
 Checks the other direction: `serialize(parse(serialized))` equals `serialized`
 ([structurally](/api/serializer#structuraleq)).
@@ -222,7 +222,7 @@ re-serialized value differs.
 ### Example
 
 ```ts
-import { testParseThenSerialize } from 'vuqs/testing'
+import { testParseThenSerialize } from '@vuqs/core/testing'
 
 expect(testParseThenSerialize(codecs.integer, '42')).toBe(true)
 expect(() => testParseThenSerialize(codecs.integer, 'not-a-number')).toThrow()

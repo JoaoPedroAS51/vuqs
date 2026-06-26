@@ -1,5 +1,5 @@
 {
-  "name": "vuqs",
+  "name": "@vuqs/core",
   "type": "module",
   "version": "0.0.0",
   "description": "Type-safe query state for Vue 3 — composable codecs and URL sync.",

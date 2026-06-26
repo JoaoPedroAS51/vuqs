@@ -6,7 +6,7 @@ it inline in `useQueryStates`; this page covers it on its own — for naming,
 reusing, and composing params.
 
 ```ts
-import { codecs, defineQueryParam } from 'vuqs'
+import { codecs, defineQueryParam } from '@vuqs/core'
 
 const page = defineQueryParam('page', codecs.integer.withDefault(1))
 ```
@@ -26,7 +26,7 @@ everywhere:
 
 ```ts
 // filters.ts
-import { codecs, defineQueryParam } from 'vuqs'
+import { codecs, defineQueryParam } from '@vuqs/core'
 
 export const filterSchema = {
   q: defineQueryParam('q', codecs.string.withDefault('')),
@@ -37,7 +37,7 @@ export const filterSchema = {
 
 ```ts
 // AnyComponent.vue
-import { useQueryStates } from 'vuqs'
+import { useQueryStates } from '@vuqs/core'
 import { filterSchema } from './filters'
 
 const { values } = useQueryStates(filterSchema)
@@ -88,7 +88,7 @@ bounding box across four — use the object form. You provide `paths`, `parse`, 
 `serialize` directly:
 
 ```ts
-import { getQueryString } from 'vuqs'
+import { getQueryString } from '@vuqs/core'
 
 interface Range {
   from: string

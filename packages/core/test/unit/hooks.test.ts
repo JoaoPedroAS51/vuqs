@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createQueryHooks } from '../../src/core/hooks'
 
-declare module 'vuqs' {
+declare module '@vuqs/core' {
   interface QueryHooks {
     'test:ping': (value: number) => void
   }

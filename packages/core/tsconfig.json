@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "paths": {
-      "vuqs": ["./src/index.ts"]
+      "@vuqs/core": ["./src/index.ts"]
     }
   },
   "include": [

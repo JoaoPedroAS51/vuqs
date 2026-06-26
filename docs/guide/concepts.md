@@ -33,7 +33,7 @@ A **param** is a codec wired to a concrete query path, produced by
 [`defineQueryParam`](/guide/defining-params):
 
 ```ts
-import { codecs, defineQueryParam } from 'vuqs'
+import { codecs, defineQueryParam } from '@vuqs/core'
 
 const page = defineQueryParam('page', codecs.integer)
 //    binds codecs.integer to the `page` key

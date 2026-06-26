@@ -16,7 +16,7 @@ import { structuralEq } from './core/equality'
  *
  * @example
  * ```ts
- * import { isCodecBijective } from 'vuqs/testing'
+ * import { isCodecBijective } from '@vuqs/core/testing'
  *
  * // Passing test returns true
  * expect(isCodecBijective(codecs.integer, '42', 42)).toBe(true)
@@ -64,7 +64,7 @@ export function isCodecBijective<T>(codec: Codec<T>, serialized: ParsedQueryValu
  *
  * @example
  * ```ts
- * import { testSerializeThenParse } from 'vuqs/testing'
+ * import { testSerializeThenParse } from '@vuqs/core/testing'
  *
  * // Passing test returns true
  * expect(testSerializeThenParse(codecs.integer, 42)).toBe(true)
@@ -109,7 +109,7 @@ export function testSerializeThenParse<T>(codec: Codec<T>, input: T): boolean {
  *
  * @example
  * ```ts
- * import { testParseThenSerialize } from 'vuqs/testing'
+ * import { testParseThenSerialize } from '@vuqs/core/testing'
  *
  * // Passing test returns true
  * expect(testParseThenSerialize(codecs.integer, '42')).toBe(true)

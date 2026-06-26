@@ -41,7 +41,7 @@ features:
 
 ```vue
 <script setup lang="ts">
-import { codecs, useQueryState } from 'vuqs'
+import { codecs, useQueryState } from '@vuqs/core'
 
 // ?q=laptop&page=2  ⇄  reactive, typed refs
 const q = useQueryState('q', codecs.string.withDefault(''))

@@ -9,7 +9,7 @@ keys. vuqs supports both.
 A param's path can be **dotted** to target a nested query object:
 
 ```ts
-import { codecs, defineQueryParam } from 'vuqs'
+import { codecs, defineQueryParam } from '@vuqs/core'
 
 defineQueryParam('filters.sort', codecs.string)
 defineQueryParam('filters.dir', codecs.literal(['asc', 'desc'] as const))
@@ -55,7 +55,7 @@ a range — a `from`/`to` pair you want to read and write as a single object. Us
 the object form of [`defineQueryParam`](/guide/defining-params#composite-params):
 
 ```ts
-import { defineQueryParam, getQueryString } from 'vuqs'
+import { defineQueryParam, getQueryString } from '@vuqs/core'
 
 interface DateRange {
   from: string

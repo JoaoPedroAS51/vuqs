@@ -1,10 +1,10 @@
-# withRuntimeDefaults <Badge type="tip" text="vuqs/modules" />
+# withRuntimeDefaults <Badge type="tip" text="@vuqs/core/modules" />
 
 Layers runtime defaults *under* the bound query state, so they shape what the UI
 reads without ever reaching the URL.
 
 ```ts
-import { withRuntimeDefaults } from 'vuqs/modules'
+import { withRuntimeDefaults } from '@vuqs/core/modules'
 ```
 
 ## Overview
@@ -91,8 +91,8 @@ with [`toQueryRefs`](/api/composables#toqueryrefs).
 
 ```vue
 <script setup lang="ts">
-import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
-import { withRuntimeDefaults } from 'vuqs/modules'
+import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
+import { withRuntimeDefaults } from '@vuqs/core/modules'
 import { onMounted } from 'vue'
 
 const { values, selected, defaults, setDefaults, clear } = useQueryStates({

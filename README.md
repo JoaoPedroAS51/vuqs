@@ -12,7 +12,7 @@ URL becomes the single source of truth for view state — typed, reactive, and
 bound to your router.
 
 ```bash
-pnpm add vuqs
+pnpm add @vuqs/core
 ```
 
 ## Quick start
@@ -22,7 +22,7 @@ Provide an adapter once, near the root of your app:
 ```vue
 <!-- App.vue -->
 <script setup lang="ts">
-import { provideVueRouterAdapter } from 'vuqs/adapters/vue-router'
+import { provideVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
 
 provideVueRouterAdapter()
 </script>
@@ -32,7 +32,7 @@ Then bind state to the URL anywhere below it:
 
 ```vue
 <script setup lang="ts">
-import { codecs, useQueryState } from 'vuqs'
+import { codecs, useQueryState } from '@vuqs/core'
 
 const q = useQueryState('q', codecs.string.withDefault(''))
 const page = useQueryState('page', codecs.integer.withDefault(1))
@@ -55,7 +55,7 @@ binds many keys at once and coalesces multi-field writes into a single navigatio
 
 | Package | What it does |
 | --- | --- |
-| [`vuqs`](https://JoaoPedroAS51.github.io/vuqs/guide/introduction) | The core — codecs, `useQueryState`/`useQueryStates`, adapters, serializer, and the [`vuqs/modules`](https://JoaoPedroAS51.github.io/vuqs/modules/introduction) subpath. |
+| [`@vuqs/core`](https://JoaoPedroAS51.github.io/vuqs/guide/introduction) | The core — codecs, `useQueryState`/`useQueryStates`, adapters, serializer, and the [`@vuqs/core/modules`](https://JoaoPedroAS51.github.io/vuqs/modules/introduction) subpath. |
 | [`@vuqs/nuxt`](https://JoaoPedroAS51.github.io/vuqs/nuxt/introduction) | The Nuxt module — auto-imports and the vue-router adapter out of the box. |
 
 ## Features

@@ -24,7 +24,7 @@ The built-in adapter lives at a subpath so it's only pulled in when you use it:
 ```vue
 <!-- App.vue -->
 <script setup lang="ts">
-import { provideVueRouterAdapter } from 'vuqs/adapters/vue-router'
+import { provideVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
 
 provideVueRouterAdapter()
 </script>
@@ -87,8 +87,8 @@ component — `createVueRouterAdapter()` returns the bare object, which you hand
 [`provideQueryAdapter`](/api/composables#providequeryadapter) (component-level):
 
 ```ts
-import { installQueryAdapter } from 'vuqs'
-import { createVueRouterAdapter } from 'vuqs/adapters/vue-router'
+import { installQueryAdapter } from '@vuqs/core'
+import { createVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
 
 installQueryAdapter(app, createVueRouterAdapter())
 ```
@@ -103,7 +103,7 @@ To centralize a non-vue-router setup, build the adapter and provide it yourself:
 
 ```ts
 import qs from 'qs'
-import { provideQueryAdapter } from 'vuqs'
+import { provideQueryAdapter } from '@vuqs/core'
 
 provideQueryAdapter({
   query: () => readQuerySomehow(),

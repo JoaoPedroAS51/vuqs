@@ -50,8 +50,8 @@
   },
   "dependencies": {
     "@nuxt/kit": "catalog:",
-    "defu": "catalog:",
-    "vuqs": "workspace:*"
+    "@vuqs/core": "workspace:*",
+    "defu": "catalog:"
   },
   "devDependencies": {
     "@nuxt/module-builder": "catalog:",

@@ -87,17 +87,38 @@ importers:
         specifier: 'catalog:'
         version: 3.5.38(typescript@6.0.3)
 
+  packages/core:
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.9(vitest@4.1.9)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      unbuild:
+        specifier: 'catalog:'
+        version: 3.6.1(typescript@6.0.3)(vue-sfc-transformer@0.1.17(@vue/compiler-core@3.5.38)(esbuild@0.28.1)(vue@3.5.38(typescript@6.0.3)))(vue-tsc@3.3.5(typescript@6.0.3))(vue@3.5.38(typescript@6.0.3))
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.9(@types/node@22.20.0)(@vitest/coverage-v8@4.1.9)(vite@8.1.0(@types/node@22.20.0)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
+      vue:
+        specifier: 'catalog:'
+        version: 3.5.38(typescript@6.0.3)
+      vue-router:
+        specifier: 'catalog:'
+        version: 5.1.0(@vue/compiler-sfc@3.5.38)(esbuild@0.28.1)(rolldown@1.1.3)(rollup@4.62.2)(vite@8.1.0(@types/node@22.20.0)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))(vue@3.5.38(typescript@6.0.3))
+
   packages/nuxt:
     dependencies:
       '@nuxt/kit':
         specifier: 'catalog:'
         version: 4.4.8(magicast@0.5.3)
+      '@vuqs/core':
+        specifier: workspace:*
+        version: link:../core
       defu:
         specifier: 'catalog:'
         version: 6.1.7
-      vuqs:
-        specifier: workspace:*
-        version: link:../vuqs
     devDependencies:
       '@nuxt/module-builder':
         specifier: 'catalog:'
@@ -121,38 +142,17 @@ importers:
         specifier: 'catalog:'
         version: 3.3.5(typescript@6.0.3)
 
-  packages/vuqs:
-    devDependencies:
-      '@vitest/coverage-v8':
-        specifier: 'catalog:'
-        version: 4.1.9(vitest@4.1.9)
-      typescript:
-        specifier: 'catalog:'
-        version: 6.0.3
-      unbuild:
-        specifier: 'catalog:'
-        version: 3.6.1(typescript@6.0.3)(vue-sfc-transformer@0.1.17(@vue/compiler-core@3.5.38)(esbuild@0.28.1)(vue@3.5.38(typescript@6.0.3)))(vue-tsc@3.3.5(typescript@6.0.3))(vue@3.5.38(typescript@6.0.3))
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.9(@types/node@22.20.0)(@vitest/coverage-v8@4.1.9)(vite@8.1.0(@types/node@22.20.0)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
-      vue:
-        specifier: 'catalog:'
-        version: 3.5.38(typescript@6.0.3)
-      vue-router:
-        specifier: 'catalog:'
-        version: 5.1.0(@vue/compiler-sfc@3.5.38)(esbuild@0.28.1)(rolldown@1.1.3)(rollup@4.62.2)(vite@8.1.0(@types/node@22.20.0)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))(vue@3.5.38(typescript@6.0.3))
-
   playground:
     dependencies:
+      '@vuqs/core':
+        specifier: workspace:*
+        version: link:../packages/core
       vue:
         specifier: 'catalog:'
         version: 3.5.38(typescript@6.0.3)
       vue-router:
         specifier: 'catalog:'
         version: 5.1.0(@vue/compiler-sfc@3.5.38)(esbuild@0.28.1)(rolldown@1.1.3)(rollup@4.62.2)(vite@8.1.0(@types/node@22.20.0)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))(vue@3.5.38(typescript@6.0.3))
-      vuqs:
-        specifier: workspace:*
-        version: link:../packages/vuqs
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: 'catalog:'

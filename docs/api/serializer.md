@@ -4,7 +4,7 @@ Framework-free building blocks — no Vue, no router. Use them to build URLs, ru
 the server, or compose your own behavior. See the [serializer guide](/guide/serializer)
 for the narrative.
 
-## createSerializer <Badge type="info" text="vuqs" />
+## createSerializer <Badge type="info" text="@vuqs/core" />
 
 Builds a reusable, schema-bound function that turns values into a query.
 
@@ -51,7 +51,7 @@ string base is passed without a `parse` option.
 ### Example
 
 ```ts
-import { createSerializer } from 'vuqs'
+import { createSerializer } from '@vuqs/core'
 import qs from 'qs'
 
 const serialize = createSerializer(schema)
@@ -65,7 +65,7 @@ const toUrl = createSerializer(schema, {
 toUrl({ q: 'lease', page: 2 })             // '?q=lease&page=2'
 ```
 
-## Pure functions <Badge type="info" text="vuqs" />
+## Pure functions <Badge type="info" text="@vuqs/core" />
 
 Framework-free helpers over a schema and a parsed query. `createSerializer` and
 the engine are built on these; reach for them for custom server-side or
@@ -133,7 +133,7 @@ function assertUniquePaths<TSchema>(schema: TSchema): void
 Throws if any query path is declared by more than one param. Called internally by
 the composables.
 
-## Path helpers <Badge type="info" text="vuqs" />
+## Path helpers <Badge type="info" text="@vuqs/core" />
 
 Dot-path read/write/delete over a parsed query, plus the normalizers used when
 writing [custom codecs](/guide/custom-codecs).
@@ -149,7 +149,7 @@ function getQueryStringArray(raw: ParsedQueryValue): string[] | undefined
 `getQueryString` collapses a raw value to a clean `string | undefined`;
 `getQueryStringArray` does the same for a list.
 
-## structuralEq <Badge type="info" text="vuqs" />
+## structuralEq <Badge type="info" text="@vuqs/core" />
 
 ```ts
 function structuralEq(a: unknown, b: unknown): boolean
@@ -157,7 +157,7 @@ function structuralEq(a: unknown, b: unknown): boolean
 
 The deep structural comparison used as the default codec `eq`.
 
-## createQueryStateEngine <Badge type="info" text="vuqs" />
+## createQueryStateEngine <Badge type="info" text="@vuqs/core" />
 
 The reactive core behind `useQueryStates` — the optimistic overlay,
 reconciliation, write coalescing, and navigation.

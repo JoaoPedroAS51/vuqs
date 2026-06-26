@@ -7,7 +7,7 @@ what `core` gives you to work with.
 
 ```ts
 import type { ComputedRef } from 'vue'
-import type { QueryCore, QueryStateSchema } from 'vuqs'
+import type { QueryCore, QueryStateSchema } from '@vuqs/core'
 import { computed } from 'vue'
 
 export function withCount(): <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>) => { count: ComputedRef<number> } {
@@ -51,7 +51,7 @@ matching `values`:
 
 ```ts
 import { computed } from 'vue'
-import { toReadonlyState } from 'vuqs/shared'
+import { toReadonlyState } from '@vuqs/core/shared'
 
 const visible = computed(() => { /* derive a record from core.state.selected.value */ })
 
@@ -106,14 +106,14 @@ a transform may *read* reactive sources — it re-runs when they change — but 
 mutate or cause side effects.
 
 ```ts
-import { pickBy } from 'vuqs/shared'
+import { pickBy } from '@vuqs/core/shared'
 
 // Drop params failing a (possibly reactive) predicate from reads and writes.
 const untap = core.pipeline.tap(['read', 'write'], pickBy(key => isAllowed(key)))
 onScopeDispose(untap)
 ```
 
-`vuqs/shared` ships the two filter builders: `pickBy(predicate)` keeps matching
+`@vuqs/core/shared` ships the two filter builders: `pickBy(predicate)` keeps matching
 keys, `omitBy(predicate)` drops them. Both return a transform you hand straight to
 `tap`.
 
@@ -135,7 +135,7 @@ through `core.hooks`, a fire-and-forget bus. Declare your event on the shared
 `QueryHooks` interface so it's typed everywhere without an import:
 
 ```ts
-declare module 'vuqs' {
+declare module '@vuqs/core' {
   interface QueryHooks {
     'context:change': (context: string) => void
   }
@@ -195,11 +195,11 @@ list changes, and exposes `isAllowed`:
 ```ts
 // with-allow-list.ts
 import type { MaybeRefOrGetter } from 'vue'
-import type { QueryCore, QueryStateSchema } from 'vuqs'
+import type { QueryCore, QueryStateSchema } from '@vuqs/core'
 import { computed, onScopeDispose, toValue, watch } from 'vue'
-import { pickBy } from 'vuqs/shared'
+import { pickBy } from '@vuqs/core/shared'
 
-declare module 'vuqs' {
+declare module '@vuqs/core' {
   interface QueryHooks {
     'allow:change': (allowed: readonly string[]) => void
   }
@@ -239,10 +239,10 @@ isAllowed('status') // false → `status` is filtered out of `values` and the UR
 It reads `core` only — `pickBy` on the pipeline, `emit` on the hooks bus — so it
 composes with any other module without knowing it exists.
 
-## Authoring types <Badge type="info" text="vuqs" />
+## Authoring types <Badge type="info" text="@vuqs/core" />
 
-The exact shapes a module works with, exported from `vuqs` (the
-[`vuqs/shared`](#vuqs-shared-helpers) helpers below come from their own subpath).
+The exact shapes a module works with, exported from `@vuqs/core` (the
+[`@vuqs/core/shared`](#vuqs-core-shared-helpers) helpers below come from their own subpath).
 
 ```ts
 type QueryModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
@@ -261,9 +261,9 @@ interface QueryCore<TSchema> {
 }
 ```
 
-### State, defaults, and options <Badge type="info" text="vuqs" />
+### State, defaults, and options <Badge type="info" text="@vuqs/core" />
 
-The facets are exported from `vuqs`, so a module can name them.
+The facets are exported from `@vuqs/core`, so a module can name them.
 
 ```ts
 interface QueryStateReads<TSchema> {
@@ -287,7 +287,7 @@ interface ResolvedQueryStateOptions {
 ### Hooks
 
 `QueryHooks` is empty in the core; a module declares its event via
-`declare module 'vuqs'`. Handlers run synchronously, in an unspecified order, and
+`declare module '@vuqs/core'`. Handlers run synchronously, in an unspecified order, and
 must be commutative; a throwing handler is isolated and logged.
 
 ```ts
@@ -323,7 +323,7 @@ interface QueryPipelineBus {
 type QueryValues = Record<string, unknown>
 ```
 
-### `vuqs/shared` helpers <Badge type="tip" text="vuqs/shared" />
+### `@vuqs/core/shared` helpers <Badge type="tip" text="@vuqs/core/shared" />
 
 ```ts
 function pickBy(predicate: (key: string) => boolean): <T>(values: T) => Partial<T>
@@ -340,4 +340,4 @@ function toReadonlyState<T>(source: ComputedRef<T>): Readonly<T>
 
 Auto-imports cover the published modules. A module you write lives in your app, so
 import it normally — or register it under Nuxt's `imports` if you want it
-auto-imported alongside the [`vuqs/modules` group](/nuxt/introduction#auto-imports).
+auto-imported alongside the [`@vuqs/core/modules` group](/nuxt/introduction#auto-imports).

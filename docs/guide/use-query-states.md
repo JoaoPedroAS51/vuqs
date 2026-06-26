@@ -5,7 +5,7 @@ sort + page trio, anything where several keys change together and you want
 multi-param writes to land as a single navigation.
 
 ```ts
-import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
+import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
 
 const { values, setValues, clear } = useQueryStates({
   q: defineQueryParam('q', codecs.string.withDefault('')),
@@ -67,7 +67,7 @@ one field around as a ref — explode `values` with
 [`toQueryRefs`](/api/composables#toqueryrefs):
 
 ```ts
-import { toQueryRefs } from 'vuqs'
+import { toQueryRefs } from '@vuqs/core'
 
 const { q, page } = toQueryRefs(values)
 
@@ -126,7 +126,7 @@ calls for a related group.
 
 ```vue
 <script setup lang="ts">
-import { codecs, defineQueryParam, useQueryStates } from 'vuqs'
+import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
 import { computed } from 'vue'
 
 const { values, setValues, clear } = useQueryStates({

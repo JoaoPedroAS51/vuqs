@@ -6,7 +6,7 @@ query-state composables and provides the `vue-router` adapter app-wide.
 ## Setup
 
 ```bash
-pnpm add vuqs @vuqs/nuxt
+pnpm add @vuqs/core @vuqs/nuxt
 ```
 
 ```ts
@@ -31,14 +31,14 @@ const search = useQueryState('q', codecs.string.withDefault(''))
 
 ## What it registers
 
-**Auto-imports** (from `vuqs`):
+**Auto-imports** (from `@vuqs/core`):
 
 - Composables: `useQueryState`, `useQueryStates`, `useQueryAdapter`,
   `provideQueryAdapter`, `defineQueryParam`, `createSerializer`
 - Codecs: `codecs`, `createCodec` — `codecs` is a single namespace object
   (`codecs.string`, `codecs.integer`, …), so it's one auto-imported name, not one
   per codec
-- Modules: the composable modules from `vuqs/modules`
+- Modules: the composable modules from `@vuqs/core/modules`
 
 **Adapter:** a plugin provides `createVueRouterAdapter()` on the Vue app via
 vuqs's `installQueryAdapter`, so the composables resolve the router app-wide.
@@ -84,7 +84,7 @@ export default defineNuxtConfig({
 
 ```ts
 // plugins/vuqs.ts
-import { createVueRouterAdapter } from 'vuqs/adapters/vue-router'
+import { createVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
 
 export default defineNuxtPlugin((nuxtApp) => {
   installQueryAdapter(nuxtApp.vueApp, createVueRouterAdapter({ router: useRouter() }))

@@ -1,6 +1,6 @@
 # @vuqs/playground
 
-Interactive playground for `vuqs` and its [modules](../docs/modules/introduction.md). Every page
+Interactive playground for `@vuqs/core` and its [modules](../docs/modules/introduction.md). Every page
 syncs state to the URL — edit a control and watch the inspector, or edit the URL and watch the UI
 react. State survives a reload because it lives in the query string.
 
@@ -24,7 +24,7 @@ Then open http://localhost:5173.
 
 ## How it resolves the packages
 
-`vite.config.ts` aliases `vuqs`, `vuqs/adapters/vue-router`, and `vuqs/modules` to their `src/`
+`vite.config.ts` aliases `@vuqs/core`, `@vuqs/core/adapters/vue-router`, and `@vuqs/core/modules` to their `src/`
 entry points, so editing the libraries reflects instantly via HMR with no rebuild. The published
 `dist` stubs (`unbuild --stub`) are jiti-backed and run in Node only, which is why a browser
 playground aliases to source instead.

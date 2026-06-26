@@ -7,7 +7,7 @@ It's optional. Nuxt's router **is** vue-router, so the same setup works manually
 in a plain Nuxt app; the module handles the wiring.
 
 ```bash
-pnpm add vuqs @vuqs/nuxt
+pnpm add @vuqs/core @vuqs/nuxt
 ```
 
 ```ts
@@ -35,14 +35,14 @@ const search = useQueryState('q', codecs.string.withDefault(''))
 
 | Group | Names | From |
 | --- | --- | --- |
-| Composables | `useQueryState`, `useQueryStates`, `useQueryAdapter`, `provideQueryAdapter`, `defineQueryParam`, `createSerializer` | `vuqs` |
-| Codecs | `codecs`, `createCodec` | `vuqs` |
-| Modules | the composable [modules](/modules/introduction) | `vuqs/modules` |
+| Composables | `useQueryState`, `useQueryStates`, `useQueryAdapter`, `provideQueryAdapter`, `defineQueryParam`, `createSerializer` | `@vuqs/core` |
+| Codecs | `codecs`, `createCodec` | `@vuqs/core` |
+| Modules | the composable [modules](/modules/introduction) | `@vuqs/core/modules` |
 
 `codecs` is a single namespace object, so it's one auto-imported name
 (`codecs.string`, `codecs.integer`, …), not one per codec.
 
-The Modules group registers every module exported from `vuqs/modules`, so new
+The Modules group registers every module exported from `@vuqs/core/modules`, so new
 modules become available without changing your config.
 
 ### The adapter
@@ -82,7 +82,7 @@ interface ModuleOptions {
 interface AutoImportsOptions {
   composables?: boolean // useQueryState(s), use/provideQueryAdapter, defineQueryParam, createSerializer
   codecs?: boolean      // the `codecs` namespace and `createCodec`
-  modules?: boolean     // the composable modules from `vuqs/modules`
+  modules?: boolean     // the composable modules from `@vuqs/core/modules`
 }
 
 interface AdapterOptions {
@@ -139,7 +139,7 @@ export default defineNuxtConfig({
 
 ```ts
 // plugins/vuqs.ts
-import { createVueRouterAdapter } from 'vuqs/adapters/vue-router'
+import { createVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
 
 export default defineNuxtPlugin((nuxtApp) => {
   installQueryAdapter(nuxtApp.vueApp, createVueRouterAdapter({ router: useRouter() }))

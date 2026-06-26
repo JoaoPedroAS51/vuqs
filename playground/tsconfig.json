@@ -3,9 +3,9 @@
   "compilerOptions": {
     "jsx": "preserve",
     "paths": {
-      "vuqs": ["../packages/vuqs/src/index.ts"],
-      "vuqs/adapters/vue-router": ["../packages/vuqs/src/adapters/vue-router.ts"],
-      "vuqs/modules": ["../packages/vuqs/src/modules/index.ts"]
+      "@vuqs/core": ["../packages/core/src/index.ts"],
+      "@vuqs/core/adapters/vue-router": ["../packages/core/src/adapters/vue-router.ts"],
+      "@vuqs/core/modules": ["../packages/core/src/modules/index.ts"]
     },
     "types": ["vite/client"]
   },

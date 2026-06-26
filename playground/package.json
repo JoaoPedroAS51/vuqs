@@ -11,9 +11,9 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@vuqs/core": "workspace:*",
     "vue": "catalog:",
-    "vue-router": "catalog:",
-    "vuqs": "workspace:*"
+    "vue-router": "catalog:"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "catalog:",

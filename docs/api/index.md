@@ -8,12 +8,12 @@ walkthroughs, see the [Guide](/guide/introduction) and
 
 | Entry point | Import | Purpose |
 | --- | --- | --- |
-| `vuqs` | `import { … } from 'vuqs'` | The core: codecs, composables, adapters, serializer. |
-| `vuqs/adapters/vue-router` | `import { … } from 'vuqs/adapters/vue-router'` | The vue-router adapter. |
-| `vuqs/modules` | `import { … } from 'vuqs/modules'` | [Composable modules](/modules/introduction) applied with `.use()`. |
-| `vuqs/shared` | `import { … } from 'vuqs/shared'` | Helpers for [writing your own module](/modules/authoring). |
-| `vuqs/adapters/testing` | `import { … } from 'vuqs/adapters/testing'` | The [testing](/api/testing) adapter and helpers. |
-| `vuqs/testing` | `import { … } from 'vuqs/testing'` | Codec bijectivity [test helpers](/api/testing#vuqs-testing). |
+| `@vuqs/core` | `import { … } from '@vuqs/core'` | The core: codecs, composables, adapters, serializer. |
+| `@vuqs/core/adapters/vue-router` | `import { … } from '@vuqs/core/adapters/vue-router'` | The vue-router adapter. |
+| `@vuqs/core/modules` | `import { … } from '@vuqs/core/modules'` | [Composable modules](/modules/introduction) applied with `.use()`. |
+| `@vuqs/core/shared` | `import { … } from '@vuqs/core/shared'` | Helpers for [writing your own module](/modules/authoring). |
+| `@vuqs/core/adapters/testing` | `import { … } from '@vuqs/core/adapters/testing'` | The [testing](/api/testing) adapter and helpers. |
+| `@vuqs/core/testing` | `import { … } from '@vuqs/core/testing'` | Codec bijectivity [test helpers](/api/testing#vuqs-testing). |
 | `@vuqs/nuxt` | `modules: ['@vuqs/nuxt']` | The [Nuxt module](/nuxt/introduction): auto-imports + the adapter out of the box. |
 
 ## Reference pages
@@ -32,7 +32,7 @@ section.
 
 ## Full export list
 
-### `vuqs`
+### `@vuqs/core`
 
 ```ts
 // Composables
@@ -110,21 +110,21 @@ export type {
 }
 ```
 
-### `vuqs/adapters/vue-router`
+### `@vuqs/core/adapters/vue-router`
 
 ```ts
 export { createVueRouterAdapter, provideVueRouterAdapter }
 export type { VueRouterAdapterOptions }
 ```
 
-### `vuqs/modules`
+### `@vuqs/core/modules`
 
 ```ts
 export { withContext, withRuntimeDefaults }
 export type { ContextApi, ContextOptions, RuntimeDefaultsApi }
 ```
 
-### `vuqs/shared`
+### `@vuqs/core/shared`
 
 ```ts
 // Helpers for writing your own module
@@ -132,14 +132,14 @@ export { pickBy, omitBy, definedOnly, toReadonlyState }
 export type { NoInferType }
 ```
 
-### `vuqs/adapters/testing`
+### `@vuqs/core/adapters/testing`
 
 ```ts
 export { createTestingAdapter, withVuqsTestingAdapter, resetQueues }
 export type { TestingAdapter, TestingAdapterOptions, UrlUpdateEvent, OnUrlUpdateFunction }
 ```
 
-### `vuqs/testing`
+### `@vuqs/core/testing`
 
 ```ts
 export { isCodecBijective, testSerializeThenParse, testParseThenSerialize }
