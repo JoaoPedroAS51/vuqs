@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const kit = vi.hoisted(() => ({
   addImports: vi.fn(),
   addPlugin: vi.fn(),
+  extendViteConfig: vi.fn((cb: (config: Record<string, any>) => void) => cb({})),
 }))
 
 vi.mock('@nuxt/kit', async importActual => ({
   ...await importActual<typeof import('@nuxt/kit')>(),
   addImports: kit.addImports,
   addPlugin: kit.addPlugin,
+  extendViteConfig: kit.extendViteConfig,
 }))
 
 const { default: module } = await import('../../src/module')
