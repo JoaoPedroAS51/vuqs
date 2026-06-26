@@ -7,9 +7,7 @@ export default defineConfig({
   description: 'Type-safe query state for Vue 3 — composable codecs, URL sync, and opt-in modules.',
   lang: 'en-US',
 
-  // GitHub Pages serves the project site under /vuqs/. Set to '/' for a root
-  // domain or a custom CNAME.
-  base: '/vuqs/',
+  base: '/',
 
   lastUpdated: true,
   cleanUrls: true,
