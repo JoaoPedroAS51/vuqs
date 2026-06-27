@@ -1,10 +1,16 @@
 import type { Codec } from '../../src/core/codec'
-import type { QueryParamDefinition, QueryParamDefinitionWithDefault } from '../../src/core/define-query-param'
+import type {
+  DefinedQueryParam,
+  DefinedQueryParamWithDefault,
+  QueryParamDefinition,
+  QueryParamDefinitionWithDefault,
+} from '../../src/core/define-query-param'
 import type { QueryStateValues } from '../../src/core/schema'
 import type { UseQueryStateReturn } from '../../src/core/use-query-state'
 import { describe, expectTypeOf, it } from 'vitest'
 import { codecs } from '../../src/core/codec'
 import { defineQueryParam } from '../../src/core/define-query-param'
+import { queryParam } from '../../src/core/query-param'
 import { parseQueryStates } from '../../src/core/schema'
 import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
@@ -19,6 +25,96 @@ describe('codec inference', () => {
   it('infers array and literal types', () => {
     expectTypeOf(codecs.arrayOf(codecs.integer)).toEqualTypeOf<Codec<number[]>>()
     expectTypeOf(codecs.literal(['asc', 'desc'])).toEqualTypeOf<Codec<'asc' | 'desc'>>()
+  })
+})
+
+describe('queryParam inference', () => {
+  it('carries scalar value types', () => {
+    expectTypeOf(queryParam('q')).toMatchTypeOf<DefinedQueryParam<string>>()
+    expectTypeOf(queryParam('q', { defaultValue: '' })).toMatchTypeOf<DefinedQueryParamWithDefault<string>>()
+    expectTypeOf(queryParam('page', codecs.integer)).toMatchTypeOf<DefinedQueryParam<number>>()
+    expectTypeOf(queryParam('page', codecs.integer.withDefault(1))).toMatchTypeOf<DefinedQueryParamWithDefault<number>>()
+  })
+
+  it('infers object values from children and child defaults', () => {
+    const bounds = queryParam.object('bounds', {
+      north: queryParam('n', codecs.float).withDefault(1),
+      south: queryParam('s', codecs.float),
+    })
+
+    expectTypeOf(bounds).toMatchTypeOf<DefinedQueryParam<{
+      north: number
+      south?: number
+    }>>()
+  })
+
+  it('keeps object defaults partial while narrowing the top-level value', () => {
+    const bounds = queryParam.object('bounds', {
+      north: queryParam('n', codecs.float).withDefault(1),
+      south: queryParam('s', codecs.float),
+      east: queryParam('e', codecs.float),
+    }).withDefault({ east: 20 })
+
+    const { values } = useQueryStates({ bounds })
+
+    expectTypeOf(values.bounds).toEqualTypeOf<{
+      north: number
+      south?: number
+      east?: number
+    }>()
+  })
+
+  it('infers prefixed object definitions', () => {
+    const point = queryParam.object({
+      lat: queryParam('lat', codecs.float),
+      lng: queryParam('lng', codecs.float),
+    })
+    const viewport = queryParam.object('viewport', {
+      northEast: queryParam.object('ne', point),
+      southWest: queryParam.object('sw', point),
+    })
+
+    expectTypeOf(viewport).toMatchTypeOf<DefinedQueryParam<{
+      northEast?: {
+        lat?: number
+        lng?: number
+      }
+      southWest?: {
+        lat?: number
+        lng?: number
+      }
+    }>>()
+  })
+
+  it('infers transformed public values', () => {
+    const center = queryParam.object('map', {
+      lat: queryParam('lat', codecs.float),
+      lng: queryParam('lng', codecs.float),
+      zoom: queryParam('z', codecs.integer.withDefault(10)),
+    }).transform({
+      read(value): { point: { lat: number, lng: number }, zoom: number } | undefined {
+        if (value.lat === undefined || value.lng === undefined) {
+          return undefined
+        }
+
+        return {
+          point: { lat: value.lat, lng: value.lng },
+          zoom: value.zoom,
+        }
+      },
+      write(value) {
+        return {
+          lat: value.point.lat,
+          lng: value.point.lng,
+          zoom: value.zoom,
+        }
+      },
+    })
+
+    expectTypeOf(center).toMatchTypeOf<DefinedQueryParam<{
+      point: { lat: number, lng: number }
+      zoom: number
+    }>>()
   })
 })
 
@@ -84,6 +180,13 @@ describe('useQueryState signatures', () => {
     expectTypeOf(useQueryState(defineQueryParam('q', codecs.string)))
       .toEqualTypeOf<UseQueryStateReturn<string | undefined, object, string>>()
   })
+
+  it('accepts queryParam definitions', () => {
+    expectTypeOf(useQueryState(queryParam('page', codecs.integer).withDefault(1)))
+      .toEqualTypeOf<UseQueryStateReturn<number, object, number>>()
+    expectTypeOf(useQueryState(queryParam('q')))
+      .toEqualTypeOf<UseQueryStateReturn<string | undefined, object, string>>()
+  })
 })
 
 describe('useQueryStates inference', () => {
@@ -91,6 +194,16 @@ describe('useQueryStates inference', () => {
     const { values } = useQueryStates({
       q: defineQueryParam('q', codecs.string),
       page: defineQueryParam('page', codecs.integer.withDefault(1)),
+    })
+
+    expectTypeOf(values.q).toEqualTypeOf<string | undefined>()
+    expectTypeOf(values.page).toEqualTypeOf<number>()
+  })
+
+  it('accepts codecs directly using schema keys as query paths', () => {
+    const { values } = useQueryStates({
+      q: codecs.string,
+      page: codecs.integer.withDefault(1),
     })
 
     expectTypeOf(values.q).toEqualTypeOf<string | undefined>()

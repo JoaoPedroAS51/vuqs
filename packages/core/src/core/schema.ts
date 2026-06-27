@@ -1,24 +1,71 @@
-import type { QueryParamDefinition, QueryParamDefinitionWithDefault } from './define-query-param'
+import type { Codec } from './codec'
+import type { DefinedQueryParam, DefinedQueryParamWithDefault } from './defined-query-param'
 import type { ParsedQuery, ParsedQueryRaw } from './types'
+import { defineCodecQueryParam } from './defined-query-param'
 import { deletePath, pruneEmptyAncestors } from './path'
 import { cloneQuery, compactQuery, mergeQueries } from './query-object'
 
 /**
- * A map of param name to its {@link QueryParamDefinition}.
+ * A map of param name to its {@link DefinedQueryParam}.
  *
  * @remarks
  * The keys are the logical names a consumer reads and writes. The query keys a
  * param owns live inside its definition, not in these map keys.
  */
-export type QueryStateSchema = Record<string, QueryParamDefinition<any>>
+export type QueryStateSchema = Record<string, DefinedQueryParam<any>>
 
 /**
- * Extracts the decoded value type from a single {@link QueryParamDefinition}.
+ * A schema accepted by public APIs before normalization.
+ *
+ * @remarks
+ * Passing a codec directly uses the schema key as the query path. Passing a
+ * defined param allows custom paths, object params, transforms, and modifiers.
+ */
+export type QueryStateSchemaInput = Record<string, Codec<any> | DefinedQueryParam<any>>
+
+/**
+ * Normalizes a public schema input into executable defined query params.
+ *
+ * @typeParam TSchema - The input schema to normalize.
+ * @param schema - The schema input.
+ * @returns A schema whose values are all defined query params.
+ */
+export function normalizeQueryStateSchema<TSchema extends QueryStateSchemaInput>(
+  schema: TSchema,
+): NormalizeQueryStateSchema<TSchema> {
+  const normalized: QueryStateSchema = {}
+
+  for (const key of Object.keys(schema)) {
+    const value = schema[key]
+
+    normalized[key] = isDefinedQueryParam(value)
+      ? value
+      : defineCodecQueryParam(key, value)
+  }
+
+  return normalized as NormalizeQueryStateSchema<TSchema>
+}
+
+/**
+ * The normalized schema type produced from a public schema input.
+ */
+export type NormalizeQueryStateSchema<TSchema extends QueryStateSchemaInput> = {
+  [Key in keyof TSchema]: TSchema[Key] extends DefinedQueryParam<any>
+    ? TSchema[Key]
+    : TSchema[Key] extends Codec<infer TValue>
+      ? TSchema[Key] extends { readonly defaultValue: infer TDefault }
+        ? DefinedQueryParamWithDefault<TDefault>
+        : DefinedQueryParam<TValue>
+      : never
+}
+
+/**
+ * Extracts the decoded value type from a single {@link DefinedQueryParam}.
  *
  * @typeParam TDefinition - The definition to read the value type from.
  */
 export type QueryStateValueOf<TDefinition>
-  = TDefinition extends QueryParamDefinition<infer TValue> ? TValue : never
+  = TDefinition extends DefinedQueryParam<infer TValue> ? TValue : never
 
 /**
  * The value a param's reactive ref exposes: `T` when the param declares a
@@ -30,8 +77,8 @@ export type QueryStateValueOf<TDefinition>
  *
  * @typeParam TDefinition - The param definition to read the ref value type from.
  */
-export type QueryStateRefValue<TDefinition extends QueryParamDefinition<any>>
-  = TDefinition extends QueryParamDefinitionWithDefault<any>
+export type QueryStateRefValue<TDefinition extends DefinedQueryParam<any>>
+  = TDefinition extends DefinedQueryParamWithDefault<any>
     ? QueryStateValueOf<TDefinition>
     : QueryStateValueOf<TDefinition> | undefined
 
@@ -82,7 +129,7 @@ export function parseQueryStates<TSchema extends QueryStateSchema>(
   const values: QueryStateValues<TSchema> = {}
 
   for (const key of keysOf(schema)) {
-    const value = schema[key].parse(query)
+    const value = schema[key].read(query)
 
     if (value !== undefined) {
       values[key] = value as QueryStateValues<TSchema>[typeof key]
@@ -116,7 +163,7 @@ export function serializeQueryStates<TSchema extends QueryStateSchema>(
     const value = values[key]
 
     if (value !== undefined) {
-      query = mergeQueries(query, schema[key].serialize(value))
+      query = mergeQueries(query, schema[key].write(value))
     }
   }
 
@@ -221,7 +268,11 @@ export function dropDefaults<TSchema extends QueryStateSchema>(
 
     const definition = schema[key]
 
-    if (definition.defaultValue !== undefined && definition.eq(value, definition.defaultValue)) {
+    if (
+      definition.clearOnDefault !== false
+      && definition.defaultValue !== undefined
+      && definition.eq(value, definition.defaultValue)
+    ) {
       continue
     }
 
@@ -238,6 +289,17 @@ export function dropDefaults<TSchema extends QueryStateSchema>(
  */
 function keysOf<TSchema extends QueryStateSchema>(schema: TSchema): Array<keyof TSchema & string> {
   return Object.keys(schema) as Array<keyof TSchema & string>
+}
+
+/**
+ * Duck-types a normalized query param.
+ *
+ * @internal
+ */
+function isDefinedQueryParam(value: Codec<any> | DefinedQueryParam<any>): value is DefinedQueryParam<any> {
+  return typeof (value as DefinedQueryParam<any>).read === 'function'
+    && typeof (value as DefinedQueryParam<any>).write === 'function'
+    && Array.isArray((value as DefinedQueryParam<any>).paths)
 }
 
 /**

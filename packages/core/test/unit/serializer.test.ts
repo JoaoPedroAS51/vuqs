@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { codecs } from '../../src/core/codec'
 import { defineQueryParam } from '../../src/core/define-query-param'
+import { queryParam } from '../../src/core/query-param'
 import { createSerializer } from '../../src/core/serializer'
 
 const schema = {
@@ -55,6 +56,31 @@ describe('createSerializer', () => {
     const serialize = createSerializer(schema, { clearOnDefault: false })
 
     expect(serialize({ page: 1 })).toEqual({ page: '1' })
+  })
+
+  it('accepts codecs directly using the schema key as the query path', () => {
+    const serialize = createSerializer({
+      q: codecs.string,
+      page: codecs.integer.withDefault(1),
+    })
+
+    expect(serialize({ q: 'lease', page: 2 })).toEqual({ q: 'lease', page: '2' })
+  })
+
+  it('keeps a default value when keepOnDefault is set on the param', () => {
+    const serialize = createSerializer({
+      page: queryParam('page', codecs.integer).withDefault(1).keepOnDefault(),
+    })
+
+    expect(serialize({ page: 1 })).toEqual({ page: '1' })
+  })
+
+  it('lets serializer options override keepOnDefault', () => {
+    const serialize = createSerializer({
+      page: queryParam('page', codecs.integer).withDefault(1).keepOnDefault(),
+    }, { clearOnDefault: true })
+
+    expect(serialize({ page: 1 })).toEqual({})
   })
 
   it('does not inject a default for a field absent from the base (clearOnDefault false)', () => {

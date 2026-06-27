@@ -46,6 +46,17 @@ describe('createSerializer types', () => {
     expectTypeOf(serialize({} as ParsedQuery, readValues)).toEqualTypeOf<ParsedQueryRaw>()
   })
 
+  it('accepts direct codecs and infers write values from normalized schema', () => {
+    const serialize = createSerializer({
+      q: codecs.string,
+      page: codecs.integer.withDefault(1),
+    })
+
+    serialize({ q: 'x', page: 2 })
+    // @ts-expect-error page is an integer, not a string
+    serialize({ page: '2' })
+  })
+
   it('rejects a string base when only stringify is provided', () => {
     const serialize = createSerializer(schema, { stringify: query => JSON.stringify(query) })
 

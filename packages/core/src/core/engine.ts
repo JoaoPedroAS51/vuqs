@@ -32,6 +32,8 @@ export interface QueryStateEngineOptions<TSchema extends QueryStateSchema> exten
   throttleMs?: number
   /** Drop a value from the URL when it equals its resolved default. Defaults to `true`. */
   clearOnDefault?: boolean
+  /** Adapter-level default for `clearOnDefault`. */
+  adapterClearOnDefault?: boolean
 }
 
 /**
@@ -134,14 +136,27 @@ export interface QueryStateEngine<TSchema extends QueryStateSchema> {
 export function createQueryStateEngine<TSchema extends QueryStateSchema>(
   options: QueryStateEngineOptions<TSchema>,
 ): QueryStateEngine<TSchema> {
-  const { schema, adapter, history, scroll, throttleMs = 0, clearOnDefault = true } = options
+  const {
+    schema,
+    adapter,
+    history,
+    scroll,
+    throttleMs = 0,
+    clearOnDefault,
+    adapterClearOnDefault,
+  } = options
   const keys = Object.keys(schema) as Array<keyof TSchema & string>
   const managedPaths = getManagedKeys(schema)
 
   const pipeline = createQueryPipeline()
   const overlay = globalThrottleQueue.overlay
 
-  const resolvedOptions: ResolvedQueryStateOptions = { history, scroll, throttleMs, clearOnDefault }
+  const resolvedOptions: ResolvedQueryStateOptions = {
+    history,
+    scroll,
+    throttleMs,
+    clearOnDefault: clearOnDefault ?? adapterClearOnDefault ?? true,
+  }
 
   const codecDefaults: Record<string, unknown> = {}
   for (const key of keys) {
@@ -261,7 +276,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
 
     let map: QueryStateValues<QueryStateSchema> = value === undefined ? {} : { [key]: value }
 
-    if (clearOnDefault && value !== undefined) {
+    if (shouldClearOnDefault(definition) && value !== undefined) {
       const defaultValue = mergedDefaults.value[key]
 
       if (defaultValue !== undefined && definition.eq(value, defaultValue)) {
@@ -280,6 +295,10 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     }
 
     return deltas
+  }
+
+  function shouldClearOnDefault(definition: TSchema[keyof TSchema & string]): boolean {
+    return clearOnDefault ?? definition.clearOnDefault ?? adapterClearOnDefault ?? true
   }
 
   function setValue(key: keyof TSchema & string, value: unknown, perCall?: NavigateOptions): void {

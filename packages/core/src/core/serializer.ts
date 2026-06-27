@@ -1,7 +1,13 @@
-import type { QueryStateSchema, QueryStateWriteValues } from './schema'
+import type {
+  NormalizeQueryStateSchema,
+  QueryStateSchema,
+  QueryStateSchemaInput,
+  QueryStateWriteValues,
+} from './schema'
 import type { ParsedQuery, ParsedQueryRaw } from './types'
 import { deletePath, pruneEmptyAncestors } from './path'
 import { cloneQuery, compactQuery, mergeQueries } from './query-object'
+import { normalizeQueryStateSchema } from './schema'
 
 /**
  * Options for {@link createSerializer}.
@@ -20,6 +26,8 @@ export interface CreateSerializerOptions {
   /** Parses a base query string into an object, for example `s => qs.parse(s)`. Enables a string base. */
   parse?: (search: string) => ParsedQuery
 }
+
+type SerializerSchema<TSchema extends QueryStateSchemaInput> = NormalizeQueryStateSchema<TSchema>
 
 /** Renders a built query object into a string, for example via `qs.stringify`. */
 export type SerializerStringify = (query: ParsedQueryRaw) => string
@@ -73,34 +81,37 @@ export interface Serializer<TSchema extends QueryStateSchema, TBase, TOutput> {
  * toUrl({ q: 'lease', page: 2 })                   // '?q=lease&page=2'
  * ```
  */
-export function createSerializer<TSchema extends QueryStateSchema>(
+export function createSerializer<TSchema extends QueryStateSchemaInput>(
   schema: TSchema,
   options: CreateSerializerOptions & { stringify: SerializerStringify, parse: SerializerParse },
-): Serializer<TSchema, ParsedQuery | string, string>
-export function createSerializer<TSchema extends QueryStateSchema>(
+): Serializer<SerializerSchema<TSchema>, ParsedQuery | string, string>
+export function createSerializer<TSchema extends QueryStateSchemaInput>(
   schema: TSchema,
   options: CreateSerializerOptions & { stringify: SerializerStringify },
-): Serializer<TSchema, ParsedQuery, string>
-export function createSerializer<TSchema extends QueryStateSchema>(
+): Serializer<SerializerSchema<TSchema>, ParsedQuery, string>
+export function createSerializer<TSchema extends QueryStateSchemaInput>(
   schema: TSchema,
   options: CreateSerializerOptions & { parse: SerializerParse },
-): Serializer<TSchema, ParsedQuery | string, ParsedQueryRaw>
-export function createSerializer<TSchema extends QueryStateSchema>(
+): Serializer<SerializerSchema<TSchema>, ParsedQuery | string, ParsedQueryRaw>
+export function createSerializer<TSchema extends QueryStateSchemaInput>(
   schema: TSchema,
   options?: CreateSerializerOptions,
-): Serializer<TSchema, ParsedQuery, ParsedQueryRaw>
-export function createSerializer<TSchema extends QueryStateSchema>(
+): Serializer<SerializerSchema<TSchema>, ParsedQuery, ParsedQueryRaw>
+export function createSerializer<TSchema extends QueryStateSchemaInput>(
   schema: TSchema,
   options: CreateSerializerOptions = {},
-): Serializer<TSchema, ParsedQuery, ParsedQueryRaw | string> {
-  const { clearOnDefault = true, stringify, parse } = options
+): Serializer<SerializerSchema<TSchema>, ParsedQuery, ParsedQueryRaw | string> {
+  const { clearOnDefault, stringify, parse } = options
+  const normalizedSchema = normalizeQueryStateSchema(schema)
 
   function serialize(
-    ...args: [QueryStateWriteValues<TSchema>] | [ParsedQuery | string, QueryStateWriteValues<TSchema>]
+    ...args:
+      | [QueryStateWriteValues<SerializerSchema<TSchema>>]
+      | [ParsedQuery | string, QueryStateWriteValues<SerializerSchema<TSchema>>]
   ): ParsedQueryRaw | string {
     const hasBase = args.length === 2
     const rawBase = hasBase ? args[0] : undefined
-    const values = (hasBase ? args[1] : args[0]) as QueryStateWriteValues<TSchema>
+    const values = (hasBase ? args[1] : args[0]) as QueryStateWriteValues<SerializerSchema<TSchema>>
 
     let base: ParsedQuery
     if (rawBase === undefined) {
@@ -126,7 +137,7 @@ export function createSerializer<TSchema extends QueryStateSchema>(
         continue
       }
 
-      const definition = schema[key as keyof TSchema & string]
+      const definition = normalizedSchema[key as keyof SerializerSchema<TSchema> & string]
 
       for (const path of definition.paths) {
         deletePath(query, path)
@@ -140,15 +151,17 @@ export function createSerializer<TSchema extends QueryStateSchema>(
         continue
       }
 
-      if (clearOnDefault && definition.defaultValue !== undefined && definition.eq(value, definition.defaultValue)) {
+      const shouldClearOnDefault = clearOnDefault ?? definition.clearOnDefault ?? true
+
+      if (shouldClearOnDefault && definition.defaultValue !== undefined && definition.eq(value, definition.defaultValue)) {
         continue
       }
 
-      query = mergeQueries(query, compactQuery(definition.serialize(value)))
+      query = mergeQueries(query, compactQuery(definition.write(value)))
     }
 
     return stringify ? stringify(query) : query
   }
 
-  return serialize as Serializer<TSchema, ParsedQuery, ParsedQueryRaw | string>
+  return serialize as Serializer<SerializerSchema<TSchema>, ParsedQuery, ParsedQueryRaw | string>
 }

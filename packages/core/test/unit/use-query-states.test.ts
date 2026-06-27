@@ -7,6 +7,7 @@ import { installQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
 import { defineQueryParam } from '../../src/core/define-query-param'
 import { defineQueryModule } from '../../src/core/module'
+import { queryParam } from '../../src/core/query-param'
 import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
 
@@ -39,6 +40,22 @@ describe('useQueryStates', () => {
 
     expect(values.q).toBe('lease')
     expect(values.sort).toBe('name')
+  })
+
+  it('accepts codecs directly using the schema key as the query path', async () => {
+    const { query, run } = setup({ q: 'lease', page: '2' })
+    const { values } = run(() => useQueryStates({
+      q: codecs.string,
+      page: codecs.integer.withDefault(1),
+    }))
+
+    expect(values.q).toBe('lease')
+    expect(values.page).toBe(2)
+
+    values.page = 3
+    await flush()
+
+    expect(query.value).toEqual({ q: 'lease', page: '3' })
   })
 
   it('updates the value optimistically before navigation flushes', () => {
@@ -217,6 +234,32 @@ describe('useQueryStates', () => {
       await flush()
 
       expect(query.value).toEqual({ page: '2' })
+    })
+
+    it('keeps a default-valued param when keepOnDefault is set', async () => {
+      const schema = {
+        page: queryParam('page', codecs.integer).withDefault(1).keepOnDefault(),
+      }
+      const { query, run } = setup()
+      const { values } = run(() => useQueryStates(schema))
+
+      values.page = 1
+      await flush()
+
+      expect(query.value).toEqual({ page: '1' })
+    })
+
+    it('lets composable options override keepOnDefault', async () => {
+      const schema = {
+        page: queryParam('page', codecs.integer).withDefault(1).keepOnDefault(),
+      }
+      const { query, run } = setup()
+      const { values } = run(() => useQueryStates(schema, { clearOnDefault: true }))
+
+      values.page = 1
+      await flush()
+
+      expect(query.value).toEqual({})
     })
   })
 

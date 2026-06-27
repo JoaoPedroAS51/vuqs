@@ -1,10 +1,17 @@
 import type { QueryModule } from './module'
 import type { QueryCore } from './query-core'
-import type { QueryStateRefValue, QueryStateSchema, QueryStateWriteValues } from './schema'
+import type {
+  NormalizeQueryStateSchema,
+  QueryStateRefValue,
+  QueryStateSchema,
+  QueryStateSchemaInput,
+  QueryStateWriteValues,
+} from './schema'
 import type { NavigateOptions } from './types'
 import { reactive } from 'vue'
 import { createQueryBinding } from './binding'
 import { applyQueryModule } from './module'
+import { normalizeQueryStateSchema } from './schema'
 
 export type { DefinedQueryModule, QueryModule, QueryStateModule, QueryStatesModule } from './module'
 export type { QueryCore } from './query-core'
@@ -144,17 +151,20 @@ export interface UseQueryStatesReturn<TSchema extends QueryStateSchema> extends 
  * setValues({ q: 'lease', sort: null }, { history: 'push' })
  * ```
  */
-export function useQueryStates<TSchema extends QueryStateSchema>(
+export function useQueryStates<TSchema extends QueryStateSchemaInput>(
   schema: TSchema,
   options: UseQueryStatesOptions = {},
-): QueryComposable<TSchema, UseQueryStatesReturn<TSchema>> {
-  const { engine, refs, core } = createQueryBinding(schema, options)
+): QueryComposable<NormalizeQueryStateSchema<TSchema>, UseQueryStatesReturn<NormalizeQueryStateSchema<TSchema>>> {
+  const normalizedSchema = normalizeQueryStateSchema(schema)
+  const { engine, refs, core } = createQueryBinding(normalizedSchema, options)
 
-  const values = reactive(refs) as WritableQueryValues<TSchema>
+  type TNormalizedSchema = NormalizeQueryStateSchema<TSchema>
 
-  function setValues(next: QueryStateWriteValues<TSchema>, perCall?: NavigateOptions): void {
-    for (const key of Object.keys(next) as Array<keyof TSchema & string>) {
-      if (!Object.hasOwn(schema, key)) {
+  const values = reactive(refs) as WritableQueryValues<TNormalizedSchema>
+
+  function setValues(next: QueryStateWriteValues<TNormalizedSchema>, perCall?: NavigateOptions): void {
+    for (const key of Object.keys(next) as Array<keyof TNormalizedSchema & string>) {
+      if (!Object.hasOwn(normalizedSchema, key)) {
         continue
       }
 
@@ -169,19 +179,23 @@ export function useQueryStates<TSchema extends QueryStateSchema>(
   }
 
   function clear(perCall?: NavigateOptions): void {
-    for (const key of Object.keys(schema) as Array<keyof TSchema & string>) {
+    for (const key of Object.keys(normalizedSchema) as Array<keyof TNormalizedSchema & string>) {
       engine.query.set(key, undefined, perCall)
     }
   }
 
   Object.defineProperty(values, WRITER, { value: setValues, enumerable: false })
 
-  const composable = { values, setValues, clear } as QueryComposable<TSchema, UseQueryStatesReturn<TSchema>>
+  const composable = {
+    values,
+    setValues,
+    clear,
+  } as QueryComposable<TNormalizedSchema, UseQueryStatesReturn<TNormalizedSchema>>
 
-  composable.use = <TAdded>(module: QueryModule<TSchema, TAdded>) => {
+  composable.use = <TAdded>(module: QueryModule<TNormalizedSchema, TAdded>) => {
     applyQueryModule(composable, core, module)
 
-    return composable as QueryComposable<TSchema, UseQueryStatesReturn<TSchema> & TAdded>
+    return composable as QueryComposable<TNormalizedSchema, UseQueryStatesReturn<TNormalizedSchema> & TAdded>
   }
 
   return composable

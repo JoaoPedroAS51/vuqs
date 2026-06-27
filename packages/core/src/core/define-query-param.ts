@@ -1,207 +1,79 @@
 import type { Codec, CodecWithDefault } from './codec'
-import type { ParsedQuery, ParsedQueryRaw } from './types'
-import { structuralEq } from './equality'
-import { collectLeafPaths, getPath, setPath } from './path'
+import type {
+  DefinedQueryParam,
+  DefinedQueryParamInput,
+  DefinedQueryParamWithDefault,
+} from './defined-query-param'
+import {
+  createDefinedQueryParam,
+  defineCodecQueryParam,
+  defineCodecQueryParamWithDefault,
+} from './defined-query-param'
 
-/**
- * A param's wiring: the query path(s) it owns and how it reads and writes them.
- *
- * @remarks
- * This is the Layer 1 primitive and carries no context policy such as preserve
- * or validity handling. `paths` is the source of truth for the keys the param
- * manages, so removal can target only this param's keys while preserving siblings.
- *
- * @typeParam T - The decoded value type of the param.
- */
-export interface QueryParamDefinition<T> {
-  /** The query keys this param owns. */
-  readonly paths: readonly string[]
-  /** Reads the param's value from the parsed query, or `undefined` when absent. */
-  parse: (query: ParsedQuery) => T | undefined
-  /** Writes the param's value into a fresh query object covering only `paths`. */
-  serialize: (value: T) => ParsedQueryRaw
-  /** Compares two values to detect when one equals the default. */
-  eq: (a: T, b: T) => boolean
-  /** The param's default value, if the underlying codec or definition declared one. */
-  readonly defaultValue?: T
+export type {
+  DefinedQueryParam,
+  DefinedQueryParamInput,
+  DefinedQueryParamWithDefault,
 }
 
 /**
- * A {@link QueryParamDefinition} whose codec or definition declared a default, so
- * its value is never absent: a missing key reads back as
- * {@link QueryParamDefinition.defaultValue}.
- *
- * @remarks
- * Carrying this as a distinct type lets {@link useQueryStates} narrow a defaulted
- * param to `T` instead of `T | undefined`, matching the single-param overload.
- *
- * @typeParam T - The decoded value type of the param.
+ * @deprecated Use {@link DefinedQueryParam}.
  */
-export interface QueryParamDefinitionWithDefault<T> extends QueryParamDefinition<T> {
-  readonly defaultValue: T
-}
+export type QueryParamDefinition<T> = DefinedQueryParam<T>
 
 /**
- * The escape-hatch form passed to {@link defineQueryParam} for params that span
- * multiple keys or need custom parse/serialize.
- *
- * @remarks
- * `paths` must list every key `serialize` writes. A dev guard checks this on the
- * first serialize and throws on a mismatch.
+ * @deprecated Use {@link DefinedQueryParamWithDefault}.
  */
-export interface QueryParamDefinitionInput<T> {
-  /** Every query key the param manages. `serialize` must not write outside this list. */
-  paths: readonly string[]
-  /** Reads the param's value from the parsed query, or `undefined` when absent. */
-  parse: (query: ParsedQuery) => T | undefined
-  /** Writes the param's value as a query object covering only `paths`. */
-  serialize: (value: T) => ParsedQueryRaw
-  /** Optional equality, defaulting to {@link structuralEq}. */
-  eq?: (a: T, b: T) => boolean
-  /** Optional default value, surfaced as {@link QueryParamDefinition.defaultValue}. */
-  default?: T
-}
+export type QueryParamDefinitionWithDefault<T> = DefinedQueryParamWithDefault<T>
+
+/**
+ * @deprecated Use `queryParam` for new code.
+ */
+export type QueryParamDefinitionInput<T> = DefinedQueryParamInput<T>
 
 /**
  * Binds a codec with a static default to a single dot-path.
  *
- * @remarks
- * `paths` is derived from `path`. The codec's default is surfaced as
- * {@link QueryParamDefinition.defaultValue}, and the result is a
- * {@link QueryParamDefinitionWithDefault}, so a missing key reads back as that
- * default instead of `undefined`.
- *
- * @typeParam T - The decoded value type.
- * @param path - A dot-path into the query object, for example `'filters.sort'`.
- * @param codec - A codec carrying a default, from {@link Codec.withDefault}.
- * @returns A definition that manages the single key at `path` and never reads absent.
- *
- * @example
- * ```ts
- * defineQueryParam('page', codecs.integer.withDefault(1))
- * ```
+ * @deprecated Use `queryParam(path, codec)` for new code.
  */
-export function defineQueryParam<T>(path: string, codec: CodecWithDefault<T>): QueryParamDefinitionWithDefault<T>
+export function defineQueryParam<T>(path: string, codec: CodecWithDefault<T>): DefinedQueryParamWithDefault<T>
 /**
  * Binds a codec to a single dot-path.
  *
- * @remarks
- * `paths` is derived from `path`, so there is nothing to keep in sync by hand.
- *
- * @typeParam T - The decoded value type.
- * @param path - A dot-path into the query object, for example `'filters.sort'`.
- * @param codec - The codec that reads and writes the value at `path`.
- * @returns A definition that manages the single key at `path`.
- *
- * @example
- * ```ts
- * defineQueryParam('currency', codecs.string)
- * defineQueryParam('filters.sort', codecs.string)
- * ```
+ * @deprecated Use `queryParam(path, codec)` for new code.
  */
-export function defineQueryParam<T>(path: string, codec: Codec<T>): QueryParamDefinition<T>
+export function defineQueryParam<T>(path: string, codec: Codec<T>): DefinedQueryParam<T>
 /**
  * Defines a composite or custom param spanning one or more keys, with a default value.
  *
- * @remarks
- * Because the definition carries a `default`, the returned definition is a
- * {@link QueryParamDefinitionWithDefault}, so a missing key reads back as that
- * default instead of `undefined`.
- *
- * @typeParam T - The decoded value type.
- * @param definition - The paths, parse, serialize, default, and optional equality.
- * @returns A definition that manages the declared `paths` and never reads absent.
- *
- * @example
- * ```ts
- * defineQueryParam({
- *   paths: ['from', 'to'],
- *   parse: q => buildRange(q),
- *   serialize: v => ({ from: v.from, to: v.to }),
- *   default: { from: '2024-01-01', to: '2024-12-31' },
- * })
- * ```
+ * @deprecated Prefer `queryParam.object(...).transform(...)` for new code.
  */
-export function defineQueryParam<T>(definition: QueryParamDefinitionInput<T> & { default: T }): QueryParamDefinitionWithDefault<T>
+export function defineQueryParam<T>(definition: DefinedQueryParamInput<T> & { default: T }): DefinedQueryParamWithDefault<T>
 /**
  * Defines a composite or custom param spanning one or more keys.
  *
- * @remarks
- * `paths` is the source of truth for the keys the param manages. The returned
- * `serialize` throws on its first call if it writes a key outside `paths`.
- *
- * @typeParam T - The decoded value type.
- * @param definition - The paths, parse, serialize, and optional equality and default.
- * @returns A definition that manages the declared `paths`.
- *
- * @example
- * ```ts
- * defineQueryParam({
- *   paths: ['from', 'to'],
- *   parse: q => buildRange(q),
- *   serialize: v => ({ from: v.from, to: v.to }),
- * })
- * ```
+ * @deprecated Prefer `queryParam.object(...).transform(...)` for new code.
  */
-export function defineQueryParam<T>(definition: QueryParamDefinitionInput<T>): QueryParamDefinition<T>
+export function defineQueryParam<T>(definition: DefinedQueryParamInput<T>): DefinedQueryParam<T>
 export function defineQueryParam<T>(
-  pathOrDefinition: string | QueryParamDefinitionInput<T>,
+  pathOrDefinition: string | DefinedQueryParamInput<T>,
   codec?: Codec<T>,
-): QueryParamDefinition<T> {
+): DefinedQueryParam<T> {
   if (typeof pathOrDefinition === 'string') {
-    const path = pathOrDefinition
-    const boundCodec = codec as Codec<T>
-
-    return {
-      paths: [path],
-      parse: query => boundCodec.parse(getPath(query, path)),
-      serialize: guardSerialize([path], value => setPath({}, path, boundCodec.serialize(value))),
-      eq: boundCodec.eq,
-      defaultValue: boundCodec.defaultValue,
-    }
-  }
-
-  const definition = pathOrDefinition
-
-  return {
-    paths: definition.paths,
-    parse: definition.parse,
-    serialize: guardSerialize(definition.paths, definition.serialize),
-    eq: definition.eq ?? structuralEq,
-    defaultValue: definition.default,
-  }
-}
-
-/**
- * Wraps a serialize function so every call checks that the keys it writes fall
- * within the declared paths.
- *
- * @remarks
- * A mismatch means a later removal would leak or miss keys, so it throws instead
- * of silently corrupting the query. The check walks a small object, so the cost
- * is negligible.
- *
- * @throws {Error} When the wrapped `serialize` writes a key outside `paths`.
- *
- * @internal
- */
-function guardSerialize<T>(
-  paths: readonly string[],
-  serialize: (value: T) => ParsedQueryRaw,
-): (value: T) => ParsedQueryRaw {
-  const declared = new Set(paths)
-
-  return (value) => {
-    const output = serialize(value)
-
-    for (const path of collectLeafPaths(output)) {
-      if (!declared.has(path)) {
-        throw new Error(
-          `[vuqs] serialize() wrote "${path}", which is not in the declared paths [${paths.join(', ')}].`,
-        )
-      }
+    if (codec === undefined) {
+      throw new Error('[vuqs] defineQueryParam(path, codec) requires a codec.')
     }
 
-    return output
+    return defineCodecQueryParam(pathOrDefinition, codec)
   }
+
+  return createDefinedQueryParam({
+    paths: pathOrDefinition.paths,
+    read: pathOrDefinition.parse,
+    write: pathOrDefinition.serialize,
+    eq: pathOrDefinition.eq,
+    defaultValue: pathOrDefinition.default,
+  })
 }
+
+export { defineCodecQueryParamWithDefault }

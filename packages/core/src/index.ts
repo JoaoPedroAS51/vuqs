@@ -3,7 +3,14 @@ export type { QueryAdapter, QueryAdapterDefaultOptions } from './core/adapter'
 export { codecs, createCodec } from './core/codec'
 export type { Codec, CodecInput, CodecWithDefault } from './core/codec'
 export { defineQueryParam } from './core/define-query-param'
-export type { QueryParamDefinition, QueryParamDefinitionInput, QueryParamDefinitionWithDefault } from './core/define-query-param'
+export type {
+  DefinedQueryParam,
+  DefinedQueryParamInput,
+  DefinedQueryParamWithDefault,
+  QueryParamDefinition,
+  QueryParamDefinitionInput,
+  QueryParamDefinitionWithDefault,
+} from './core/define-query-param'
 export { createQueryStateEngine } from './core/engine'
 export type {
   QueryDefaultsBus,
@@ -24,9 +31,11 @@ export type {
 export { deletePath, getPath, getQueryString, getQueryStringArray, setPath } from './core/path'
 export type { Enforce, QueryPipeline, QueryPipelineBus, QueryPipelineStage, QueryValues } from './core/pipeline'
 export type { QueryCore } from './core/query-core'
+export { queryParam } from './core/query-param'
+export type { QueryParam, QueryParamBuilder, QueryParamBuilderWithDefault, QueryParamTransform, QueryParamWithDefault } from './core/query-param'
 export { resetQueues } from './core/queues/throttle'
-export { assertUniquePaths, buildQuery, dropDefaults, getManagedKeys, omitManagedKeys, parseQueryStates, serializeQueryStates } from './core/schema'
-export type { QueryStateRefValue, QueryStateSchema, QueryStateValueOf, QueryStateValues, QueryStateWriteValues } from './core/schema'
+export { assertUniquePaths, buildQuery, dropDefaults, getManagedKeys, normalizeQueryStateSchema, omitManagedKeys, parseQueryStates, serializeQueryStates } from './core/schema'
+export type { NormalizeQueryStateSchema, QueryStateRefValue, QueryStateSchema, QueryStateSchemaInput, QueryStateValueOf, QueryStateValues, QueryStateWriteValues } from './core/schema'
 export { createSerializer } from './core/serializer'
 export type { CreateSerializerOptions, Serializer, SerializerParse, SerializerStringify } from './core/serializer'
 export { toQueryRefs } from './core/to-query-refs'

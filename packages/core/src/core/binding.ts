@@ -43,19 +43,25 @@ export function createQueryBinding<TSchema extends QueryStateSchema>(
   }
 
   const { query: querySource, navigate, defaultOptions: adapterDefaults } = adapter
+  const resolvedSchema = resolveSchemaClearOnDefault(
+    schema,
+    options.clearOnDefault,
+    adapterDefaults?.clearOnDefault,
+  )
 
   const engine = createQueryStateEngine({
-    schema,
+    schema: resolvedSchema,
     adapter: { query: querySource, navigate },
     history: options.history ?? adapterDefaults?.history,
     scroll: options.scroll ?? adapterDefaults?.scroll,
     throttleMs: options.throttleMs ?? adapterDefaults?.throttleMs,
-    clearOnDefault: options.clearOnDefault ?? adapterDefaults?.clearOnDefault,
+    clearOnDefault: options.clearOnDefault,
+    adapterClearOnDefault: adapterDefaults?.clearOnDefault,
   })
 
   const refs: Record<string, WritableComputedRef<unknown>> = {}
 
-  for (const key of Object.keys(schema) as Array<keyof TSchema & string>) {
+  for (const key of Object.keys(resolvedSchema) as Array<keyof TSchema & string>) {
     refs[key] = computed<unknown>({
       get: () => (engine.state.values.value as Record<string, unknown>)[key],
       set: value => engine.query.set(key, value),
@@ -63,7 +69,7 @@ export function createQueryBinding<TSchema extends QueryStateSchema>(
   }
 
   const core: QueryCore<TSchema> = {
-    schema,
+    schema: resolvedSchema,
     state: engine.state,
     defaults: engine.defaults,
     options: engine.options,
@@ -87,4 +93,26 @@ export function createQueryStateRefs<TSchema extends QueryStateSchema>(
   const { engine, refs } = createQueryBinding(schema, options)
 
   return { engine, refs }
+}
+
+function resolveSchemaClearOnDefault<TSchema extends QueryStateSchema>(
+  schema: TSchema,
+  instanceClearOnDefault: boolean | undefined,
+  adapterClearOnDefault: boolean | undefined,
+): TSchema {
+  const resolved: QueryStateSchema = {}
+
+  for (const key of Object.keys(schema)) {
+    const definition = schema[key]
+
+    resolved[key] = {
+      ...definition,
+      clearOnDefault: instanceClearOnDefault
+        ?? definition.clearOnDefault
+        ?? adapterClearOnDefault
+        ?? true,
+    }
+  }
+
+  return resolved as TSchema
 }
