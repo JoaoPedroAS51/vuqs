@@ -60,6 +60,7 @@ describe('@vuqs/nuxt module', () => {
     expect(names).toContain('useQueryState')
     expect(names).toContain('useQueryStates')
     expect(names).toContain('defineQueryParam')
+    expect(names).toContain('defineQueryModule')
     expect(names).toContain('createSerializer')
     expect(names).toContain('codecs')
     expect(names).toContain('createCodec')

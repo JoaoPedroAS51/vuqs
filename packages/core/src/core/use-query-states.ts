@@ -1,13 +1,15 @@
-import type { WritableComputedRef } from 'vue'
-import type { QueryDefaultsBus, QueryStateReads, ResolvedQueryStateOptions } from './engine'
-import type { QueryHookBus } from './hooks'
-import type { QueryPipelineBus } from './pipeline'
+import type { QueryModule } from './module'
+import type { QueryCore } from './query-core'
 import type { QueryStateRefValue, QueryStateSchema, QueryStateWriteValues } from './schema'
-import type { NavigateOptions, ParsedQuery } from './types'
+import type { NavigateOptions } from './types'
 import { reactive } from 'vue'
 import { createQueryBinding } from './binding'
+import { applyQueryModule } from './module'
 
+export type { DefinedQueryModule, QueryModule, QueryStateModule, QueryStatesModule } from './module'
+export type { QueryCore } from './query-core'
 export type { NavigateOptions, QueryStateNavigate } from './types'
+export type { QueryStateRef, UseQueryStateReturn } from './use-query-state'
 
 /**
  * Behavior options for {@link useQueryStates} and {@link useQueryState}.
@@ -27,22 +29,18 @@ export interface UseQueryStatesOptions extends NavigateOptions {
 }
 
 /**
- * A writable ref bound to one query param, returned by {@link useQueryState}.
+ * The object returned by {@link useQueryStates}: the current API plus `use`.
  *
  * @remarks
- * Reading yields the current value, or the codec default when the param is
- * absent. Assigning `.value` schedules a write with the default navigation
- * options. `set` and `clear` do the same while accepting per-call overrides.
- * Calling `clear`, or assigning `undefined` to a nullable param, removes the
- * param from the URL.
+ * Each `use(module)` call runs the module against the same {@link QueryCore},
+ * merges the contributed API into this object, and widens the return type with
+ * that API. Call `use` synchronously while a Vue effect scope is active.
  *
- * @typeParam T - The param's value type.
+ * @typeParam TSchema - The schema being managed.
+ * @typeParam TApi - The API accumulated so far.
  */
-export interface QueryStateRef<T> extends WritableComputedRef<T> {
-  /** Writes `value`, optionally overriding the navigation options for this write. */
-  set: (value: T, options?: NavigateOptions) => void
-  /** Removes the param from the URL, optionally overriding the navigation options. */
-  clear: (options?: NavigateOptions) => void
+export type QueryComposable<TSchema extends QueryStateSchema, TApi> = TApi & {
+  use: <TAdded>(module: QueryModule<TSchema, TAdded>) => QueryComposable<TSchema, TApi & TAdded>
 }
 
 /**
@@ -102,68 +100,6 @@ export type WritableQueryValues<TSchema extends QueryStateSchema> = QueryStatesV
 export interface UseQueryStatesReturn<TSchema extends QueryStateSchema> extends QueryStatesActions<TSchema> {
   /** The reactive, writable value map, one entry per param. */
   values: WritableQueryValues<TSchema>
-}
-
-/**
- * The shared core passed to a {@link QueryModule}.
- *
- * @remarks
- * Modules use this object to derive state from the current URL selection,
- * contribute pipeline transforms, write params through `query.set`, and coordinate
- * with other modules through `hooks`. Treat it as an implementation surface for
- * module authors, not as app-facing state.
- *
- * @typeParam TSchema - The schema being managed.
- */
-export interface QueryCore<TSchema extends QueryStateSchema> {
-  /** The schema being managed. */
-  schema: TSchema
-  /** The resolved reactive reads: `selected` (no defaults) and `values` (resolved). */
-  state: QueryStateReads<TSchema>
-  /** The defaults subsystem: read the merge or register a layer. */
-  defaults: QueryDefaultsBus<TSchema>
-  /** The resolved per-instance behavior baseline (`history`/`scroll`/`throttleMs`/`clearOnDefault`). */
-  options: ResolvedQueryStateOptions
-  /** The transform pipeline: `tap` to contribute, `run` to shape a derived value map. */
-  pipeline: QueryPipelineBus
-  /** The notification bus: one module emits an event, others react. */
-  hooks: QueryHookBus
-  /** The query I/O boundary: read the current query or set a param. */
-  query: {
-    /** Reads the current committed query, without the optimistic overlay. */
-    current: () => ParsedQuery
-    /** Optimistically sets one param. */
-    set: (key: keyof TSchema & string, value: unknown, options?: NavigateOptions) => void
-  }
-}
-
-/**
- * A unit of functionality composed with {@link QueryComposable.use}.
- *
- * @remarks
- * A module receives the {@link QueryCore} and returns the API it contributes to
- * the composable. It may derive state from the core, contribute pipeline
- * transforms, subscribe to hooks, or set up watchers. The returned object is
- * merged into the composable and widens its type.
- *
- * @typeParam TSchema - The schema being managed.
- * @typeParam TAdded - The API this module adds.
- */
-export type QueryModule<TSchema extends QueryStateSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
-
-/**
- * The object returned by {@link useQueryStates}: the current API plus `use`.
- *
- * @remarks
- * Each `use(module)` call runs the module against the same {@link QueryCore},
- * merges the contributed API into this object, and widens the return type with
- * that API.
- *
- * @typeParam TSchema - The schema being managed.
- * @typeParam TApi - The API accumulated so far.
- */
-export type QueryComposable<TSchema extends QueryStateSchema, TApi> = TApi & {
-  use: <TAdded>(module: QueryModule<TSchema, TAdded>) => QueryComposable<TSchema, TApi & TAdded>
 }
 
 /**
@@ -243,15 +179,7 @@ export function useQueryStates<TSchema extends QueryStateSchema>(
   const composable = { values, setValues, clear } as QueryComposable<TSchema, UseQueryStatesReturn<TSchema>>
 
   composable.use = <TAdded>(module: QueryModule<TSchema, TAdded>) => {
-    const added = module(core)
-
-    for (const key of Object.keys(added as Record<string, unknown>)) {
-      if (key in composable) {
-        throw new Error(`[vuqs] module key "${key}" is already provided by an earlier module`)
-      }
-    }
-
-    Object.assign(composable, added)
+    applyQueryModule(composable, core, module)
 
     return composable as QueryComposable<TSchema, UseQueryStatesReturn<TSchema> & TAdded>
   }

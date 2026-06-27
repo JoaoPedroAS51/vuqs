@@ -1,9 +1,14 @@
 # Writing a module
 
-A module is a function `(core) => addedApi`. `.use(module)` runs it against the
-composable's shared [`QueryCore`](#the-core), merges the returned object onto the
-composable, and widens the type. That's the whole contract — everything below is
-what `core` gives you to work with.
+A grouped-only module is a function `(core) => addedApi`. `.use(module)` runs it
+against the composable's shared [`QueryCore`](#the-core), merges the returned
+object onto the composable, and widens the type.
+
+Use `defineQueryModule({ queryStates, queryState })` when a module should support both
+[`useQueryStates`](/api/composables#usequerystates) and
+[`useQueryState`](/api/composables#usequerystate). `queryStates(core)` contributes
+the grouped API; `queryState(core, key)` contributes the single-param API on the
+same ref object returned by `useQueryState`.
 
 ```ts
 import type { ComputedRef } from 'vue'
@@ -22,6 +27,24 @@ so the module adapts to whatever schema it's applied to — the pattern every
 built-in uses. When the API *or* the options need to reference param names, use the
 `QueryModule<TSchema, TAdded>` overload form instead, as [`withContext`](/modules/context#typing-preserve-and-only)
 does.
+
+The dual-facade form keeps grouped and single behavior explicit:
+
+```ts
+import { computed } from 'vue'
+import { defineQueryModule } from '@vuqs/core'
+
+export function withSelectedValue() {
+  return defineQueryModule({
+    queryStates: core => ({
+      selected: core.state.selected,
+    }),
+    queryState: (core, key) => ({
+      selectedValue: computed(() => core.state.selected.value[key]),
+    }),
+  })
+}
+```
 
 ## The core
 
@@ -161,10 +184,10 @@ drop per-context defaults, with neither importing the other.
 
 ## Lifecycle and cleanup
 
-A module runs synchronously inside the `useQueryStates` call's effect scope.
-Anything that outlives the call — a `pipeline.tap`, a `hooks.on`, a `watch` —
-returns a disposer; pair each with `onScopeDispose` so it's torn down with the
-scope.
+Call `.use()` synchronously during setup or another active Vue effect scope.
+Anything that outlives module setup, such as a `pipeline.tap`, a `hooks.on`, or a
+`watch`, returns a disposer. Pair each with `onScopeDispose` so it is torn down
+with the caller's scope.
 
 ```ts
 import { onScopeDispose } from 'vue'
@@ -246,6 +269,14 @@ The exact shapes a module works with, exported from `@vuqs/core` (the
 
 ```ts
 type QueryModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
+type QueryStatesModule<TSchema, TAdded> = QueryModule<TSchema, TAdded>
+type QueryStateModule<TSchema, TAdded> = (core: QueryCore<TSchema>, key: keyof TSchema & string) => TAdded
+type DefinedQueryModule<TSchema, TQueryStatesApi, TQueryStateApi> = QueryStatesModule<TSchema, TQueryStatesApi> & {}
+
+function defineQueryModule<TSchema, TQueryStatesApi, TQueryStateApi>(definition: {
+  queryStates: QueryStatesModule<TSchema, TQueryStatesApi>
+  queryState: QueryStateModule<QueryStateSchema, TQueryStateApi>
+}): DefinedQueryModule<TSchema, TQueryStatesApi, TQueryStateApi>
 
 interface QueryCore<TSchema> {
   schema: TSchema

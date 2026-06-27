@@ -1,7 +1,11 @@
+import type { QueryCore } from '../../src/core/query-core'
+import type { QueryStateSchema } from '../../src/core/schema'
 import { describe, expectTypeOf, it } from 'vitest'
 import { ref } from 'vue'
 import { codecs } from '../../src/core/codec'
 import { defineQueryParam } from '../../src/core/define-query-param'
+import { defineQueryModule } from '../../src/core/module'
+import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
 import { withContext } from '../../src/modules/context'
 import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
@@ -23,6 +27,52 @@ describe('module composition', () => {
     expectTypeOf(q.selected.q).toEqualTypeOf<string | undefined>()
     expectTypeOf(q.activeContext.value).toEqualTypeOf<'products' | 'orders'>()
     expectTypeOf(q.setDefaults).toBeFunction()
+  })
+})
+
+describe('single-state module composition', () => {
+  const dualMode = defineQueryModule<typeof schema, { grouped: true }, { single: true, key: string }>({
+    queryStates: () => ({ grouped: true }),
+    queryState: (_core, key) => ({ single: true, key }),
+  })
+
+  const functionOnly = <TSchema extends QueryStateSchema>(_core: QueryCore<TSchema>): { grouped: true } => ({ grouped: true })
+
+  it('accumulates single module API on useQueryState', () => {
+    const q = useQueryState('q').use(dualMode)
+
+    expectTypeOf(q.value).toEqualTypeOf<string | undefined>()
+    expectTypeOf(q.single).toEqualTypeOf<true>()
+    expectTypeOf(q.key).toEqualTypeOf<string>()
+    // @ts-expect-error the grouped projection is not added to useQueryState
+    expectTypeOf(q.grouped).toBeNever()
+  })
+
+  it('rejects grouped-only modules on useQueryState', () => {
+    // @ts-expect-error grouped-only modules do not provide a single-state projection
+    useQueryState('q').use(functionOnly)
+  })
+
+  it('rejects queryState projections bound to the grouped schema', () => {
+    defineQueryModule({
+      queryStates: () => ({ grouped: true }),
+      // @ts-expect-error queryState must accept the single-param core passed by useQueryState
+      queryState: (_core: QueryCore<typeof schema>, key: keyof typeof schema & string) => ({ key }),
+    })
+  })
+
+  it('uses the grouped projection on useQueryStates', () => {
+    const q = useQueryStates(schema).use(dualMode)
+
+    expectTypeOf(q.grouped).toEqualTypeOf<true>()
+    // @ts-expect-error the single projection is not added to useQueryStates
+    expectTypeOf(q.single).toBeNever()
+  })
+
+  it('keeps function-only modules valid for useQueryStates', () => {
+    const q = useQueryStates(schema).use(functionOnly)
+
+    expectTypeOf(q.grouped).toEqualTypeOf<true>()
   })
 })
 

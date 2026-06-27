@@ -85,8 +85,21 @@ type ToQueryRefs<T> = { [K in keyof T]: unknown } // one ref per field; QuerySta
 type QueryComposable<TSchema, TApi> = TApi & {
   use: <TAdded>(module: QueryModule<TSchema, TAdded>) => QueryComposable<TSchema, TApi & TAdded>
 }
-type QueryModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
+type QueryStatesModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
+type QueryModule<TSchema, TAdded> = QueryStatesModule<TSchema, TAdded>
+type QueryStateModule<TSchema, TAdded> = (core: QueryCore<TSchema>, key: keyof TSchema & string) => TAdded
+type DefinedQueryModule<TSchema, TQueryStatesApi, TQueryStateApi> = QueryStatesModule<TSchema, TQueryStatesApi> & {
+  /* single-param projection consumed by useQueryState */
+}
+type UseQueryStateReturn<T, TApi = object> = QueryStateRef<T> & TApi & {
+  use: <TStateApi>(module: DefinedQueryModule<any, any, TStateApi>) => UseQueryStateReturn<T, TApi & TStateApi>
+}
 interface QueryCore<TSchema> { /* the faceted core passed to a module */ }
+
+function defineQueryModule<TSchema, TQueryStatesApi, TQueryStateApi>(definition: {
+  queryStates: QueryStatesModule<TSchema, TQueryStatesApi>
+  queryState: QueryStateModule<QueryStateSchema, TQueryStateApi>
+}): DefinedQueryModule<TSchema, TQueryStatesApi, TQueryStateApi>
 ```
 
 ## Adapter & navigation types <Badge type="info" text="@vuqs/core" />
@@ -189,5 +202,6 @@ interface ResolvedQueryStateOptions {
 Module-specific types live with each module: [`RuntimeDefaultsApi`](/modules/runtime-defaults#api),
 [`ContextOptions`](/modules/context#options) and
 [`ContextApi`](/modules/context#api), plus the
-[authoring types](/modules/authoring#authoring-types) (`QueryCore`, `QueryModule`,
-`QueryHooks`, `QueryPipeline`, and the `@vuqs/core/shared` helpers).
+[authoring types](/modules/authoring#authoring-types) (`defineQueryModule`,
+`QueryCore`, `QueryModule`, `DefinedQueryModule`, `QueryHooks`, `QueryPipeline`,
+and the `@vuqs/core/shared` helpers).

@@ -9,7 +9,7 @@ export interface AutoImportsOptions {
   /**
    * The composables and schema builder: `useQueryState`, `useQueryStates`,
    * `useQueryAdapter`, `provideQueryAdapter`, `defineQueryParam`,
-   * `createSerializer`.
+   * `defineQueryModule`, `createSerializer`.
    *
    * @default true
    */
@@ -78,6 +78,7 @@ const COMPOSABLE_IMPORTS = [
   'useQueryAdapter',
   'provideQueryAdapter',
   'defineQueryParam',
+  'defineQueryModule',
   'createSerializer',
 ] as const
 

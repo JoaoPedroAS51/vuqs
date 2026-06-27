@@ -14,8 +14,16 @@ export type {
 } from './core/engine'
 export { structuralEq } from './core/equality'
 export type { QueryHookBus, QueryHooks } from './core/hooks'
+export { defineQueryModule } from './core/module'
+export type {
+  DefinedQueryModule,
+  QueryModule,
+  QueryStateModule,
+  QueryStatesModule,
+} from './core/module'
 export { deletePath, getPath, getQueryString, getQueryStringArray, setPath } from './core/path'
 export type { Enforce, QueryPipeline, QueryPipelineBus, QueryPipelineStage, QueryValues } from './core/pipeline'
+export type { QueryCore } from './core/query-core'
 export { resetQueues } from './core/queues/throttle'
 export { assertUniquePaths, buildQuery, dropDefaults, getManagedKeys, omitManagedKeys, parseQueryStates, serializeQueryStates } from './core/schema'
 export type { QueryStateRefValue, QueryStateSchema, QueryStateValueOf, QueryStateValues, QueryStateWriteValues } from './core/schema'
@@ -25,14 +33,12 @@ export { toQueryRefs } from './core/to-query-refs'
 export type { ToQueryRefs } from './core/to-query-refs'
 export type { ParsedQuery, ParsedQueryRaw, ParsedQueryValue } from './core/types'
 export { useQueryState } from './core/use-query-state'
+export type { QueryStateRef, UseQueryStateReturn } from './core/use-query-state'
 export { useQueryStates } from './core/use-query-states'
 export type {
   NavigateOptions,
   QueryComposable,
-  QueryCore,
-  QueryModule,
   QueryStateNavigate,
-  QueryStateRef,
   QueryStatesActions,
   QueryStatesValues,
   UseQueryStatesOptions,

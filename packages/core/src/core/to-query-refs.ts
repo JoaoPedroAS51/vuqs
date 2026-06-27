@@ -1,5 +1,6 @@
 import type { ComputedRef } from 'vue'
-import type { NavigateOptions, QueryStateRef } from './use-query-states'
+import type { NavigateOptions } from './types'
+import type { QueryStateRef } from './use-query-state'
 import { computed } from 'vue'
 import { WRITER } from './use-query-states'
 

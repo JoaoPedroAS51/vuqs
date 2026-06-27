@@ -35,7 +35,7 @@ const search = useQueryState('q', codecs.string.withDefault(''))
 
 | Group | Names | From |
 | --- | --- | --- |
-| Composables | `useQueryState`, `useQueryStates`, `useQueryAdapter`, `provideQueryAdapter`, `defineQueryParam`, `createSerializer` | `@vuqs/core` |
+| Composables | `useQueryState`, `useQueryStates`, `useQueryAdapter`, `provideQueryAdapter`, `defineQueryParam`, `defineQueryModule`, `createSerializer` | `@vuqs/core` |
 | Codecs | `codecs`, `createCodec` | `@vuqs/core` |
 | Modules | the composable [modules](/modules/introduction) | `@vuqs/core/modules` |
 
@@ -80,7 +80,7 @@ interface ModuleOptions {
 }
 
 interface AutoImportsOptions {
-  composables?: boolean // useQueryState(s), use/provideQueryAdapter, defineQueryParam, createSerializer
+  composables?: boolean // useQueryState(s), use/provideQueryAdapter, defineQueryParam/Module, createSerializer
   codecs?: boolean      // the `codecs` namespace and `createCodec`
   modules?: boolean     // the composable modules from `@vuqs/core/modules`
 }

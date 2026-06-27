@@ -14,23 +14,23 @@ function useQueryState<T>(
   path: string,
   codec?: Codec<T>,
   options?: UseQueryStatesOptions,
-): QueryStateRef<T>
+): UseQueryStateReturn<T>
 ```
 
 ### Overloads
 
 ```ts
 // With a codec (canonical)
-function useQueryState<T>(path: string, codec: CodecWithDefault<T>, options?: UseQueryStatesOptions): QueryStateRef<T>
-function useQueryState<T>(path: string, codec: Codec<T>, options?: UseQueryStatesOptions): QueryStateRef<T | undefined>
+function useQueryState<T>(path: string, codec: CodecWithDefault<T>, options?: UseQueryStatesOptions): UseQueryStateReturn<T>
+function useQueryState<T>(path: string, codec: Codec<T>, options?: UseQueryStatesOptions): UseQueryStateReturn<T | undefined>
 
 // String shorthand (no codec)
-function useQueryState(path: string, options: StringOptions & { defaultValue: string }): QueryStateRef<string>
-function useQueryState(path: string, options?: StringOptions): QueryStateRef<string | undefined>
+function useQueryState(path: string, options: StringOptions & { defaultValue: string }): UseQueryStateReturn<string>
+function useQueryState(path: string, options?: StringOptions): UseQueryStateReturn<string | undefined>
 
 // With a pre-built param definition
-function useQueryState<T>(definition: QueryParamDefinitionWithDefault<T>, options?: UseQueryStatesOptions): QueryStateRef<T>
-function useQueryState<T>(definition: QueryParamDefinition<T>, options?: UseQueryStatesOptions): QueryStateRef<T | undefined>
+function useQueryState<T>(definition: QueryParamDefinitionWithDefault<T>, options?: UseQueryStatesOptions): UseQueryStateReturn<T>
+function useQueryState<T>(definition: QueryParamDefinition<T>, options?: UseQueryStatesOptions): UseQueryStateReturn<T | undefined>
 ```
 
 ### Parameters
@@ -48,18 +48,29 @@ other types pass `codecs.X.withDefault(...)`.
 
 ### Returns
 
-`QueryStateRef<T>` — a writable ref augmented with two methods:
+`UseQueryStateReturn<T>` — a writable ref augmented with methods:
 
 ```ts
 interface QueryStateRef<T> extends WritableComputedRef<T> {
   set: (value: T, options?: NavigateOptions) => void
   clear: (options?: NavigateOptions) => void
 }
+
+type UseQueryStateReturn<T, TApi = object> = QueryStateRef<T> & TApi & {
+  use: <TStateApi>(
+    module: DefinedQueryModule<any, any, TStateApi>,
+  ) => UseQueryStateReturn<T, TApi & TStateApi>
+}
 ```
 
 - `.value` — read/write; assigning `undefined` clears a nullable param.
 - `.set(value, options?)` — write with per-call [navigation options](/guide/navigation-options).
 - `.clear(options?)` — remove the key (revert to its default).
+- `.use(module)` — compose a single-compatible module onto the same ref object,
+  preserving Vue ref identity and widening the returned type.
+
+Call `.use()` synchronously during setup or another active Vue effect scope so
+module cleanup registered with `onScopeDispose` is tied to the caller's lifecycle.
 
 ### Example
 
@@ -143,6 +154,9 @@ clear()                          // reset all
 `useQueryStates` returns a [`QueryComposable`](/modules/introduction#the-use-model) —
 call `.use()` to layer modules like [`withRuntimeDefaults`](/modules/runtime-defaults) and
 [`withContext`](/modules/context) onto it.
+
+Modules authored with [`defineQueryModule`](/modules/authoring) can also expose a
+single-param projection for [`useQueryState`](#usequerystate).
 :::
 
 ## toQueryRefs <Badge type="info" text="@vuqs/core" />

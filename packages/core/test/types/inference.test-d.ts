@@ -1,7 +1,7 @@
 import type { Codec } from '../../src/core/codec'
 import type { QueryParamDefinition, QueryParamDefinitionWithDefault } from '../../src/core/define-query-param'
 import type { QueryStateValues } from '../../src/core/schema'
-import type { QueryStateRef } from '../../src/core/use-query-states'
+import type { UseQueryStateReturn } from '../../src/core/use-query-state'
 import { describe, expectTypeOf, it } from 'vitest'
 import { codecs } from '../../src/core/codec'
 import { defineQueryParam } from '../../src/core/define-query-param'
@@ -63,14 +63,14 @@ describe('schema value inference', () => {
 
 describe('useQueryState signatures', () => {
   it('infers string for the implicit forms', () => {
-    expectTypeOf(useQueryState('q')).toEqualTypeOf<QueryStateRef<string | undefined>>()
-    expectTypeOf(useQueryState('q', { history: 'push' })).toEqualTypeOf<QueryStateRef<string | undefined>>()
-    expectTypeOf(useQueryState('q', { defaultValue: 'x' })).toEqualTypeOf<QueryStateRef<string>>()
+    expectTypeOf(useQueryState('q')).toEqualTypeOf<UseQueryStateReturn<string | undefined>>()
+    expectTypeOf(useQueryState('q', { history: 'push' })).toEqualTypeOf<UseQueryStateReturn<string | undefined>>()
+    expectTypeOf(useQueryState('q', { defaultValue: 'x' })).toEqualTypeOf<UseQueryStateReturn<string>>()
   })
 
   it('keeps codec inference', () => {
-    expectTypeOf(useQueryState('q', codecs.string)).toEqualTypeOf<QueryStateRef<string | undefined>>()
-    expectTypeOf(useQueryState('page', codecs.integer.withDefault(1))).toEqualTypeOf<QueryStateRef<number>>()
+    expectTypeOf(useQueryState('q', codecs.string)).toEqualTypeOf<UseQueryStateReturn<string | undefined>>()
+    expectTypeOf(useQueryState('page', codecs.integer.withDefault(1))).toEqualTypeOf<UseQueryStateReturn<number>>()
   })
 
   it('rejects a non-string defaultValue without a codec', () => {
@@ -80,9 +80,9 @@ describe('useQueryState signatures', () => {
 
   it('narrows a defaulted definition to a non-nullable ref', () => {
     expectTypeOf(useQueryState(defineQueryParam('page', codecs.integer.withDefault(1))))
-      .toEqualTypeOf<QueryStateRef<number>>()
+      .toEqualTypeOf<UseQueryStateReturn<number>>()
     expectTypeOf(useQueryState(defineQueryParam('q', codecs.string)))
-      .toEqualTypeOf<QueryStateRef<string | undefined>>()
+      .toEqualTypeOf<UseQueryStateReturn<string | undefined>>()
   })
 })
 

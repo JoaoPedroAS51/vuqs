@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
+import type { QueryCore } from '../core/query-core'
 import type { QueryStateSchema, QueryStateValues } from '../core/schema'
-import type { QueryCore } from '../core/use-query-states'
 import { onScopeDispose, ref } from 'vue'
 import { toReadonlyState } from '../shared'
 
