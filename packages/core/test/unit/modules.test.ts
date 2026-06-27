@@ -1,9 +1,10 @@
 import type { NavigateOptions, ParsedQuery, ParsedQueryRaw } from '../../src/core/types'
 import { describe, expect, it, vi } from 'vitest'
-import { createApp, effectScope, nextTick, ref } from 'vue'
+import { createApp, effectScope, isRef, nextTick, ref } from 'vue'
 import { installQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
 import { defineQueryParam } from '../../src/core/define-query-param'
+import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
 import { withContext } from '../../src/modules/context'
 import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
@@ -61,6 +62,75 @@ describe('withRuntimeDefaults', () => {
     q.clearDefaults()
 
     expect(q.values).toEqual({})
+  })
+
+  it('adds runtime defaults to a single ref without replacing it', async () => {
+    const { query, build } = setup({ currency: 'EUR' })
+    const currency = build(() => useQueryState('currency', codecs.string))
+
+    const used = currency.use(withRuntimeDefaults())
+    used.setDefault('USD')
+
+    expect(used).toBe(currency)
+    expect(isRef(currency)).toBe(true)
+    expect(currency.value).toBe('EUR')
+    expect(used.selectedValue.value).toBe('EUR')
+    expect(used.defaultValue.value).toBe('USD')
+
+    currency.clear()
+    await flush()
+
+    expect(query.value).toEqual({})
+    expect(currency.value).toBe('USD')
+    expect(used.selectedValue.value).toBeUndefined()
+
+    used.clearDefault()
+
+    expect(currency.value).toBeUndefined()
+    expect(used.defaultValue.value).toBeUndefined()
+  })
+
+  it('keeps single runtime defaults coherent with clearOnDefault', async () => {
+    const { query, build } = setup()
+    const page = build(() => useQueryState('page', codecs.integer.withDefault(1)).use(withRuntimeDefaults()))
+
+    page.setDefault(5)
+    page.value = 1
+    await flush()
+
+    expect(query.value).toEqual({ page: '1' })
+    expect(page.selectedValue.value).toBe(1)
+    expect(page.value).toBe(1)
+
+    page.value = 5
+    await flush()
+
+    expect(query.value).toEqual({})
+    expect(page.selectedValue.value).toBeUndefined()
+    expect(page.value).toBe(5)
+  })
+
+  it('supports a single composite param without creating a parallel ref', () => {
+    const { build } = setup({ from: '2026-01-01', to: '2026-01-31' })
+    const rangeParam = defineQueryParam<{ from: string, to: string }>({
+      paths: ['from', 'to'],
+      parse: (current) => {
+        const from = codecs.string.parse(current.from)
+        const to = codecs.string.parse(current.to)
+
+        return from && to ? { from, to } : undefined
+      },
+      serialize: value => ({ from: value.from, to: value.to }),
+    })
+    const range = build(() => useQueryState(rangeParam))
+    const used = range.use(withRuntimeDefaults())
+
+    used.setDefault({ from: '2026-02-01', to: '2026-02-28' })
+
+    expect(used).toBe(range)
+    expect(range.value).toEqual({ from: '2026-01-01', to: '2026-01-31' })
+    expect(used.selectedValue.value).toEqual({ from: '2026-01-01', to: '2026-01-31' })
+    expect(used.defaultValue.value).toEqual({ from: '2026-02-01', to: '2026-02-28' })
   })
 })
 

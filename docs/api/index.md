@@ -126,7 +126,7 @@ export type { VueRouterAdapterOptions }
 
 ```ts
 export { withContext, withRuntimeDefaults }
-export type { ContextApi, ContextOptions, RuntimeDefaultsApi }
+export type { ContextApi, ContextOptions, RuntimeDefaultsApi, RuntimeDefaultsStateApi }
 ```
 
 ### `@vuqs/core/shared`

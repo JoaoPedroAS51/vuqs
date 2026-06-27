@@ -28,6 +28,43 @@ describe('module composition', () => {
     expectTypeOf(q.activeContext.value).toEqualTypeOf<'products' | 'orders'>()
     expectTypeOf(q.setDefaults).toBeFunction()
   })
+
+  it('adds single runtime-default APIs to useQueryState', () => {
+    const q = useQueryState('q').use(withRuntimeDefaults())
+
+    expectTypeOf(q.value).toEqualTypeOf<string | undefined>()
+    expectTypeOf(q.selectedValue.value).toEqualTypeOf<string | undefined>()
+    expectTypeOf(q.defaultValue.value).toEqualTypeOf<string | undefined>()
+    q.setDefault('preset')
+    q.clearDefault()
+    // @ts-expect-error setDefault follows the single param value type
+    q.setDefault(1)
+    // @ts-expect-error the grouped projection is not added to useQueryState
+    expectTypeOf(q.setDefaults).toBeNever()
+  })
+
+  it('types single runtime defaults for defaulted and composite params', () => {
+    const page = useQueryState('page', codecs.integer.withDefault(1)).use(withRuntimeDefaults())
+
+    expectTypeOf(page.value).toEqualTypeOf<number>()
+    expectTypeOf(page.defaultValue.value).toEqualTypeOf<number | undefined>()
+    page.setDefault(2)
+    // @ts-expect-error setDefault follows the integer value type
+    page.setDefault('2')
+
+    const rangeParam = defineQueryParam({
+      paths: ['from', 'to'],
+      parse: (): { from: string, to: string } | undefined => undefined,
+      serialize: (value: { from: string, to: string }) => ({ from: value.from, to: value.to }),
+    })
+    const range = useQueryState(rangeParam).use(withRuntimeDefaults())
+
+    expectTypeOf(range.value).toEqualTypeOf<{ from: string, to: string } | undefined>()
+    expectTypeOf(range.selectedValue.value).toEqualTypeOf<{ from: string, to: string } | undefined>()
+    range.setDefault({ from: '2026-01-01', to: '2026-01-31' })
+    // @ts-expect-error setDefault follows the composite value shape
+    range.setDefault({ from: '2026-01-01' })
+  })
 })
 
 describe('single-state module composition', () => {

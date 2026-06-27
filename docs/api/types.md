@@ -91,8 +91,8 @@ type QueryStateModule<TSchema, TAdded> = (core: QueryCore<TSchema>, key: keyof T
 type DefinedQueryModule<TSchema, TQueryStatesApi, TQueryStateApi> = QueryStatesModule<TSchema, TQueryStatesApi> & {
   /* single-param projection consumed by useQueryState */
 }
-type UseQueryStateReturn<T, TApi = object> = QueryStateRef<T> & TApi & {
-  use: <TStateApi>(module: DefinedQueryModule<any, any, TStateApi>) => UseQueryStateReturn<T, TApi & TStateApi>
+type UseQueryStateReturn<T, TApi = object, TValue = T> = QueryStateRef<T> & TApi & {
+  use: <TStateApi>(module: DefinedQueryModule<any, any, TStateApi>) => UseQueryStateReturn<T, TApi & TStateApi, TValue>
 }
 interface QueryCore<TSchema> { /* the faceted core passed to a module */ }
 
@@ -200,6 +200,7 @@ interface ResolvedQueryStateOptions {
 ## Module types
 
 Module-specific types live with each module: [`RuntimeDefaultsApi`](/modules/runtime-defaults#api),
+[`RuntimeDefaultsStateApi`](/modules/runtime-defaults#api),
 [`ContextOptions`](/modules/context#options) and
 [`ContextApi`](/modules/context#api), plus the
 [authoring types](/modules/authoring#authoring-types) (`defineQueryModule`,

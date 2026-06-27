@@ -13,8 +13,8 @@ import { withRuntimeDefaults } from '@vuqs/core/modules'
 defaults](/modules/authoring#layered-defaults). The codec defaults are the base,
 the runtime defaults (`setDefaults`) sit above them, and an explicit URL selection
 sits above both. The bound `values` from [`useQueryStates`](/guide/use-query-states)
-resolve through that stack, so `values` **is** the effective read — no separate
-view.
+and the ref from [`useQueryState`](/guide/use-query-state) resolve through that
+stack. They are the effective reads.
 
 | State | Source | In the URL? |
 | --- | --- | --- |
@@ -32,9 +32,9 @@ always wins; clearing it reveals the runtime default, and clearing the runtime
 default reveals the codec default (if the param has one). Your UI reads `values`;
 only `selected` is serialized.
 
-`selected` and `defaults` are readonly reactive objects — dot access, no `.value`.
-`values` is the writable map [`useQueryStates`](/guide/use-query-states) already
-hands back:
+Grouped composition exposes `selected` and `defaults` as readonly reactive
+objects: dot access, no `.value`. `values` is the writable map
+[`useQueryStates`](/guide/use-query-states) already hands back:
 
 ```ts
 const { values, selected, defaults } = useQueryStates(schema).use(withRuntimeDefaults())
@@ -42,6 +42,17 @@ const { values, selected, defaults } = useQueryStates(schema).use(withRuntimeDef
 selected.status // string | undefined — the explicit choice
 defaults.status // the fallback in force
 values.status   // what the UI shows
+```
+
+Single-param composition exposes scalar computed refs:
+
+```ts
+const status = useQueryState('status', codecs.string)
+  .use(withRuntimeDefaults())
+
+status.selectedValue.value // string | undefined — the explicit choice
+status.defaultValue.value  // string | undefined — the fallback in force
+status.value               // string | undefined — what the UI shows
 ```
 
 ### Writing is coherent
@@ -64,7 +75,8 @@ that equals the *resolved* default, which here is `eur`.
 
 ## API
 
-`withRuntimeDefaults()` takes no options and contributes `RuntimeDefaultsApi`:
+`withRuntimeDefaults()` takes no options. With `useQueryStates`, it contributes
+`RuntimeDefaultsApi`:
 
 ```ts
 function withRuntimeDefaults(): QueryModule<TSchema, RuntimeDefaultsApi<TSchema>>
@@ -86,6 +98,24 @@ The effective read is the base [`values`](/guide/use-query-states#values-a-react
 map. Writes still go through the base composable: assign `values.field` or call
 `setValues(...)`. For per-field refs that keep `.set`/`.clear`, explode `values`
 with [`toQueryRefs`](/api/composables#toqueryrefs).
+
+With `useQueryState`, it contributes `RuntimeDefaultsStateApi`:
+
+```ts
+interface RuntimeDefaultsStateApi<TSchema, TKey> {
+  selectedValue: ComputedRef<QueryStateValueOf<TSchema[TKey]> | undefined>
+  defaultValue: ComputedRef<QueryStateValueOf<TSchema[TKey]> | undefined>
+  setDefault: (value: QueryStateValueOf<TSchema[TKey]>) => void
+  clearDefault: () => void
+}
+```
+
+- `setDefault(value)` — replace the runtime default for this param.
+- `clearDefault()` — drop the runtime default for this param, leaving its codec
+  default in place.
+
+The effective read is the base ref's `.value`. Writes still go through the base
+ref: assign `.value`, call `.set(...)`, or call `.clear()`.
 
 ## Example
 
