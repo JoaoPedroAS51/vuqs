@@ -19,7 +19,7 @@ walkthroughs, see the [Guide](/guide/introduction) and
 ## Reference pages
 
 - **[codecs](/api/codecs)** — every built-in codec, `createCodec`, `.withDefault`.
-- **[Composables](/api/composables)** — `useQueryState`, `useQueryStates`, `defineQueryParam`, `defineQueryModule`, the adapter.
+- **[Composables](/api/composables)** — `useQueryState`, `useQueryStates`, `queryParam`, `defineQueryModule`, the adapter.
 - **[Adapters](/api/adapters)** — `createVueRouterAdapter`, `provideVueRouterAdapter`, `QueryAdapter`.
 - **[Serializer & pure functions](/api/serializer)** — `createSerializer` and the framework-free helpers.
 - **[Testing](/api/testing)** — `createTestingAdapter`, `withVuqsTestingAdapter`, and codec bijectivity helpers.
@@ -42,7 +42,7 @@ export { defineQueryModule }
 
 // Params & codecs
 export { codecs, createCodec }
-export { defineQueryParam }
+export { queryParam }
 
 // Serializer & pure functions
 export { createSerializer }
@@ -68,9 +68,8 @@ export type {
   Codec,
   CodecInput,
   CodecWithDefault,
-  QueryParamDefinition,
-  QueryParamDefinitionInput,
-  QueryParamDefinitionWithDefault,
+  DefinedQueryParam,
+  DefinedQueryParamWithDefault,
   QueryStateRef,
   UseQueryStateReturn,
   QueryStateSchema,

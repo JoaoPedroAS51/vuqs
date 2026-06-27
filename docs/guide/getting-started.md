@@ -118,12 +118,12 @@ writers:
 
 ```vue
 <script setup lang="ts">
-import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
+import { codecs, queryParam, useQueryStates } from '@vuqs/core'
 
 const { values, setValues, clear } = useQueryStates({
-  q: defineQueryParam('q', codecs.string.withDefault('')),
-  sort: defineQueryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
-  page: defineQueryParam('page', codecs.integer.withDefault(1)),
+  q: queryParam('q', codecs.string.withDefault('')),
+  sort: queryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
+  page: queryParam('page', codecs.integer.withDefault(1)),
 })
 </script>
 

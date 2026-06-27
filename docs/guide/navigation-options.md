@@ -118,7 +118,7 @@ import { ref } from 'vue'
 
 const mode = ref<'replace' | 'push'>('replace')
 const { values, setValues } = useQueryStates({
-  page: defineQueryParam('page', codecs.integer.withDefault(1)),
+  page: queryParam('page', codecs.integer.withDefault(1)),
 })
 
 function goToPage(n: number) {

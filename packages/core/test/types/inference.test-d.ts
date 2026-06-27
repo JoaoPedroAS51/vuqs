@@ -2,14 +2,11 @@ import type { Codec } from '../../src/core/codec'
 import type {
   DefinedQueryParam,
   DefinedQueryParamWithDefault,
-  QueryParamDefinition,
-  QueryParamDefinitionWithDefault,
-} from '../../src/core/define-query-param'
+} from '../../src/core/defined-query-param'
 import type { QueryStateValues } from '../../src/core/schema'
 import type { UseQueryStateReturn } from '../../src/core/use-query-state'
 import { describe, expectTypeOf, it } from 'vitest'
 import { codecs } from '../../src/core/codec'
-import { defineQueryParam } from '../../src/core/define-query-param'
 import { queryParam } from '../../src/core/query-param'
 import { parseQueryStates } from '../../src/core/schema'
 import { useQueryState } from '../../src/core/use-query-state'
@@ -118,29 +115,19 @@ describe('queryParam inference', () => {
   })
 })
 
-describe('defineQueryParam inference', () => {
+describe('scalar queryParam inference', () => {
   it('carries the codec value type (path form)', () => {
-    expectTypeOf(defineQueryParam('currency', codecs.string)).toEqualTypeOf<QueryParamDefinition<string>>()
-    expectTypeOf(defineQueryParam('page', codecs.integer.withDefault(1))).toEqualTypeOf<QueryParamDefinitionWithDefault<number>>()
-  })
-
-  it('infers the value type from parse (composite form)', () => {
-    const dateRange = defineQueryParam({
-      paths: ['from', 'to'],
-      parse: (): { from: string, to: string } | undefined => undefined,
-      serialize: value => ({ from: value.from, to: value.to }),
-    })
-
-    expectTypeOf(dateRange).toEqualTypeOf<QueryParamDefinition<{ from: string, to: string }>>()
+    expectTypeOf(queryParam('currency', codecs.string)).toMatchTypeOf<DefinedQueryParam<string>>()
+    expectTypeOf(queryParam('page', codecs.integer.withDefault(1))).toMatchTypeOf<DefinedQueryParamWithDefault<number>>()
   })
 })
 
 describe('schema value inference', () => {
   it('builds a partial value map keyed by field', () => {
     const schema = {
-      currency: defineQueryParam('currency', codecs.string),
-      page: defineQueryParam('page', codecs.integer.withDefault(1)),
-      statuses: defineQueryParam('filters.statuses', codecs.arrayOf(codecs.string)),
+      currency: queryParam('currency', codecs.string),
+      page: queryParam('page', codecs.integer.withDefault(1)),
+      statuses: queryParam('filters.statuses', codecs.arrayOf(codecs.string)),
     }
 
     expectTypeOf<QueryStateValues<typeof schema>>().toEqualTypeOf<{
@@ -175,9 +162,9 @@ describe('useQueryState signatures', () => {
   })
 
   it('narrows a defaulted definition to a non-nullable ref', () => {
-    expectTypeOf(useQueryState(defineQueryParam('page', codecs.integer.withDefault(1))))
+    expectTypeOf(useQueryState(queryParam('page', codecs.integer.withDefault(1))))
       .toEqualTypeOf<UseQueryStateReturn<number, object, number>>()
-    expectTypeOf(useQueryState(defineQueryParam('q', codecs.string)))
+    expectTypeOf(useQueryState(queryParam('q', codecs.string)))
       .toEqualTypeOf<UseQueryStateReturn<string | undefined, object, string>>()
   })
 
@@ -192,8 +179,8 @@ describe('useQueryState signatures', () => {
 describe('useQueryStates inference', () => {
   it('narrows defaulted fields to T and keeps others nullable in values', () => {
     const { values } = useQueryStates({
-      q: defineQueryParam('q', codecs.string),
-      page: defineQueryParam('page', codecs.integer.withDefault(1)),
+      q: queryParam('q', codecs.string),
+      page: queryParam('page', codecs.integer.withDefault(1)),
     })
 
     expectTypeOf(values.q).toEqualTypeOf<string | undefined>()

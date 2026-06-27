@@ -66,11 +66,11 @@ For any other type, pass a codec: `codecs.integer.withDefault(0)`.
 
 ### With a pre-built definition
 
-If you've named a param with [`defineQueryParam`](/guide/defining-params), pass it
+If you've named a param with [`queryParam`](/guide/defining-params), pass it
 directly:
 
 ```ts
-const pageField = defineQueryParam('page', codecs.integer.withDefault(1))
+const pageField = queryParam('page', codecs.integer.withDefault(1))
 
 const page = useQueryState(pageField) // QueryStateRef<number>
 ```

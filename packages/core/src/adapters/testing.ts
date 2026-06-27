@@ -67,7 +67,7 @@ export interface TestingAdapter extends QueryAdapter {
 }
 
 // Expand each top-level key through setPath so dot-notation keys nest, aligning
-// the initial query with the dot-paths defineQueryParam binds against.
+// the initial query with the dot-paths queryParam binds against.
 function nestPaths(flat: Record<string, ParsedQueryRaw[string]>): ParsedQuery {
   const query: ParsedQueryRaw = {}
 

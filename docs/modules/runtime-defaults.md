@@ -121,14 +121,14 @@ ref: assign `.value`, call `.set(...)`, or call `.clear()`.
 
 ```vue
 <script setup lang="ts">
-import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
+import { codecs, queryParam, useQueryStates } from '@vuqs/core'
 import { withRuntimeDefaults } from '@vuqs/core/modules'
 import { onMounted } from 'vue'
 
 const { values, selected, defaults, setDefaults, clear } = useQueryStates({
-  q: defineQueryParam('q', codecs.string),
-  status: defineQueryParam('status', codecs.literal(['active', 'archived'] as const)),
-  perPage: defineQueryParam('perPage', codecs.integer),
+  q: queryParam('q', codecs.string),
+  status: queryParam('status', codecs.literal(['active', 'archived'] as const)),
+  perPage: queryParam('perPage', codecs.integer),
 }).use(withRuntimeDefaults())
 
 onMounted(async () => {

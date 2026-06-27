@@ -2,14 +2,14 @@ import type { ComputedRef } from 'vue'
 import type { QueryStateRef } from '../../src/core/use-query-states'
 import { describe, expectTypeOf, it } from 'vitest'
 import { codecs } from '../../src/core/codec'
-import { defineQueryParam } from '../../src/core/define-query-param'
+import { queryParam } from '../../src/core/query-param'
 import { toQueryRefs } from '../../src/core/to-query-refs'
 import { useQueryStates } from '../../src/core/use-query-states'
 import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
 
 const schema = {
-  q: defineQueryParam('q', codecs.string),
-  page: defineQueryParam('page', codecs.integer.withDefault(1)),
+  q: queryParam('q', codecs.string),
+  page: queryParam('page', codecs.integer.withDefault(1)),
 }
 
 describe('toQueryRefs typing', () => {

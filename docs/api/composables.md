@@ -29,8 +29,8 @@ function useQueryState(path: string, options: StringOptions & { defaultValue: st
 function useQueryState(path: string, options?: StringOptions): UseQueryStateReturn<string | undefined>
 
 // With a pre-built param definition
-function useQueryState<T>(definition: QueryParamDefinitionWithDefault<T>, options?: UseQueryStatesOptions): UseQueryStateReturn<T>
-function useQueryState<T>(definition: QueryParamDefinition<T>, options?: UseQueryStatesOptions): UseQueryStateReturn<T | undefined>
+function useQueryState<T>(definition: DefinedQueryParamWithDefault<T>, options?: UseQueryStatesOptions): UseQueryStateReturn<T>
+function useQueryState<T>(definition: DefinedQueryParam<T>, options?: UseQueryStatesOptions): UseQueryStateReturn<T | undefined>
 ```
 
 ### Parameters
@@ -39,7 +39,7 @@ function useQueryState<T>(definition: QueryParamDefinition<T>, options?: UseQuer
 | --- | --- | --- |
 | `path` | `string` | The query key. Use a dot-path (`'filters.sort'`) for [nested keys](/guide/nested-keys). |
 | `codec` | `Codec<T>` | How the value is parsed and serialized. Defaults to `codecs.string`. A `.withDefault()` codec narrows the ref to non-nullable. |
-| `definition` | `QueryParamDefinition<T>` | A pre-built param from [`defineQueryParam`](#definequeryparam), passed in place of `path` + `codec`. |
+| `definition` | `DefinedQueryParam<T>` | A pre-built param from [`queryParam`](#queryparam), passed in place of `path` + `codec`. |
 | `options` | `UseQueryStatesOptions` | Per-instance behavior. Optional when an [adapter](/api/adapters) is provided. |
 
 `StringOptions` is `UseQueryStatesOptions` with `parse`/`serialize` forbidden, so
@@ -107,7 +107,7 @@ function useQueryStates<TSchema extends QueryStateSchema>(
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `schema` | `TSchema` | A map of logical name → [param definition](#definequeryparam). |
+| `schema` | `TSchema` | A map of logical name → [param definition](#queryparam). |
 | `options` | `UseQueryStatesOptions` | Per-instance behavior. Optional when an adapter is provided. |
 
 ### Returns
@@ -138,11 +138,11 @@ provided (see [`provideQueryAdapter`](#providequeryadapter)).
 ### Example
 
 ```ts
-import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
+import { codecs, queryParam, useQueryStates } from '@vuqs/core'
 
 const { values, setValues, clear } = useQueryStates({
-  q: defineQueryParam('q', codecs.string.withDefault('')),
-  page: defineQueryParam('page', codecs.integer.withDefault(1)),
+  q: queryParam('q', codecs.string.withDefault('')),
+  page: queryParam('page', codecs.integer.withDefault(1)),
 })
 
 values.q = 'laptop'              // ?q=laptop
@@ -195,11 +195,11 @@ clears against the *effective* default, exactly as `values.x = …` would.
 ### Example
 
 ```ts
-import { codecs, defineQueryParam, toQueryRefs, useQueryStates } from '@vuqs/core'
+import { codecs, queryParam, toQueryRefs, useQueryStates } from '@vuqs/core'
 
 const { values } = useQueryStates({
-  q: defineQueryParam('q', codecs.string),
-  sort: defineQueryParam('sort', codecs.literal(['asc', 'desc'] as const)),
+  q: queryParam('q', codecs.string),
+  sort: queryParam('sort', codecs.literal(['asc', 'desc'] as const)),
 })
 
 const { q, sort } = toQueryRefs(values)
@@ -240,20 +240,21 @@ interface UseQueryStatesOptions extends NavigateOptions {
 
 See [Navigation options](/guide/navigation-options) for behavior and precedence.
 
-## defineQueryParam <Badge type="info" text="@vuqs/core" />
+## queryParam <Badge type="info" text="@vuqs/core" />
 
 Builds a reusable [param](/guide/defining-params) from a path + codec, or a
-custom multi-key definition.
+composed object param.
 
 ### Signature
 
 ```ts
 // Single key
-function defineQueryParam<T>(path: string, codec: CodecWithDefault<T>): QueryParamDefinitionWithDefault<T>
-function defineQueryParam<T>(path: string, codec: Codec<T>): QueryParamDefinition<T>
+function queryParam<T>(path: string, codec: CodecWithDefault<T>): DefinedQueryParamWithDefault<T>
+function queryParam<T>(path: string, codec: Codec<T>): DefinedQueryParam<T>
 
-// Composite / custom
-function defineQueryParam<T>(definition: QueryParamDefinitionInput<T>): QueryParamDefinition<T>
+// Object composition
+queryParam.object(children)
+queryParam.object(prefix, childrenOrParam)
 ```
 
 ### Parameters
@@ -262,30 +263,20 @@ function defineQueryParam<T>(definition: QueryParamDefinitionInput<T>): QueryPar
 | --- | --- | --- |
 | `path` | `string` | The query key the param owns. |
 | `codec` | `Codec<T>` | The codec bound to `path`. |
-| `definition` | `QueryParamDefinitionInput<T>` | A custom param spanning one or more keys (see below). |
-
-```ts
-interface QueryParamDefinitionInput<T> {
-  paths: readonly string[]              // every key serialize writes
-  parse: (query: ParsedQuery) => T | undefined
-  serialize: (value: T) => ParsedQueryRaw
-  eq?: (a: T, b: T) => boolean          // defaults to structuralEq
-  default?: T
-}
-```
+| `children` | `Record<string, DefinedQueryParam<any>>` | Child params for object composition. |
+| `prefix` | `string` | Optional path prefix applied to child params. |
 
 ### Returns
 
-A `QueryParamDefinition<T>` (or `QueryParamDefinitionWithDefault<T>` when the
-codec carries a default). A dev guard throws on the first `serialize` if it writes
-a key outside `paths`. See [composite params](/guide/nested-keys#composite-params).
+A `DefinedQueryParam<T>` (or `DefinedQueryParamWithDefault<T>` when the
+codec or param carries a default). See [composite params](/guide/nested-keys#composite-params).
 
 ### Example
 
 ```ts
-import { codecs, defineQueryParam } from '@vuqs/core'
+import { codecs, queryParam } from '@vuqs/core'
 
-const sort = defineQueryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc'))
+const sort = queryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc'))
 ```
 
 ## provideQueryAdapter <Badge type="info" text="@vuqs/core" />

@@ -5,12 +5,12 @@ sort + page trio, anything where several keys change together and you want
 multi-param writes to land as a single navigation.
 
 ```ts
-import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
+import { codecs, queryParam, useQueryStates } from '@vuqs/core'
 
 const { values, setValues, clear } = useQueryStates({
-  q: defineQueryParam('q', codecs.string.withDefault('')),
-  sort: defineQueryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
-  page: defineQueryParam('page', codecs.integer.withDefault(1)),
+  q: queryParam('q', codecs.string.withDefault('')),
+  sort: queryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
+  page: queryParam('page', codecs.integer.withDefault(1)),
 })
 ```
 
@@ -126,13 +126,13 @@ calls for a related group.
 
 ```vue
 <script setup lang="ts">
-import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
+import { codecs, queryParam, useQueryStates } from '@vuqs/core'
 import { computed } from 'vue'
 
 const { values, setValues, clear } = useQueryStates({
-  q: defineQueryParam('q', codecs.string.withDefault('')),
-  sort: defineQueryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
-  page: defineQueryParam('page', codecs.integer.withDefault(1)),
+  q: queryParam('q', codecs.string.withDefault('')),
+  sort: queryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
+  page: queryParam('page', codecs.integer.withDefault(1)),
 })
 
 const results = computed(() => runSearch(values.q, values.sort, values.page))

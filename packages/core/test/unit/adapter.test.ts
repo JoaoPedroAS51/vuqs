@@ -5,14 +5,14 @@ import { createSSRApp, defineComponent, h, ref } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 import { installQueryAdapter, provideQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
-import { defineQueryParam } from '../../src/core/define-query-param'
+import { queryParam } from '../../src/core/query-param'
 import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
 
 const schema = {
-  q: defineQueryParam('q', codecs.string),
+  q: queryParam('q', codecs.string),
 }
 
 function mount(parentSetup: () => () => unknown): Promise<string> {
@@ -111,7 +111,7 @@ describe('provideQueryAdapter', () => {
 
     const Child = defineComponent({
       setup() {
-        value = useQueryState(defineQueryParam('q', codecs.string)).value
+        value = useQueryState(queryParam('q', codecs.string)).value
         return () => h('div')
       },
     })
@@ -151,7 +151,7 @@ describe('provideQueryAdapter', () => {
   })
 
   it('passes adapter defaultOptions (clearOnDefault) through to the engine', async () => {
-    const pageSchema = { page: defineQueryParam('page', codecs.integer.withDefault(1)) }
+    const pageSchema = { page: queryParam('page', codecs.integer.withDefault(1)) }
     const query = ref<ParsedQuery>({})
     const navigate = vi.fn((next: ParsedQueryRaw) => {
       query.value = next

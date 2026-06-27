@@ -3,16 +3,16 @@ import type { QueryStateSchema } from '../../src/core/schema'
 import { describe, expectTypeOf, it } from 'vitest'
 import { ref } from 'vue'
 import { codecs } from '../../src/core/codec'
-import { defineQueryParam } from '../../src/core/define-query-param'
 import { defineQueryModule } from '../../src/core/module'
+import { queryParam } from '../../src/core/query-param'
 import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
 import { withContext } from '../../src/modules/context'
 import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
 
 const schema = {
-  q: defineQueryParam('q', codecs.string),
-  category: defineQueryParam('category', codecs.literal(['cpu', 'gpu'] as const)),
+  q: queryParam('q', codecs.string),
+  category: queryParam('category', codecs.literal(['cpu', 'gpu'] as const)),
 }
 
 describe('module composition', () => {
@@ -52,10 +52,14 @@ describe('module composition', () => {
     // @ts-expect-error setDefault follows the integer value type
     page.setDefault('2')
 
-    const rangeParam = defineQueryParam({
-      paths: ['from', 'to'],
-      parse: (): { from: string, to: string } | undefined => undefined,
-      serialize: (value: { from: string, to: string }) => ({ from: value.from, to: value.to }),
+    const rangeParam = queryParam.object({
+      from: queryParam('from', codecs.string),
+      to: queryParam('to', codecs.string),
+    }).transform({
+      read(value): { from: string, to: string } | undefined {
+        return value.from && value.to ? { from: value.from, to: value.to } : undefined
+      },
+      write: value => value,
     })
     const range = useQueryState(rangeParam).use(withRuntimeDefaults())
 

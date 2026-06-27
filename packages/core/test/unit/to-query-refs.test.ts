@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createApp, effectScope, ref } from 'vue'
 import { installQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
-import { defineQueryParam } from '../../src/core/define-query-param'
+import { queryParam } from '../../src/core/query-param'
 import { toQueryRefs } from '../../src/core/to-query-refs'
 import { useQueryStates } from '../../src/core/use-query-states'
 import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
@@ -23,8 +23,8 @@ function setup(initial: ParsedQuery = {}) {
 }
 
 const schema = {
-  q: defineQueryParam('q', codecs.string),
-  page: defineQueryParam('page', codecs.integer.withDefault(1)),
+  q: queryParam('q', codecs.string),
+  page: queryParam('page', codecs.integer.withDefault(1)),
 }
 
 describe('toQueryRefs over the writable values map', () => {

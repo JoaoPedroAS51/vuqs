@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { codecs } from '../../src/core/codec'
-import { defineQueryParam } from '../../src/core/define-query-param'
 import { queryParam } from '../../src/core/query-param'
 import { createSerializer } from '../../src/core/serializer'
 
 const schema = {
-  q: defineQueryParam('q', codecs.string),
-  sort: defineQueryParam('filters.sort', codecs.string),
-  page: defineQueryParam('page', codecs.integer.withDefault(1)),
+  q: queryParam('q', codecs.string),
+  sort: queryParam('filters.sort', codecs.string),
+  page: queryParam('page', codecs.integer.withDefault(1)),
 }
 
 describe('createSerializer', () => {

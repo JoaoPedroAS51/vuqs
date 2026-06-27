@@ -170,7 +170,7 @@ Either way, TypeScript rejects a `preserve` or `only` key that isn't in the sche
 
 ```vue
 <script setup lang="ts">
-import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
+import { codecs, queryParam, useQueryStates } from '@vuqs/core'
 import { withContext, withRuntimeDefaults } from '@vuqs/core/modules'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -180,10 +180,10 @@ const route = useRoute()
 const router = useRouter()
 
 const schema = {
-  q: defineQueryParam('q', codecs.string),
-  sort: defineQueryParam('sort', codecs.literal(['newest', 'oldest'] as const)),
-  category: defineQueryParam('category', codecs.literal(['cpu', 'gpu', 'ram'] as const)),
-  status: defineQueryParam('status', codecs.literal(['open', 'shipped'] as const)),
+  q: queryParam('q', codecs.string),
+  sort: queryParam('sort', codecs.literal(['newest', 'oldest'] as const)),
+  category: queryParam('category', codecs.literal(['cpu', 'gpu', 'ram'] as const)),
+  status: queryParam('status', codecs.literal(['open', 'shipped'] as const)),
 }
 
 const { values, selected, activeContext, switchTo } = useQueryStates(schema, { history: 'replace' })

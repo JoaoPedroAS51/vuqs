@@ -143,8 +143,8 @@ export interface UseQueryStatesReturn<TSchema extends QueryStateSchema> extends 
  * provideQueryAdapter(createVueRouterAdapter())
  *
  * const { values, setValues, clear } = useQueryStates({
- *   q: defineQueryParam('q', codecs.string),
- *   sort: defineQueryParam('filters.sort', codecs.string),
+ *   q: queryParam('q', codecs.string),
+ *   sort: queryParam('filters.sort', codecs.string),
  * })
  *
  * values.q = 'sale'

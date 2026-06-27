@@ -1,14 +1,14 @@
 # Defining params
 
 A **param** binds a [codec](/guide/codecs) to a concrete query key.
-[`defineQueryParam`](/api/composables#definequeryParam) creates one. You've seen
+[`queryParam`](/api/composables#queryparam) creates one. You've seen
 it inline in `useQueryStates`; this page covers it on its own — for naming,
 reusing, and composing params.
 
 ```ts
-import { codecs, defineQueryParam } from '@vuqs/core'
+import { codecs, queryParam } from '@vuqs/core'
 
-const page = defineQueryParam('page', codecs.integer.withDefault(1))
+const page = queryParam('page', codecs.integer.withDefault(1))
 ```
 
 A param is **pure data**. The same definition works everywhere a param is
@@ -26,12 +26,12 @@ everywhere:
 
 ```ts
 // filters.ts
-import { codecs, defineQueryParam } from '@vuqs/core'
+import { codecs, queryParam } from '@vuqs/core'
 
 export const filterSchema = {
-  q: defineQueryParam('q', codecs.string.withDefault('')),
-  sort: defineQueryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
-  page: defineQueryParam('page', codecs.integer.withDefault(1)),
+  q: queryParam('q', codecs.string.withDefault('')),
+  sort: queryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
+  page: queryParam('page', codecs.integer.withDefault(1)),
 }
 ```
 
@@ -48,8 +48,8 @@ what the URL shows. They can differ:
 
 ```ts
 const schema = {
-  lat: defineQueryParam('latitude', codecs.float),
-  lng: defineQueryParam('longitude', codecs.float),
+  lat: queryParam('latitude', codecs.float),
+  lng: queryParam('longitude', codecs.float),
 }
 // values.lat ⇄ ?latitude=…
 ```
@@ -61,12 +61,12 @@ This is vuqs's equivalent of a key alias — no separate `urlKeys` config needed
 The common form: a path and a codec.
 
 ```ts
-defineQueryParam('currency', codecs.string)              // QueryParamDefinition<string>
-defineQueryParam('page', codecs.integer.withDefault(1))  // QueryParamDefinitionWithDefault<number>
-defineQueryParam('filters.sort', codecs.string)          // a nested key — see below
+queryParam('currency', codecs.string)              // DefinedQueryParam<string>
+queryParam('page', codecs.integer.withDefault(1))  // DefinedQueryParamWithDefault<number>
+queryParam('filters.sort', codecs.string)          // a nested key — see below
 ```
 
-A codec carrying `.withDefault()` produces a `QueryParamDefinitionWithDefault`,
+A codec carrying `.withDefault()` produces a `DefinedQueryParamWithDefault`,
 which is what lets `useQueryStates` narrow that param to non-nullable.
 
 ## Nested keys
@@ -74,7 +74,7 @@ which is what lets `useQueryStates` narrow that param to non-nullable.
 A path can be dotted to target a nested query object:
 
 ```ts
-defineQueryParam('filters.sort', codecs.string)
+queryParam('filters.sort', codecs.string)
 // ⇄ ?filters[sort]=price   (with qs configured)
 ```
 
@@ -84,36 +84,34 @@ Nested keys need the adapter to parse/stringify with `qs`. See
 ## Composite params
 
 For a value that spans **multiple keys** — a date range across `from` and `to`, a
-bounding box across four — use the object form. You provide `paths`, `parse`, and
-`serialize` directly:
+bounding box across four — use `queryParam.object`. Add `transform({ read, write })`
+when the public value needs stricter semantics than the child object.
 
 ```ts
-import { getQueryString } from '@vuqs/core'
+import { codecs, queryParam } from '@vuqs/core'
 
 interface Range {
   from: string
   to: string
 }
 
-const range = defineQueryParam<Range>({
-  paths: ['from', 'to'],
-  parse: (query) => {
-    const from = getQueryString(query.from)
-    const to = getQueryString(query.to)
-    return from && to ? { from, to } : undefined
+const range = queryParam.object({
+  from: queryParam('from', codecs.string),
+  to: queryParam('to', codecs.string),
+}).transform({
+  read(value): Range | undefined {
+    return value.from && value.to ? { from: value.from, to: value.to } : undefined
   },
-  serialize: value => ({ from: value.from, to: value.to }),
+  write: value => value,
 })
 // values.range ⇄ ?from=2026-01-01&to=2026-06-30
 ```
 
-`paths` is the source of truth for the keys the param owns. A dev guard checks
-that `serialize` never writes a key outside `paths` and throws if it does — so a
-later "clear" can't leak or miss keys. See
-[composite params](/guide/nested-keys#composite-params) for the full walkthrough.
+Child params provide the owned `paths`; clearing `range` clears every child key.
+See [composite params](/guide/nested-keys#composite-params) for the full walkthrough.
 
-The object form also accepts optional `eq` (custom equality, defaults to
-structural) and `default`.
+Object params also support `.withEquality(...)`, `.withDefault(...)`, and the
+other `queryParam` modifiers.
 
 ## Definitions never collide
 
@@ -122,8 +120,8 @@ reads and writes would silently clobber each other:
 
 ```ts
 useQueryStates({
-  a: defineQueryParam('q', codecs.string),
-  b: defineQueryParam('q', codecs.integer), // ❌ throws: duplicate path "q"
+  a: queryParam('q', codecs.string),
+  b: queryParam('q', codecs.integer), // ❌ throws: duplicate path "q"
 })
 ```
 

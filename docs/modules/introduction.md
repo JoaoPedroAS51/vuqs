@@ -10,7 +10,7 @@ compose onto [`useQueryStates`](/guide/use-query-states) with `.use()`. The core
 stays small; you pull in only the modules you need.
 
 ```ts
-import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
+import { codecs, queryParam, useQueryStates } from '@vuqs/core'
 import { withContext, withRuntimeDefaults } from '@vuqs/core/modules'
 
 const { values, activeContext } = useQueryStates(schema)

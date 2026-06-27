@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createApp, effectScope, isRef, nextTick, ref } from 'vue'
 import { installQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
-import { defineQueryParam } from '../../src/core/define-query-param'
+import { queryParam } from '../../src/core/query-param'
 import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
 import { withContext } from '../../src/modules/context'
@@ -27,8 +27,8 @@ function setup(initial: ParsedQuery = {}) {
 
 describe('withRuntimeDefaults', () => {
   const schema = {
-    currency: defineQueryParam('currency', codecs.string),
-    region: defineQueryParam('region', codecs.string),
+    currency: queryParam('currency', codecs.string),
+    region: queryParam('region', codecs.string),
   }
 
   it('separates selected, defaults, and resolved values', () => {
@@ -112,15 +112,14 @@ describe('withRuntimeDefaults', () => {
 
   it('supports a single composite param without creating a parallel ref', () => {
     const { build } = setup({ from: '2026-01-01', to: '2026-01-31' })
-    const rangeParam = defineQueryParam<{ from: string, to: string }>({
-      paths: ['from', 'to'],
-      parse: (current) => {
-        const from = codecs.string.parse(current.from)
-        const to = codecs.string.parse(current.to)
-
-        return from && to ? { from, to } : undefined
+    const rangeParam = queryParam.object({
+      from: queryParam('from', codecs.string),
+      to: queryParam('to', codecs.string),
+    }).transform({
+      read(value) {
+        return value.from && value.to ? { from: value.from, to: value.to } : undefined
       },
-      serialize: value => ({ from: value.from, to: value.to }),
+      write: value => value,
     })
     const range = build(() => useQueryState(rangeParam))
     const used = range.use(withRuntimeDefaults())
@@ -136,8 +135,8 @@ describe('withRuntimeDefaults', () => {
 
 describe('withRuntimeDefaults + codec defaults', () => {
   const schema = {
-    q: defineQueryParam('q', codecs.string),
-    page: defineQueryParam('page', codecs.integer.withDefault(1)),
+    q: queryParam('q', codecs.string),
+    page: queryParam('page', codecs.integer.withDefault(1)),
   }
 
   it('uses the codec default as the lowest fallback, keeping selected explicit', () => {
@@ -172,7 +171,7 @@ describe('withRuntimeDefaults + codec defaults', () => {
 
 describe('withRuntimeDefaults layered clearing coherence', () => {
   const schema = {
-    page: defineQueryParam('page', codecs.integer.withDefault(1)),
+    page: queryParam('page', codecs.integer.withDefault(1)),
   }
 
   it('persists an explicit write of the codec default when a runtime default differs', async () => {
@@ -214,9 +213,9 @@ describe('withRuntimeDefaults layered clearing coherence', () => {
 
 describe('withContext', () => {
   const schema = {
-    q: defineQueryParam('q', codecs.string),
-    category: defineQueryParam('category', codecs.literal(['cpu', 'gpu'] as const)),
-    sort: defineQueryParam('sort', codecs.literal(['newest', 'oldest'] as const)),
+    q: queryParam('q', codecs.string),
+    category: queryParam('category', codecs.literal(['cpu', 'gpu'] as const)),
+    sort: queryParam('sort', codecs.literal(['newest', 'oldest'] as const)),
   }
 
   function setupContext(initial: ParsedQuery = {}) {
@@ -269,8 +268,8 @@ describe('withContext', () => {
 
 describe('withContext buildContextQuery', () => {
   const schema = {
-    q: defineQueryParam('q', codecs.string),
-    page: defineQueryParam('page', codecs.integer.withDefault(1)),
+    q: queryParam('q', codecs.string),
+    page: queryParam('page', codecs.integer.withDefault(1)),
   }
 
   it('omits a preserved field equal to its codec default (clearOnDefault on by default)', () => {
@@ -318,8 +317,8 @@ describe('withContext buildContextQuery', () => {
 
   it('drops a preserved field that is invalid in the target context', () => {
     const ctxSchema = {
-      q: defineQueryParam('q', codecs.string),
-      category: defineQueryParam('category', codecs.literal(['cpu', 'gpu'] as const)),
+      q: queryParam('q', codecs.string),
+      category: queryParam('category', codecs.literal(['cpu', 'gpu'] as const)),
     }
     const { query, build } = setup({ q: 'foo', category: 'cpu' })
     const tab = ref<'products' | 'orders'>('products')
@@ -336,8 +335,8 @@ describe('withContext buildContextQuery', () => {
 
 describe('withContext switchTo', () => {
   const schema = {
-    q: defineQueryParam('q', codecs.string),
-    sort: defineQueryParam('sort', codecs.literal(['newest', 'oldest'] as const)),
+    q: queryParam('q', codecs.string),
+    sort: queryParam('sort', codecs.literal(['newest', 'oldest'] as const)),
   }
 
   it('navigates via the navigate option with the reconciled query', () => {
@@ -393,8 +392,8 @@ describe('withContext switchTo', () => {
 describe('module coordination via hooks', () => {
   it('clears provided defaults on a context change without the modules referencing each other', async () => {
     const schema = {
-      q: defineQueryParam('q', codecs.string),
-      category: defineQueryParam('category', codecs.literal(['cpu', 'gpu'] as const)),
+      q: queryParam('q', codecs.string),
+      category: queryParam('category', codecs.literal(['cpu', 'gpu'] as const)),
     }
     const { build } = setup()
     const tab = ref<'products' | 'orders'>('products')
@@ -416,8 +415,8 @@ describe('module coordination via hooks', () => {
 
   it('keeps a context-invalid field out of defaults and values (even with a codec default)', async () => {
     const schema = {
-      q: defineQueryParam('q', codecs.string),
-      category: defineQueryParam('category', codecs.literal(['cpu', 'gpu'] as const).withDefault('cpu')),
+      q: queryParam('q', codecs.string),
+      category: queryParam('category', codecs.literal(['cpu', 'gpu'] as const).withDefault('cpu')),
     }
     const { build } = setup()
     const tab = ref<'products' | 'orders'>('products')
@@ -439,7 +438,7 @@ describe('module coordination via hooks', () => {
 })
 
 describe('use() collision guard', () => {
-  const schema = { q: defineQueryParam('q', codecs.string) }
+  const schema = { q: queryParam('q', codecs.string) }
 
   it('throws when two modules contribute the same key', () => {
     const { build } = setup()

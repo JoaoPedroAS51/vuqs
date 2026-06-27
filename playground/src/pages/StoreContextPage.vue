@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { codecs, defineQueryParam, useQueryStates } from '@vuqs/core'
+import { codecs, queryParam, useQueryStates } from '@vuqs/core'
 import { createVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
 import { withContext, withRuntimeDefaults } from '@vuqs/core/modules'
 import { ref } from 'vue'
@@ -17,10 +17,10 @@ const adapter = createVueRouterAdapter()
 const tab = ref<Tab>('products')
 
 const schema = {
-  q: defineQueryParam('q', codecs.string),
-  category: defineQueryParam('category', codecs.literal(['cpu', 'gpu', 'ram'] as const)),
-  status: defineQueryParam('status', codecs.literal(['open', 'shipped', 'cancelled'] as const)),
-  sort: defineQueryParam('sort', codecs.literal(['newest', 'oldest'] as const)),
+  q: queryParam('q', codecs.string),
+  category: queryParam('category', codecs.literal(['cpu', 'gpu', 'ram'] as const)),
+  status: queryParam('status', codecs.literal(['open', 'shipped', 'cancelled'] as const)),
+  sort: queryParam('sort', codecs.literal(['newest', 'oldest'] as const)),
 }
 
 const q = useQueryStates(schema)

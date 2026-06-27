@@ -2,15 +2,10 @@ export { installQueryAdapter, provideQueryAdapter, useQueryAdapter } from './cor
 export type { QueryAdapter, QueryAdapterDefaultOptions } from './core/adapter'
 export { codecs, createCodec } from './core/codec'
 export type { Codec, CodecInput, CodecWithDefault } from './core/codec'
-export { defineQueryParam } from './core/define-query-param'
 export type {
   DefinedQueryParam,
-  DefinedQueryParamInput,
   DefinedQueryParamWithDefault,
-  QueryParamDefinition,
-  QueryParamDefinitionInput,
-  QueryParamDefinitionWithDefault,
-} from './core/define-query-param'
+} from './core/defined-query-param'
 export { createQueryStateEngine } from './core/engine'
 export type {
   QueryDefaultsBus,

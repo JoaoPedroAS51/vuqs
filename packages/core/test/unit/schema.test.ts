@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { codecs } from '../../src/core/codec'
-import { defineQueryParam } from '../../src/core/define-query-param'
+import { queryParam } from '../../src/core/query-param'
 import { buildQuery, dropDefaults, getManagedKeys, omitManagedKeys, parseQueryStates, serializeQueryStates } from '../../src/core/schema'
 
 const schema = {
-  currency: defineQueryParam('currency', codecs.string),
-  sort: defineQueryParam('filters.sort', codecs.string),
-  statuses: defineQueryParam('filters.statuses', codecs.arrayOf(codecs.string)),
+  currency: queryParam('currency', codecs.string),
+  sort: queryParam('filters.sort', codecs.string),
+  statuses: queryParam('filters.statuses', codecs.arrayOf(codecs.string)),
 }
 
 describe('parseQueryStates', () => {
@@ -112,8 +112,8 @@ describe('buildQuery', () => {
 
 describe('dropDefaults', () => {
   const withDefault = {
-    page: defineQueryParam('page', codecs.integer.withDefault(1)),
-    q: defineQueryParam('q', codecs.string),
+    page: queryParam('page', codecs.integer.withDefault(1)),
+    q: queryParam('q', codecs.string),
   }
 
   it('drops a value equal to its default', () => {
@@ -131,7 +131,7 @@ describe('dropDefaults', () => {
 
 describe('deeply nested paths', () => {
   const deepSchema = {
-    sort: defineQueryParam('a.b.sort', codecs.string),
+    sort: queryParam('a.b.sort', codecs.string),
   }
 
   it('serializes into a 3-level path', () => {

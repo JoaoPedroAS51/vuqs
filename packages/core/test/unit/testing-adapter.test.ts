@@ -3,7 +3,7 @@ import { createApp } from 'vue'
 import { createTestingAdapter, resetQueues, withVuqsTestingAdapter } from '../../src/adapters/testing'
 import { installQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
-import { defineQueryParam } from '../../src/core/define-query-param'
+import { queryParam } from '../../src/core/query-param'
 import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
 
@@ -142,8 +142,8 @@ describe('createTestingAdapter', () => {
       const run = app.runWithContext.bind(app)
 
       const schema = {
-        q: defineQueryParam('q', codecs.string),
-        page: defineQueryParam('page', codecs.integer),
+        q: queryParam('q', codecs.string),
+        page: queryParam('page', codecs.integer),
       }
       const { values } = run(() => useQueryStates(schema))
 
@@ -271,8 +271,8 @@ describe('createTestingAdapter', () => {
       const run = app.runWithContext.bind(app)
 
       const schema = {
-        q: defineQueryParam('q', codecs.string),
-        page: defineQueryParam('page', codecs.integer),
+        q: queryParam('q', codecs.string),
+        page: queryParam('page', codecs.integer),
       }
       const { values } = run(() => useQueryStates(schema))
 

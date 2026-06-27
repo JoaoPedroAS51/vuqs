@@ -30,12 +30,12 @@ rule is why a garbage URL never crashes your app: `?page=banana` parses to
 ## Param: a codec bound to a key
 
 A **param** is a codec wired to a concrete query path, produced by
-[`defineQueryParam`](/guide/defining-params):
+[`queryParam`](/guide/defining-params):
 
 ```ts
-import { codecs, defineQueryParam } from '@vuqs/core'
+import { codecs, queryParam } from '@vuqs/core'
 
-const page = defineQueryParam('page', codecs.integer)
+const page = queryParam('page', codecs.integer)
 //    binds codecs.integer to the `page` key
 ```
 
@@ -46,7 +46,7 @@ definition works in `useQueryState`, `useQueryStates`, the
 to it.
 
 When you call `useQueryState('page', codecs.integer)`, vuqs creates the param for
-you. `defineQueryParam` is for when you want to name and reuse a param, or build a
+you. `queryParam` is for when you want to name and reuse a param, or build a
 [composite one](/guide/nested-keys#composite-params).
 
 ## Schema: a map of params
@@ -55,14 +55,14 @@ A **schema** is just an object mapping logical names to params:
 
 ```ts
 const schema = {
-  q: defineQueryParam('q', codecs.string),
-  sort: defineQueryParam('sort', codecs.literal(['asc', 'desc'] as const)),
+  q: queryParam('q', codecs.string),
+  sort: queryParam('sort', codecs.literal(['asc', 'desc'] as const)),
 }
 ```
 
 The map key (`q`) is the name *you* read and write. The query key it controls
 lives inside the param. They're usually the same, but they don't have to be —
-`{ lat: defineQueryParam('latitude', codecs.float) }` reads `values.lat` while the
+`{ lat: queryParam('latitude', codecs.float) }` reads `values.lat` while the
 URL says `?latitude=…`.
 
 ## Default value: not the same as "empty"

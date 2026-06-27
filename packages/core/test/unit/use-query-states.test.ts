@@ -5,7 +5,6 @@ import { computed, createApp, isRef, onScopeDispose } from 'vue'
 import { createTestingAdapter } from '../../src/adapters/testing'
 import { installQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
-import { defineQueryParam } from '../../src/core/define-query-param'
 import { defineQueryModule } from '../../src/core/module'
 import { queryParam } from '../../src/core/query-param'
 import { useQueryState } from '../../src/core/use-query-state'
@@ -29,8 +28,8 @@ function setup(initial: ParsedQuery = {}) {
 }
 
 const schema = {
-  q: defineQueryParam('q', codecs.string),
-  sort: defineQueryParam('filters.sort', codecs.string),
+  q: queryParam('q', codecs.string),
+  sort: queryParam('filters.sort', codecs.string),
 }
 
 describe('useQueryStates', () => {
@@ -201,8 +200,8 @@ describe('useQueryStates', () => {
   it('throws when two fields declare the same path', () => {
     const { run } = setup()
     const clashing = {
-      a: defineQueryParam('dupe', codecs.string),
-      b: defineQueryParam('dupe', codecs.string),
+      a: queryParam('dupe', codecs.string),
+      b: queryParam('dupe', codecs.string),
     }
 
     expect(() => run(() => useQueryStates(clashing))).toThrowError(/duplicate query path/)
@@ -213,7 +212,7 @@ describe('useQueryStates', () => {
   })
 
   describe('clearOnDefault', () => {
-    const withDefault = { page: defineQueryParam('page', codecs.integer.withDefault(1)) }
+    const withDefault = { page: queryParam('page', codecs.integer.withDefault(1)) }
 
     it('drops a value equal to the default from the URL', async () => {
       const { query, run } = setup({ page: '3' })
@@ -326,7 +325,7 @@ describe('useQueryState', () => {
 
   it('accepts a definition', async () => {
     const { query, run } = setup({ q: 'lease' })
-    const q = run(() => useQueryState(defineQueryParam('q', codecs.string)))
+    const q = run(() => useQueryState(queryParam('q', codecs.string)))
 
     expect(q.value).toBe('lease')
 
@@ -421,15 +420,14 @@ describe('useQueryState', () => {
 
   it('composes a module for a composite param without replacing the ref', async () => {
     const { query, run } = setup({ from: '2026-01-01', to: '2026-01-31' })
-    const range = defineQueryParam<{ from: string, to: string }>({
-      paths: ['from', 'to'],
-      parse: (current) => {
-        const from = codecs.string.parse(current.from)
-        const to = codecs.string.parse(current.to)
-
-        return from && to ? { from, to } : undefined
+    const range = queryParam.object({
+      from: queryParam('from', codecs.string),
+      to: queryParam('to', codecs.string),
+    }).transform({
+      read(value) {
+        return value.from && value.to ? { from: value.from, to: value.to } : undefined
       },
-      serialize: value => ({ from: value.from, to: value.to }),
+      write: value => value,
     })
     const module = defineQueryModule({
       queryStates: () => ({}),

@@ -29,27 +29,21 @@ interface CodecInput<T> {
 ## Param & schema types <Badge type="info" text="@vuqs/core" />
 
 ```ts
-interface QueryParamDefinition<T> {
+interface DefinedQueryParam<T> {
   readonly paths: readonly string[]
-  parse: (query: ParsedQuery) => T | undefined
-  serialize: (value: T) => ParsedQueryRaw
+  read: (query: ParsedQuery) => T | undefined
+  write: (value: T) => ParsedQueryRaw
   eq: (a: T, b: T) => boolean
   readonly defaultValue?: T
+  readonly clearOnDefault?: boolean
 }
 
-interface QueryParamDefinitionWithDefault<T> extends QueryParamDefinition<T> {
+interface DefinedQueryParamWithDefault<T> extends DefinedQueryParam<T> {
   readonly defaultValue: T
 }
 
-interface QueryParamDefinitionInput<T> {
-  paths: readonly string[]
-  parse: (query: ParsedQuery) => T | undefined
-  serialize: (value: T) => ParsedQueryRaw
-  eq?: (a: T, b: T) => boolean
-  default?: T
-}
-
-type QueryStateSchema = Record<string, QueryParamDefinition<any>>
+type QueryStateSchema = Record<string, DefinedQueryParam<any>>
+type QueryStateSchemaInput = Record<string, Codec<any> | DefinedQueryParam<any>>
 
 type QueryStateValueOf<TDefinition> = unknown // the decoded value type of a definition
 type QueryStateRefValue<TDefinition> = unknown // T with a default, else T | undefined

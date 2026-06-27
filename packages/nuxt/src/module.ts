@@ -8,7 +8,7 @@ import { defu } from 'defu'
 export interface AutoImportsOptions {
   /**
    * The composables and schema builder: `useQueryState`, `useQueryStates`,
-   * `useQueryAdapter`, `provideQueryAdapter`, `defineQueryParam`,
+   * `useQueryAdapter`, `provideQueryAdapter`, `queryParam`,
    * `defineQueryModule`, `createSerializer`.
    *
    * @default true
@@ -77,7 +77,7 @@ const COMPOSABLE_IMPORTS = [
   'useQueryStates',
   'useQueryAdapter',
   'provideQueryAdapter',
-  'defineQueryParam',
+  'queryParam',
   'defineQueryModule',
   'createSerializer',
 ] as const
