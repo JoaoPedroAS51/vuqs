@@ -1,7 +1,8 @@
 import type { WritableComputedRef } from 'vue'
 import type { Codec, CodecWithDefault } from './codec'
 import type { QueryParamDefinition, QueryParamDefinitionWithDefault } from './define-query-param'
-import type { DefinedQueryModule } from './module'
+import type { DefinedQueryModule, QueryStateApiOf } from './module'
+import type { QueryStateSchema } from './schema'
 import type { NavigateOptions } from './types'
 import type { UseQueryStatesOptions } from './use-query-states'
 import { createQueryBinding } from './binding'
@@ -9,7 +10,7 @@ import { codecs } from './codec'
 import { defineQueryParam } from './define-query-param'
 import { applyQueryStateModule } from './module'
 
-interface SingleQueryStateSchema<T> {
+interface SingleQueryStateSchema<T> extends QueryStateSchema {
   value: QueryParamDefinition<T>
 }
 
@@ -43,10 +44,12 @@ export interface QueryStateRef<T> extends WritableComputedRef<T> {
  * @typeParam T - The ref value type.
  * @typeParam TApi - The API accumulated so far.
  */
-export type UseQueryStateReturn<T, TApi = object> = QueryStateRef<T> & TApi & {
-  use: <TStateApi>(
-    module: DefinedQueryModule<any, any, TStateApi>,
-  ) => UseQueryStateReturn<T, TApi & TStateApi>
+export type UseQueryStateReturn<T, TApi = object, TValue = T> = QueryStateRef<T> & TApi & {
+  use: {
+    <TModule>(
+      module: TModule & DefinedQueryModule<any, any, any>,
+    ): UseQueryStateReturn<T, TApi & QueryStateApiOf<TModule, SingleQueryStateSchema<TValue>, 'value'>, TValue>
+  }
 }
 
 /**
@@ -74,7 +77,7 @@ export function useQueryState<T>(
   path: string,
   codec: CodecWithDefault<T>,
   options?: UseQueryStatesOptions,
-): UseQueryStateReturn<T>
+): UseQueryStateReturn<T, object, T>
 /**
  * Binds a single query key to a writable ref via a codec.
  *
@@ -94,7 +97,7 @@ export function useQueryState<T>(
   path: string,
   codec: Codec<T>,
   options?: UseQueryStatesOptions,
-): UseQueryStateReturn<T | undefined>
+): UseQueryStateReturn<T | undefined, object, T>
 /**
  * Binds a single query key as a string with a default, with no codec needed.
  *
@@ -116,7 +119,7 @@ export function useQueryState<T>(
 export function useQueryState(
   path: string,
   options: StringQueryStateOptions & { defaultValue: string },
-): UseQueryStateReturn<string>
+): UseQueryStateReturn<string, object, string>
 /**
  * Binds a single query key as a string, using an implicit `codecs.string`.
  *
@@ -133,7 +136,7 @@ export function useQueryState(
 export function useQueryState(
   path: string,
   options?: StringQueryStateOptions,
-): UseQueryStateReturn<string | undefined>
+): UseQueryStateReturn<string | undefined, object, string>
 /**
  * Binds a pre-built definition that declares a default to a writable ref.
  *
@@ -149,7 +152,7 @@ export function useQueryState(
 export function useQueryState<T>(
   definition: QueryParamDefinitionWithDefault<T>,
   options?: UseQueryStatesOptions,
-): UseQueryStateReturn<T>
+): UseQueryStateReturn<T, object, T>
 /**
  * Binds a pre-built definition to a writable ref.
  *
@@ -162,12 +165,12 @@ export function useQueryState<T>(
 export function useQueryState<T>(
   definition: QueryParamDefinition<T>,
   options?: UseQueryStatesOptions,
-): UseQueryStateReturn<T | undefined>
+): UseQueryStateReturn<T | undefined, object, T>
 export function useQueryState<T>(
   pathOrDefinition: string | QueryParamDefinition<T>,
   codecOrOptions?: Codec<T> | (UseQueryStatesOptions & { defaultValue?: string }),
   maybeOptions?: UseQueryStatesOptions,
-): UseQueryStateReturn<T | undefined> {
+): UseQueryStateReturn<T | undefined, object, T> {
   if (typeof pathOrDefinition !== 'string') {
     return toQueryStateRef(pathOrDefinition, (codecOrOptions as UseQueryStatesOptions | undefined) ?? {})
   }
@@ -181,7 +184,7 @@ export function useQueryState<T>(
   const { defaultValue, ...navigateOptions } = codecOrOptions ?? {}
   const codec = defaultValue === undefined ? codecs.string : codecs.string.withDefault(defaultValue)
 
-  return toQueryStateRef(defineQueryParam(path, codec), navigateOptions) as unknown as UseQueryStateReturn<T | undefined>
+  return toQueryStateRef(defineQueryParam(path, codec), navigateOptions) as unknown as UseQueryStateReturn<T | undefined, object, T>
 }
 
 /**
@@ -194,22 +197,20 @@ export function useQueryState<T>(
 function toQueryStateRef<T>(
   definition: QueryParamDefinition<T>,
   options: UseQueryStatesOptions,
-): UseQueryStateReturn<T | undefined> {
+): UseQueryStateReturn<T | undefined, object, T> {
   const schema = { value: definition } satisfies SingleQueryStateSchema<T>
   const { engine, refs, core } = createQueryBinding(schema, options)
 
   const queryRef = Object.assign(refs.value, {
     set: (value: unknown, perCall?: NavigateOptions) => engine.query.set('value', value, perCall),
     clear: (perCall?: NavigateOptions) => engine.query.set('value', undefined, perCall),
-  }) as UseQueryStateReturn<T | undefined>
+  }) as UseQueryStateReturn<T | undefined, object, T>
 
-  queryRef.use = <TStateApi>(
-    module: DefinedQueryModule<any, any, TStateApi>,
-  ) => {
+  queryRef.use = ((module: DefinedQueryModule<any, any, any>) => {
     applyQueryStateModule(queryRef, core, 'value', module)
 
-    return queryRef as UseQueryStateReturn<T | undefined, TStateApi>
-  }
+    return queryRef
+  }) as UseQueryStateReturn<T | undefined, object, T>['use']
 
   return queryRef
 }

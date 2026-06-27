@@ -63,14 +63,14 @@ describe('schema value inference', () => {
 
 describe('useQueryState signatures', () => {
   it('infers string for the implicit forms', () => {
-    expectTypeOf(useQueryState('q')).toEqualTypeOf<UseQueryStateReturn<string | undefined>>()
-    expectTypeOf(useQueryState('q', { history: 'push' })).toEqualTypeOf<UseQueryStateReturn<string | undefined>>()
-    expectTypeOf(useQueryState('q', { defaultValue: 'x' })).toEqualTypeOf<UseQueryStateReturn<string>>()
+    expectTypeOf(useQueryState('q')).toEqualTypeOf<UseQueryStateReturn<string | undefined, object, string>>()
+    expectTypeOf(useQueryState('q', { history: 'push' })).toEqualTypeOf<UseQueryStateReturn<string | undefined, object, string>>()
+    expectTypeOf(useQueryState('q', { defaultValue: 'x' })).toEqualTypeOf<UseQueryStateReturn<string, object, string>>()
   })
 
   it('keeps codec inference', () => {
-    expectTypeOf(useQueryState('q', codecs.string)).toEqualTypeOf<UseQueryStateReturn<string | undefined>>()
-    expectTypeOf(useQueryState('page', codecs.integer.withDefault(1))).toEqualTypeOf<UseQueryStateReturn<number>>()
+    expectTypeOf(useQueryState('q', codecs.string)).toEqualTypeOf<UseQueryStateReturn<string | undefined, object, string>>()
+    expectTypeOf(useQueryState('page', codecs.integer.withDefault(1))).toEqualTypeOf<UseQueryStateReturn<number, object, number>>()
   })
 
   it('rejects a non-string defaultValue without a codec', () => {
@@ -80,9 +80,9 @@ describe('useQueryState signatures', () => {
 
   it('narrows a defaulted definition to a non-nullable ref', () => {
     expectTypeOf(useQueryState(defineQueryParam('page', codecs.integer.withDefault(1))))
-      .toEqualTypeOf<UseQueryStateReturn<number>>()
+      .toEqualTypeOf<UseQueryStateReturn<number, object, number>>()
     expectTypeOf(useQueryState(defineQueryParam('q', codecs.string)))
-      .toEqualTypeOf<UseQueryStateReturn<string | undefined>>()
+      .toEqualTypeOf<UseQueryStateReturn<string | undefined, object, string>>()
   })
 })
 

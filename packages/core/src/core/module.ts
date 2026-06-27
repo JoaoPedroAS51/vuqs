@@ -2,7 +2,35 @@ import type { QueryCore } from './query-core'
 import type { QueryStateSchema } from './schema'
 import { effectScope } from 'vue'
 
-const QUERY_STATE_MODULE = Symbol('vuqs.queryStateModule')
+/**
+ * @internal
+ */
+export const QUERY_STATE_MODULE = Symbol('vuqs.queryStateModule')
+
+/**
+ * @internal
+ */
+export declare const QUERY_STATE_MODULE_API: unique symbol
+
+/**
+ * Type-only higher-kinded API descriptor for single-param modules.
+ *
+ * @internal
+ */
+export interface QueryStateModuleApiKind {
+  readonly schema: QueryStateSchema
+  readonly key: string
+  readonly api: object
+}
+
+type ApplyQueryStateModuleApi<
+  TKind extends QueryStateModuleApiKind,
+  TSchema extends QueryStateSchema,
+  TKey extends keyof TSchema & string,
+> = (TKind & {
+  readonly schema: TSchema
+  readonly key: TKey
+})['api']
 
 /**
  * A module projection that contributes API to {@link useQueryStates}.
@@ -60,6 +88,21 @@ export type DefinedQueryModule<
 }
 
 /**
+ * Extracts the API a module contributes to a specific single-param core.
+ *
+ * @internal
+ */
+export type QueryStateApiOf<
+  TModule,
+  TSchema extends QueryStateSchema,
+  TKey extends keyof TSchema & string,
+> = TModule extends {
+  readonly [QUERY_STATE_MODULE_API]: infer TKind extends QueryStateModuleApiKind
+} ? ApplyQueryStateModuleApi<TKind, TSchema, TKey> : TModule extends DefinedQueryModule<any, any, infer TApi>
+    ? TApi
+    : never
+
+/**
  * Creates a module with grouped and single-param projections.
  *
  * @remarks
@@ -75,15 +118,25 @@ export type DefinedQueryModule<
  * @param definition.queryState - The projection used by {@link useQueryState}.
  * @returns A module that supports both composable facades.
  */
-export function defineQueryModule<TSchema extends QueryStateSchema, TQueryStatesApi, TQueryStateApi>(
+export function defineQueryModule<
+  TSchema extends QueryStateSchema,
+  TQueryStatesApi,
+  TQueryStateApi,
+  TQueryStates extends QueryStatesModule<TSchema, TQueryStatesApi> = QueryStatesModule<TSchema, TQueryStatesApi>,
+  TQueryState extends QueryStateModule<QueryStateSchema, TQueryStateApi> = QueryStateModule<QueryStateSchema, TQueryStateApi>,
+>(
   definition: {
-    queryStates: QueryStatesModule<TSchema, TQueryStatesApi>
-    queryState: QueryStateModule<QueryStateSchema, TQueryStateApi>
+    queryStates: TQueryStates
+    queryState: TQueryState
   },
-): DefinedQueryModule<TSchema, TQueryStatesApi, TQueryStateApi> {
+): TQueryStates & DefinedQueryModule<TSchema, TQueryStatesApi, TQueryStateApi> & {
+  readonly [QUERY_STATE_MODULE]: TQueryState
+} {
   return Object.assign(definition.queryStates, {
     [QUERY_STATE_MODULE]: definition.queryState,
-  }) as DefinedQueryModule<TSchema, TQueryStatesApi, TQueryStateApi>
+  }) as TQueryStates & DefinedQueryModule<TSchema, TQueryStatesApi, TQueryStateApi> & {
+    readonly [QUERY_STATE_MODULE]: TQueryState
+  }
 }
 
 /**
