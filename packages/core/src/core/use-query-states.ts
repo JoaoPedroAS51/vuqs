@@ -1,14 +1,11 @@
 import type { WritableComputedRef } from 'vue'
-import type { QueryDefaultsBus, QueryStateEngine, QueryStateReads, ResolvedQueryStateOptions } from './engine'
+import type { QueryDefaultsBus, QueryStateReads, ResolvedQueryStateOptions } from './engine'
 import type { QueryHookBus } from './hooks'
 import type { QueryPipelineBus } from './pipeline'
 import type { QueryStateRefValue, QueryStateSchema, QueryStateWriteValues } from './schema'
 import type { NavigateOptions, ParsedQuery } from './types'
-import { computed, reactive } from 'vue'
-import { useQueryAdapter } from './adapter'
-import { createQueryStateEngine } from './engine'
-import { createQueryHooks } from './hooks'
-import { assertUniquePaths } from './schema'
+import { reactive } from 'vue'
+import { createQueryBinding } from './binding'
 
 export type { NavigateOptions, QueryStateNavigate } from './types'
 
@@ -105,53 +102,6 @@ export type WritableQueryValues<TSchema extends QueryStateSchema> = QueryStatesV
 export interface UseQueryStatesReturn<TSchema extends QueryStateSchema> extends QueryStatesActions<TSchema> {
   /** The reactive, writable value map, one entry per param. */
   values: WritableQueryValues<TSchema>
-}
-
-/**
- * Builds the engine and one writable computed per param. Shared by
- * {@link useQueryStates} and {@link useQueryState} so neither duplicates the
- * adapter resolution or the reactive wiring.
- *
- * @internal
- */
-export function createQueryStateRefs<TSchema extends QueryStateSchema>(
-  schema: TSchema,
-  options: UseQueryStatesOptions,
-): {
-  engine: QueryStateEngine<TSchema>
-  refs: Record<string, WritableComputedRef<unknown>>
-} {
-  assertUniquePaths(schema)
-
-  const adapter = useQueryAdapter()
-
-  if (adapter === undefined) {
-    throw new Error(
-      '[vuqs] no query adapter: provide one with provideQueryAdapter() (or installQueryAdapter() at the app level).',
-    )
-  }
-
-  const { query: querySource, navigate, defaultOptions: adapterDefaults } = adapter
-
-  const engine = createQueryStateEngine({
-    schema,
-    adapter: { query: querySource, navigate },
-    history: options.history ?? adapterDefaults?.history,
-    scroll: options.scroll ?? adapterDefaults?.scroll,
-    throttleMs: options.throttleMs ?? adapterDefaults?.throttleMs,
-    clearOnDefault: options.clearOnDefault ?? adapterDefaults?.clearOnDefault,
-  })
-
-  const refs: Record<string, WritableComputedRef<unknown>> = {}
-
-  for (const key of Object.keys(schema) as Array<keyof TSchema & string>) {
-    refs[key] = computed<unknown>({
-      get: () => (engine.state.values.value as Record<string, unknown>)[key],
-      set: value => engine.query.set(key, value),
-    })
-  }
-
-  return { engine, refs }
 }
 
 /**
@@ -262,7 +212,7 @@ export function useQueryStates<TSchema extends QueryStateSchema>(
   schema: TSchema,
   options: UseQueryStatesOptions = {},
 ): QueryComposable<TSchema, UseQueryStatesReturn<TSchema>> {
-  const { engine, refs } = createQueryStateRefs(schema, options)
+  const { engine, refs, core } = createQueryBinding(schema, options)
 
   const values = reactive(refs) as WritableQueryValues<TSchema>
 
@@ -289,16 +239,6 @@ export function useQueryStates<TSchema extends QueryStateSchema>(
   }
 
   Object.defineProperty(values, WRITER, { value: setValues, enumerable: false })
-
-  const core: QueryCore<TSchema> = {
-    schema,
-    state: engine.state,
-    defaults: engine.defaults,
-    options: engine.options,
-    pipeline: engine.pipeline,
-    hooks: createQueryHooks(),
-    query: engine.query,
-  }
 
   const composable = { values, setValues, clear } as QueryComposable<TSchema, UseQueryStatesReturn<TSchema>>
 

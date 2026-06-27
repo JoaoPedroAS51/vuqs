@@ -1,9 +1,9 @@
 import type { Codec, CodecWithDefault } from './codec'
 import type { QueryParamDefinition, QueryParamDefinitionWithDefault } from './define-query-param'
 import type { NavigateOptions, QueryStateRef, UseQueryStatesOptions } from './use-query-states'
+import { createQueryStateRefs } from './binding'
 import { codecs } from './codec'
 import { defineQueryParam } from './define-query-param'
-import { createQueryStateRefs } from './use-query-states'
 
 /**
  * Options for the string-implicit form. Forbids the `parse` and `serialize` keys
