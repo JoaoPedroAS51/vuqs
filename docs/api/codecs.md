@@ -1,7 +1,7 @@
 # API: codecs
 
-The built-in codecs, the factories that build them, and `createCodec` for your
-own. For a narrative tour, see the [Codecs guide](/guide/codecs).
+The built-in codecs, the factories that build them, and `createCodec` for your own.
+For a narrative tour, see the [Codecs guide](/guide/codecs/built-in).
 
 ## codecs <Badge type="info" text="@vuqs/core" />
 
@@ -30,9 +30,17 @@ A namespace of built-in codecs and codec factories. Every codec's `parse` return
 function arrayOf<T>(codec: Codec<T>): Codec<T[]>
 ```
 
-Wraps another codec for a list. A scalar value is treated as a one-item array;
-items the inner codec rejects are dropped; an empty result is absent. Equality is
-element-wise.
+**Parameters**
+
+- `codec: Codec<T>`
+  - The codec applied to each item.
+
+**Returns**
+
+- `Codec<T[]>`
+  - A codec for a list over repeated keys. A scalar value is treated as a one-item
+    array, items the inner codec rejects are dropped, and an empty result is absent.
+    Equality is element-wise.
 
 ```ts
 const tags = useQueryState('tags', codecs.arrayOf(codecs.string).withDefault([]))
@@ -45,7 +53,16 @@ const tags = useQueryState('tags', codecs.arrayOf(codecs.string).withDefault([])
 function literal<const T extends string>(values: readonly T[]): Codec<T>
 ```
 
-Constrains to a fixed set of strings. Use `as const` for a narrowed union type.
+**Parameters**
+
+- `values: readonly T[]`
+  - The accepted strings. Use `as const` so `T` narrows to the union. Any value
+    outside the set parses as absent.
+
+**Returns**
+
+- `Codec<T>`
+  - A codec for the string union.
 
 ```ts
 const sort = useQueryState('sort', codecs.literal(['asc', 'desc'] as const))
@@ -58,7 +75,15 @@ const sort = useQueryState('sort', codecs.literal(['asc', 'desc'] as const))
 function numberLiteral<const T extends number>(values: readonly T[]): Codec<T>
 ```
 
-The numeric counterpart of `literal`.
+**Parameters**
+
+- `values: readonly T[]`
+  - The accepted numbers. The numeric counterpart of `literal`.
+
+**Returns**
+
+- `Codec<T>`
+  - A codec for the number union.
 
 ### codecs.json
 
@@ -66,9 +91,17 @@ The numeric counterpart of `literal`.
 function json<T>(options?: { validate?: (value: unknown) => T }): Codec<T>
 ```
 
-Encodes any JSON-serializable value. Invalid JSON is absent. `validate` runs on
-the decoded value and may throw to reject (caught and treated as absent), so a
-schema parser like Zod's `.parse` works directly.
+**Parameters**
+
+- `options?: { validate?: (value: unknown) => T }`
+  - `validate?: (value: unknown) => T`: runs on the decoded value and may throw to
+    reject. A throw is caught and treated as absent, so a schema parser like Zod's
+    `.parse` works directly. Omit it to accept any parsed JSON as `T`.
+
+**Returns**
+
+- `Codec<T>`
+  - A codec that encodes any JSON-serializable value. Invalid JSON parses as absent.
 
 ```ts
 const range = useQueryState('range', codecs.json({ validate: priceSchema.parse }))
@@ -76,46 +109,30 @@ const range = useQueryState('range', codecs.json({ validate: priceSchema.parse }
 
 ## createCodec <Badge type="info" text="@vuqs/core" />
 
-Builds a codec from a `parse`/`serialize` pair — the extension point for custom
-and adapted value shapes. See [Custom codecs](/guide/custom-codecs).
-
-### Signature
+Builds a codec from a `parse`/`serialize` pair, the extension point for custom and
+adapted value shapes. See [Custom codecs](/guide/codecs/custom).
 
 ```ts
 function createCodec<T>(input: CodecInput<T>): Codec<T>
 ```
 
-### Parameters
+**Parameters**
 
-```ts
-interface CodecInput<T> {
-  parse: (raw: ParsedQueryValue) => T | undefined
-  serialize: (value: T) => ParsedQueryValue
-  eq?: (a: T, b: T) => boolean // defaults to structuralEq
-}
-```
+- `input: CodecInput<T>`
+  - `parse: (raw: ParsedQueryValue) => T | undefined`: decode a value, or `undefined`
+    when absent or invalid. **Never throw.**
+  - `serialize: (value: T) => ParsedQueryValue`: encode a value back into a query
+    value.
+  - `eq?: (a: T, b: T) => boolean`: optional equality, defaulting to a deep
+    structural compare (`structuralEq`).
 
-| Property | Type | Description |
-| --- | --- | --- |
-| `parse` | `(raw) => T \| undefined` | Decode a value, or `undefined` when absent or invalid. **Never throw.** |
-| `serialize` | `(value) => ParsedQueryValue` | Encode a value back into a query value. |
-| `eq` | `(a, b) => boolean` | Optional equality; defaults to a deep structural compare. |
+**Returns**
 
-### Returns
-
-A `Codec<T>`, including a `.withDefault()` factory:
-
-```ts
-interface Codec<T> {
-  parse: (raw: ParsedQueryValue) => T | undefined
-  serialize: (value: T) => ParsedQueryValue
-  eq: (a: T, b: T) => boolean
-  readonly defaultValue?: T
-  withDefault: (defaultValue: T) => CodecWithDefault<T>
-}
-```
-
-### Example
+- `codec: Codec<T>`
+  - The codec, plus a `.withDefault()` factory.
+  - `parse`, `serialize`, `eq`: as supplied, with `eq` defaulted.
+  - `readonly defaultValue?: T`: present only after `.withDefault()`.
+  - `withDefault(defaultValue: T): CodecWithDefault<T>`: see [`Codec.withDefault`](#codec-withdefault).
 
 ```ts
 import { createCodec, getQueryString } from '@vuqs/core'
@@ -131,31 +148,27 @@ const percent = createCodec<number>({
 
 ## Codec.withDefault <Badge type="info" text="@vuqs/core" />
 
-Returns a variant of a codec carrying `defaultValue`. `parse` stays raw
+Returns a variant of a codec carrying `defaultValue`. The codec's `parse` stays raw
 (`undefined` when absent or invalid); the param that binds the codec resolves the
 default, so it applies in one place rather than being baked into `parse`.
-
-### Signature
 
 ```ts
 function withDefault<T>(defaultValue: T): CodecWithDefault<T>
 ```
 
-### Parameters
+**Parameters**
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `defaultValue` | `T` | The value a param reads back when the key is absent or invalid. |
+- `defaultValue: T`
+  - The value an absent or invalid key reads back as.
 
-### Returns
+**Returns**
 
-A `CodecWithDefault<T>` (`parse` stays `T | undefined`, with `defaultValue`
-exposed), which downstream APIs use to narrow refs to non-nullable and to drop the
-value from the URL when it equals the default ([`clearOnDefault`](/guide/navigation-options#clearondefault)).
-
-### Example
+- `codec: CodecWithDefault<T>`
+  - A codec exposing `defaultValue`. Downstream APIs use it to narrow refs to
+    non-nullable and to drop the value from the URL when it equals the default
+    ([`clearOnDefault`](/guide/essentials/navigation-options#clearondefault)).
 
 ```ts
-codecs.integer                 // Codec<number>            → ref is number | undefined
-codecs.integer.withDefault(1)  // CodecWithDefault<number> → ref is number
+codecs.integer // Codec<number>            → ref is number | undefined
+codecs.integer.withDefault(1) // CodecWithDefault<number> → ref is number
 ```

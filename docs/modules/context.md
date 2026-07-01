@@ -1,211 +1,128 @@
 # withContext <Badge type="tip" text="@vuqs/core/modules" />
 
-Makes one schema behave differently across **contexts** — tabs, wizard steps, view
+Makes state behave differently across **contexts**: tabs, wizard steps, view
 modes. Switching to a context preserves some params, resets the rest, and drops
-params that don't exist there — reconciled into a single navigation you trigger.
+params that don't exist there, reconciled into a single navigation you trigger. It
+composes onto a group with `useQueryStates` or onto a single param with
+`useQueryState`.
 
-```ts
-import { withContext } from '@vuqs/core/modules'
-```
-
-## Overview
+## Usage
 
 Picture two tabs, Products and Orders, sharing one search box:
 
 - `q` (the search term) should **survive** switching tabs.
-- `sort` should **reset** — a product sort doesn't make sense for orders.
+- `sort` should **reset**: a product sort does not make sense for orders.
 - `category` exists only on Products; `status` only on Orders. Neither should leak
   into the other, or survive a pasted stale link.
 
-Hand-rolling this is fiddly. `withContext` declares it.
+Hand-rolling this is fiddly. `withContext` declares it:
+
+```ts
+import { useQueryStates } from '@vuqs/core'
+import { withContext } from '@vuqs/core/modules'
+
+const { values, activeContext, switchTo } = useQueryStates(schema)
+  .use(withContext({
+    active: tab, // your context: a ref, a route param, or a wizard step
+    preserve: ['q'], // q carries over; everything else resets
+    only: { category: ['products'], status: ['orders'] }, // per-context validity
+    navigate: (target, query) => router.push({ params: { tab: target }, query }),
+  }))
+```
+
+On a single param, `preserve` is a boolean and `only` a list of contexts:
+
+```ts
+const category = useQueryState('category', codecs.string)
+  .use(withContext({ active: tab, only: ['products'] }))
+```
 
 ## API
 
-`withContext(options)` or `withContext(schema, options)` for explicit key
-checking (see [Typing `preserve` and `only`](#typing-preserve-and-only)) —
-contributes `ContextStatesApi` or `ContextStateApi`:
+`withContext(options)`, or `withContext(schema, options)` to type-check the keys
+against a schema (see [Typing `preserve` and `only`](#typing-preserve-and-only)),
+contributes the same controls to whichever composable it is used with:
 
-```ts
-function withContext<TSchema, TContext extends string>(
-  options: QueryStatesContextOptions<TSchema, TContext>,
-): QueryStatesModule<TSchema, ContextStatesApi<TContext>>
+- `activeContext: ComputedRef<TContext>`
+  - The current context as a ref, mirroring the `active` option.
+- `buildContextQuery(currentQuery, nextContext): ParsedQueryRaw`
+  - The reconciled query for switching to `nextContext`, **without navigating**.
+    Use it to render a link.
+- `switchTo(target, options?): void`
+  - Switches in **one navigation**, reconciling the query and handing it to your
+    [`navigate`](#navigate-how-to-switch) option. Throws if `navigate` is not
+    configured.
 
-function withContext<TContext extends string>(
-  options: QueryStateContextOptions<TContext>,
-): DefinedQueryStateModule<ContextStateApi<TContext>>
-
-interface ContextStatesApi<TContext extends string> {
-  activeContext: ComputedRef<TContext>
-  buildContextQuery: (currentQuery: ParsedQuery, nextContext: TContext) => ParsedQueryRaw
-  switchTo: (target: TContext, options?: NavigateOptions) => void
-}
-
-interface ContextStateApi<TContext extends string> {
-  activeContext: ComputedRef<TContext>
-  buildContextQuery: (currentQuery: ParsedQuery, nextContext: TContext) => ParsedQueryRaw
-  switchTo: (target: TContext, options?: NavigateOptions) => void
-}
-```
-
-- `activeContext` — the current context as a ref (`.value`), mirroring the `active`
-  option.
-- `buildContextQuery(currentQuery, nextContext)` — the reconciled query for
-  switching to `nextContext`, **without navigating**. Use it to render a link or
-  for SSR.
-- `switchTo(target, options?)` — switches in **one navigation**: reconciles the
-  query and hands it to your [`navigate`](#navigate-how-to-switch) option. Throws
-  if `navigate` isn't configured.
-
-It also filters params by the active context, so a param invalid there never
-enters `values`, the URL, or any module's derived state — and a stale link that
-pastes an invalid param has it dropped on the next write.
+It also filters params by the active context, so a param invalid there never enters
+`values`, the URL, or any module's derived state, and a stale link that pastes an
+invalid param has it dropped on the next write.
 
 ## Options
 
-```ts
-interface ContextBaseOptions<TContext extends string> {
-  active: MaybeRefOrGetter<TContext>
-  navigate?: (target: TContext, query: ParsedQueryRaw, options?: NavigateOptions) => void
-}
+`active` and `navigate` are shared. `preserve` and `only` take a different shape
+per composable:
 
-type QueryStatesContextOptions<TSchema, TContext extends string> = ContextBaseOptions<TContext> & (
-  | {
-    preserve: ReadonlyArray<keyof TSchema & string>
-    only?: Partial<Record<keyof TSchema & string, readonly TContext[]>>
-  }
-  | {
-    preserve?: ReadonlyArray<keyof TSchema & string>
-    only: Partial<Record<keyof TSchema & string, readonly TContext[]>>
-  }
-)
+- `active: MaybeRefOrGetter<TContext>`
+  - The current context. An **external, opaque** identifier the module never
+    derives: you own it, whether it is a tab `ref`, a route param, or a wizard step.
+- `preserve`
+  - Grouped: `(keyof schema)[]`, the params kept across a switch. Everything not
+    listed resets.
+  - Single: `boolean`, whether the one param carries over.
+- `only`
+  - Grouped: `Record<key, TContext[]>`, restricting which contexts each param
+    exists in. An omitted param is valid everywhere.
+  - Single: `TContext[]`, the contexts the one param exists in.
+- `navigate?: (target, query, options?) => void`
+  - How to reach a context. `switchTo` reconciles the query and calls this with the
+    target context and that query, so **you** issue one navigation carrying both the
+    route and the query. Only you know how a context maps to a route, so you own
+    that mapping. Omit it and `switchTo` throws; you can still drive navigation
+    yourself with `buildContextQuery`.
 
-type QueryStateContextOptions<TContext extends string> = ContextBaseOptions<TContext> & (
-  | {
-    preserve: boolean
-    only?: readonly TContext[]
-  }
-  | {
-    preserve?: boolean
-    only: readonly TContext[]
-  }
-)
-```
+Provide at least one of `preserve`/`only`; with neither, every managed param resets
+on a switch.
 
-`ContextBaseOptions` with only `active` and optional `navigate` creates a module
-that works with both `useQueryStates` and `useQueryState`. It adds the context
-controls and keeps the default reconciliation rule: `buildContextQuery` and
-`switchTo` reset managed params because no param is marked as preserved.
+## Signals
 
-```ts
-withContext({ active })
-```
-
-Grouped and single-param rules use different option shapes:
-
-```ts
-// grouped
-withContext({
-  active,
-  preserve: ['q'],
-  only: { category: ['products'] },
-})
-
-// single
-withContext({
-  active,
-  preserve: true,
-  only: ['products'],
-})
-```
-
-### `active` — the current context
-
-An **external, opaque** identifier (`MaybeRefOrGetter`). The module never derives
-it — you own it, whether it's a tab `ref`, a route param, or a wizard step.
-
-```ts
-withContext({ active: tab })                     // a ref
-withContext({ active: () => route.params.tab })  // a getter
-```
-
-### `preserve` — what survives a switch
-
-Params kept when the context changes. **Everything not listed resets.** The split
-is irreducible — two params can both be valid in both contexts yet one should
-persist and the other shouldn't.
-
-```ts
-withContext({ active, preserve: ['q'] }) // q carries over; everything else resets
-useQueryState('q').use(withContext({ active, preserve: true }))
-```
-
-### `only` — param validity per context
-
-Restricts which contexts a param **exists in**. An invalid param never enters
-`values`/URL/derived state, is dropped when you switch away from its context, and
-is auto-dropped if a stale link pastes it into the wrong context. Omit a param to
-make it valid everywhere.
-
-```ts
-withContext({
-  active,
-  only: {
-    category: ['products'], // category exists only on Products
-    status: ['orders'],     // status exists only on Orders
-  },
-})
-
-useQueryState('category').use(withContext({ active, only: ['products'] }))
-```
-
-### `navigate` — how to switch
-
-How to navigate to a context. `switchTo` reconciles the query and calls this with
-the target context and that query, so **you** issue one navigation carrying both
-the route and the query. The module is router-agnostic — only you know how a
-context maps to a route, so you own that mapping.
-
-```ts
-// context lives in a route param:
-withContext({ active, navigate: (target, query) => router.push({ params: { tab: target }, query }) })
-// or in the query string:
-withContext({ active, navigate: (target, query) => router.replace({ query: { ...query, tab: target } }) })
-```
-
-Omit it and `switchTo` throws; you can still drive navigation yourself with
-[`buildContextQuery`](#api).
+- **Emits** [`context:change`](/modules/signals) when the active context changes. A
+  module holding per-context state can react to it.
+  [`withRuntimeDefaults`](/modules/runtime-defaults) does, clearing its stale
+  defaults. Apply `withRuntimeDefaults` first, then `withContext`, and re-call
+  `setDefaults` after a switch.
+- **Reacts to:** none.
 
 ## How it works
 
 ### Switching context
 
-The module **never navigates on its own** — `active` is yours. Changing it (setting
+The module **never navigates on its own**: `active` is yours. Changing it (setting
 the ref, or navigating so a route-derived getter updates) makes param validity
-follow the new context and signals [`withRuntimeDefaults`](#composing) to clear its
-per-context defaults. Reconciling the URL is a separate, explicit step — that split
-is what keeps the switch a single navigation you control.
+follow the new context and emits the `context:change` signal. Reconciling the URL is
+a separate, explicit step, and that split is what keeps the switch a single
+navigation you control.
 
 `switchTo` is the ergonomic path: it reconciles the query and hands it to your
 `navigate` option, so the route change and the param reset land together.
 
 ```ts
-const { switchTo, buildContextQuery } = useQueryStates(schema)
+const { switchTo } = useQueryStates(schema)
   .use(withContext({
     active: () => route.params.tab as 'products' | 'orders',
     preserve: ['q'],
     navigate: (target, query) => router.push({ params: { tab: target }, query }),
   }))
 
-switchTo('orders')                      // one navigation: new route + reconciled query
+switchTo('orders') // one navigation: new route + reconciled query
 switchTo('orders', { history: 'push' }) // per-call options are forwarded to `navigate`
 ```
 
-`switchTo` uses your router (`router.push`, Nuxt's `navigateTo`, …), not vuqs's
-internal adapter — so it works the same whether the adapter is local or installed
-app-wide.
+`switchTo` uses your router (`router.push`, Nuxt's `navigateTo`, and so on), not
+vuqs's internal adapter, so it works the same whether the adapter is local or
+installed app-wide.
 
-When you only need the reconciled query *without* navigating — to render a link or
-for SSR — call `buildContextQuery`:
+When you only need the reconciled query *without* navigating, to render a link, call
+`buildContextQuery`:
 
 ```ts
 const query = buildContextQuery(route.query, 'orders')
@@ -214,38 +131,24 @@ const query = buildContextQuery(route.query, 'orders')
 
 ### Typing `preserve` and `only`
 
-`withContext` infers the option shape from the facade that consumes it.
-Grouped options use schema keys:
+Chained off `useQueryStates(schema)`, the keys in `preserve`/`only` are inferred
+from the schema. Pass the schema explicitly when the keys can't be inferred:
 
 ```ts
-// Inferred from the schema you chain off — no extra argument:
+// Inferred:
 useQueryStates(schema).use(withContext({ active, preserve: ['q'] }))
 
-// Or bind explicitly by passing the schema (handy when the keys can't be inferred):
+// Explicit:
 useQueryStates(schema).use(withContext(schema, { active, preserve: ['q'] }))
 ```
 
-Either way, TypeScript rejects a `preserve` or `only` key that isn't in the schema.
-
-Single-param options describe the one param bound by `useQueryState`. They never
-expose the internal single schema key:
-
-```ts
-useQueryState('category').use(withContext({
-  active,
-  preserve: true,
-  only: ['products'],
-}))
-```
-
-`withContext({ active })` has no param-specific rules and works with both
-`useQueryStates` and `useQueryState`.
+Either way, TypeScript rejects a `preserve` or `only` key that is not in the schema.
 
 ## Example
 
 ```vue
 <script setup lang="ts">
-import { codecs, queryParam, useQueryStates } from '@vuqs/core'
+import { codecs, useQueryStates } from '@vuqs/core'
 import { withContext, withRuntimeDefaults } from '@vuqs/core/modules'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -255,10 +158,10 @@ const route = useRoute()
 const router = useRouter()
 
 const schema = {
-  q: queryParam('q', codecs.string),
-  sort: queryParam('sort', codecs.literal(['newest', 'oldest'] as const)),
-  category: queryParam('category', codecs.literal(['cpu', 'gpu', 'ram'] as const)),
-  status: queryParam('status', codecs.literal(['open', 'shipped'] as const)),
+  q: codecs.string,
+  sort: codecs.literal(['newest', 'oldest'] as const),
+  category: codecs.literal(['cpu', 'gpu', 'ram'] as const),
+  status: codecs.literal(['open', 'shipped'] as const),
 }
 
 const { values, selected, activeContext, switchTo } = useQueryStates(schema, { history: 'replace' })
@@ -291,17 +194,10 @@ const { values, selected, activeContext, switchTo } = useQueryStates(schema, { h
 </template>
 ```
 
-Set a category on Products, `switchTo('orders')`, watch the URL: `q` stays,
+Set a category on Products, `switchTo('orders')`, and watch the URL: `q` stays,
 `category` disappears, all in one navigation.
-
-## Composing
-
-[`withRuntimeDefaults`](/modules/runtime-defaults)'s runtime defaults are per-context, so
-`withContext` signals a context change through `core` and `withRuntimeDefaults` clears
-its stale defaults in response. Apply `withRuntimeDefaults` first, then `withContext`,
-and re-call `setDefaults` after a switch.
 
 ## Nuxt
 
-Under [`@vuqs/nuxt`](/nuxt/introduction#auto-imports), `withContext` is
-auto-imported with the other modules — drop the `import` line and call it directly.
+Under [`@vuqs/nuxt`](/nuxt/auto-imports), `withContext` is auto-imported with the
+other modules.

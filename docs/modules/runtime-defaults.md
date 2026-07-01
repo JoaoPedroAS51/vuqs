@@ -1,26 +1,83 @@
 # withRuntimeDefaults <Badge type="tip" text="@vuqs/core/modules" />
 
 Layers runtime defaults *under* the bound query state, so they shape what the UI
-reads without ever reaching the URL.
+reads without ever reaching the URL. It composes onto a group with `useQueryStates`
+or onto a single param with `useQueryState`.
+
+## Usage
 
 ```ts
+import { useQueryStates } from '@vuqs/core'
 import { withRuntimeDefaults } from '@vuqs/core/modules'
+
+// A group:
+const { values, selected, defaults, setDefaults } = useQueryStates(schema)
+  .use(withRuntimeDefaults())
+
+setDefaults(await loadUserPreferences()) // runtime defaults, never written to the URL
+values.status // reads through them: a selection if present, else the runtime default
 ```
 
-## Overview
+```ts
+// A single param:
+const perPage = useQueryState('perPage', codecs.integer)
+  .use(withRuntimeDefaults())
 
-`withRuntimeDefaults` registers a runtime-default layer on the core's [layered
-defaults](/modules/authoring#layered-defaults). The codec defaults are the base,
-the runtime defaults (`setDefaults`) sit above them, and an explicit URL selection
-sits above both. The bound `values` from [`useQueryStates`](/guide/use-query-states)
-and the ref from [`useQueryState`](/guide/use-query-state) resolve through that
-stack. They are the effective reads.
+perPage.setDefault(20)
+perPage.value // the selection if present, else 20
+```
+
+## API
+
+`withRuntimeDefaults()` takes no options. It contributes a grouped API to
+`useQueryStates` and a per-param API to `useQueryState`.
+
+**On `useQueryStates`** (`RuntimeDefaultsStatesApi`):
+
+- `selected: Readonly<…>`
+  - The explicit URL selections, a readonly reactive map, with no runtime or codec
+    defaults applied.
+- `defaults: Readonly<…>`
+  - The fallback values: runtime defaults from `setDefaults` over codec defaults.
+- `setDefaults(values): void`
+  - **Replaces** the runtime defaults with a snapshot. It does not merge. These
+    feed `defaults` and the resolved `values`, but are never written to the URL.
+- `clearDefaults(): void`
+  - Drops the runtime defaults, leaving codec defaults in place.
+
+**On `useQueryState`** (`RuntimeDefaultsStateApi`), merged onto the ref:
+
+- `selectedValue: ComputedRef<T | undefined>`
+  - The explicit URL selection for this param.
+- `defaultValue: ComputedRef<T | undefined>`
+  - The fallback for this param: runtime default over codec default.
+- `setDefault(value): void` / `clearDefault(): void`
+  - Set or drop the runtime default for this one param.
+
+The effective read is the base `values` map (grouped) or the ref's `.value`
+(single). Writes still go through the base composable.
+
+## Signals
+
+- **Reacts to** [`context:change`](/modules/signals): on a context change, it
+  clears its runtime defaults, so a stale per-context default never bleeds through.
+  Re-call `setDefaults`/`setDefault` after the switch, typically when the new
+  context's data loads.
+- **Emits:** none.
+
+## How it works
+
+`withRuntimeDefaults` registers a runtime-default layer on the core's
+[layered defaults](/modules/authoring#layered-defaults). The codec defaults are the
+base, the runtime defaults sit above them, and an explicit URL selection sits above
+both. The bound `values` resolve through that stack, so `values` **is** the
+effective read.
 
 | State | Source | In the URL? |
 | --- | --- | --- |
-| `selected` | explicit URL selections | ✅ yes — and *only* this |
-| `defaults` | runtime defaults (`setDefaults`) over codec defaults | ❌ never |
-| `values` | `selected` over `defaults` — the read model | derived |
+| `selected` | explicit URL selections | yes (and only this) |
+| `defaults` | runtime defaults over codec defaults | never |
+| `values` | `selected` over `defaults`, the read model | derived |
 
 ```
 values   = { ...defaults, ...selected }
@@ -29,31 +86,8 @@ defaults = { ...codecDefaults, ...runtimeDefaults }
 
 Precedence runs **selection → runtime default → codec default**. A user selection
 always wins; clearing it reveals the runtime default, and clearing the runtime
-default reveals the codec default (if the param has one). Your UI reads `values`;
+default reveals the codec default, if the param has one. Your UI reads `values`;
 only `selected` is serialized.
-
-Grouped composition exposes `selected` and `defaults` as readonly reactive
-objects: dot access, no `.value`. `values` is the writable map
-[`useQueryStates`](/guide/use-query-states) already hands back:
-
-```ts
-const { values, selected, defaults } = useQueryStates(schema).use(withRuntimeDefaults())
-
-selected.status // string | undefined — the explicit choice
-defaults.status // the fallback in force
-values.status   // what the UI shows
-```
-
-Single-param composition exposes scalar computed refs:
-
-```ts
-const status = useQueryState('status', codecs.string)
-  .use(withRuntimeDefaults())
-
-status.selectedValue.value // string | undefined — the explicit choice
-status.defaultValue.value  // string | undefined — the fallback in force
-status.value               // string | undefined — what the UI shows
-```
 
 ### Writing is coherent
 
@@ -62,73 +96,30 @@ default while a *differing* runtime default exists persists the write instead of
 silently dropping to the runtime default. Say the codec default is `usd` and
 `setDefaults` raised the runtime default to `eur`: assigning `values.currency =
 'usd'` writes `?currency=usd` and reads it back, rather than clearing to `eur`.
-[`clearOnDefault`](/guide/navigation-options#clearondefault) only drops a write
-that equals the *resolved* default, which here is `eur`.
+[`clearOnDefault`](/guide/essentials/navigation-options#clearondefault) only drops a
+write that equals the *resolved* default, which here is `eur`.
 
 ### Why runtime defaults stay out of the URL
 
 - **Honest links.** The URL captures what the user *chose*, not what their account
-  happens to default to. A shared link reproduces the selection; the recipient's
-  own defaults fill the rest.
+  happens to default to. A shared link reproduces the selection, and the
+  recipient's own defaults fill the rest.
 - **Defaults can change.** If the runtime default for `perPage` moves from 20 to
-  50, every user sees 50 immediately — no stale `?perPage=20` baked into bookmarks.
-
-## API
-
-`withRuntimeDefaults()` takes no options. With `useQueryStates`, it contributes
-`RuntimeDefaultsStatesApi`:
-
-```ts
-function withRuntimeDefaults(): QueryStatesModule<TSchema, RuntimeDefaultsStatesApi<TSchema>>
-
-interface RuntimeDefaultsStatesApi<TSchema> {
-  selected: Readonly<QueryStateValues<TSchema>>
-  defaults: Readonly<QueryStateValues<TSchema>>
-  setDefaults: (values: QueryStateValues<TSchema>) => void
-  clearDefaults: () => void
-}
-```
-
-- `setDefaults(values)` — **replace** the runtime defaults with a snapshot. It
-  doesn't merge. These feed `defaults` and the resolved `values`, but are never
-  written to the URL.
-- `clearDefaults()` — drop the runtime defaults, leaving codec defaults in place.
-
-The effective read is the base [`values`](/guide/use-query-states#values-a-reactive-value-map)
-map. Writes still go through the base composable: assign `values.field` or call
-`setValues(...)`. For per-field refs that keep `.set`/`.clear`, explode `values`
-with [`toQueryRefs`](/api/composables#toqueryrefs).
-
-With `useQueryState`, it contributes `RuntimeDefaultsStateApi`:
-
-```ts
-interface RuntimeDefaultsStateApi<TSchema, TKey> {
-  selectedValue: ComputedRef<QueryStateValueOf<TSchema[TKey]> | undefined>
-  defaultValue: ComputedRef<QueryStateValueOf<TSchema[TKey]> | undefined>
-  setDefault: (value: QueryStateValueOf<TSchema[TKey]>) => void
-  clearDefault: () => void
-}
-```
-
-- `setDefault(value)` — replace the runtime default for this param.
-- `clearDefault()` — drop the runtime default for this param, leaving its codec
-  default in place.
-
-The effective read is the base ref's `.value`. Writes still go through the base
-ref: assign `.value`, call `.set(...)`, or call `.clear()`.
+  50, every user sees 50 immediately, with no stale `?perPage=20` baked into
+  bookmarks.
 
 ## Example
 
 ```vue
 <script setup lang="ts">
-import { codecs, queryParam, useQueryStates } from '@vuqs/core'
+import { codecs, useQueryStates } from '@vuqs/core'
 import { withRuntimeDefaults } from '@vuqs/core/modules'
 import { onMounted } from 'vue'
 
 const { values, selected, defaults, setDefaults, clear } = useQueryStates({
-  q: queryParam('q', codecs.string),
-  status: queryParam('status', codecs.literal(['active', 'archived'] as const)),
-  perPage: queryParam('perPage', codecs.integer),
+  q: codecs.string,
+  status: codecs.literal(['active', 'archived'] as const),
+  perPage: codecs.integer,
 }).use(withRuntimeDefaults())
 
 onMounted(async () => {
@@ -158,17 +149,7 @@ is whatever `setDefaults` supplied, and `values.status` shows the default. The
 moment the user picks `archived`, `?status=archived` appears and `values` follows
 the choice; clear it and `values` falls back again.
 
-## Composing
-
-Runtime defaults are per-context. When you also apply
-[`withContext`](/modules/context), `withRuntimeDefaults` clears its runtime defaults on a
-context change — so a stale default from the previous tab never bleeds through.
-Re-call `setDefaults` after the switch, typically when the new context's data
-loads. The two modules coordinate through `core` with no direct dependency.
-
 ## Nuxt
 
-Under [`@vuqs/nuxt`](/nuxt/introduction#auto-imports), `withRuntimeDefaults` is
-auto-imported with the other modules — drop the `import` line and call it directly.
-
-Next: **[withContext →](/modules/context)**
+Under [`@vuqs/nuxt`](/nuxt/auto-imports), `withRuntimeDefaults` is auto-imported
+with the other modules.

@@ -1,108 +1,34 @@
 # Writing a module
 
-A grouped-only module is a function `(core) => addedApi`. `.use(module)` runs it
-against the composable's shared [`QueryCore`](#the-core), merges the returned
-object onto the composable, and widens the type.
+A module contributes API to a group (`useQueryStates`), to a single param
+(`useQueryState`), or to both. It receives the shared [`QueryCore`](#the-core),
+returns the object to merge onto the composable, and `.use()` widens the type.
 
-Use `defineQueryModule(...)` for authored modules. Pass `queryStates` for grouped
-composition, `queryState` for single-param composition, or both for a dual
-module. `queryStates(core)` contributes the grouped API; `queryState(core, key)`
-contributes the single-param API on the same ref object returned by
-`useQueryState`.
+## The grouped module
+
+The simplest module is a function `(core) => api`, a `QueryStatesModule`. Pass it
+straight to `useQueryStates(...).use(...)`:
 
 ```ts
-import type { ComputedRef } from 'vue'
 import type { QueryCore, QueryStateSchema } from '@vuqs/core'
 import { computed } from 'vue'
 
-export function withCount(): <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>) => { count: ComputedRef<number> } {
-  return core => ({
+export function withCount() {
+  return <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>) => ({
     count: computed(() => Object.keys(core.state.selected.value).length),
   })
 }
 ```
 
 Return a generic `(core) => api` function rather than one bound to a fixed schema,
-so the module adapts to whatever schema it's applied to — the pattern every
-built-in uses. When the API *or* the options need to reference param names, use the
-`QueryStatesModule<TSchema, TAdded>` overload form instead, as [`withContext`](/modules/context#typing-preserve-and-only)
-does.
-
-The dual-facade form keeps grouped and single behavior explicit:
-
-```ts
-import { computed } from 'vue'
-import { defineQueryModule } from '@vuqs/core'
-
-export function withSelectedValue() {
-  return defineQueryModule({
-    queryStates: core => ({
-      selected: core.state.selected,
-    }),
-    queryState: (core, key) => ({
-      selectedValue: computed(() => core.state.selected.value[key]),
-    }),
-  })
-}
-```
-
-## Typing the single-param API against the bound param
-
-When the single-param API's types depend on the param `useQueryState` binds it to
-(its value type, key, or schema), register the API shape on the
-`QueryStateApiRegistry` under a namespaced URI, then build the `queryState`
-projection with `defineQueryStateApi(uri, project)`. The URI rides on the module as
-a type-only marker, so `useQueryState(...).use(...)` looks the API up against that
-param's schema and key, exactly as [`withRuntimeDefaults`](/modules/runtime-defaults)
-types `setDefault` and `selectedValue`.
-
-The registry is parameterized by the concrete schema and key, so they arrive as real
-type parameters: derive the bound value type with `QueryStateValueAt<TSchema, TKey>`
-and the API is sound in every position, including writes.
-
-```ts
-import type { ComputedRef } from 'vue'
-import type { QueryStateSchema, QueryStateValueAt } from '@vuqs/core'
-import { computed } from 'vue'
-import { defineQueryModule, defineQueryStateApi } from '@vuqs/core'
-
-interface SelectionApi<TValue> {
-  selection: ComputedRef<TValue | undefined>
-  resetTo: (value: TValue) => void
-}
-
-declare module '@vuqs/core' {
-  interface QueryStateApiRegistry<TSchema extends QueryStateSchema, TKey extends keyof TSchema & string> {
-    'my-lib:selection': SelectionApi<QueryStateValueAt<TSchema, TKey>>
-  }
-}
-
-export function withSelection() {
-  return defineQueryModule({
-    queryState: defineQueryStateApi('my-lib:selection', (core, key) => ({
-      selection: computed(() => core.state.selected.value[key]),
-      resetTo: value => core.query.set(key, value),
-    })),
-  })
-}
-```
-
-```ts
-const page = useQueryState('page', codecs.integer.withDefault(1)).use(withSelection())
-
-page.selection.value // number | undefined
-page.resetTo(2) // resetTo takes number, the param's value type
-```
-
-Namespace the URI by library (`'my-lib:selection'`) to avoid collisions with other
-modules, the way hook keys are namespaced. Add a `queryStates` projection alongside
-`queryState` for a dual module; a `queryState`-only definition is single-only and not
-callable for grouped composition.
+so the module adapts to whatever schema it is applied to. Everything below is what
+`core` gives you to work with; [single-param and dual modules](#single-param-and-dual-modules)
+extend this to `useQueryState`.
 
 ## The core
 
-`core` is the only thing a module touches — it never references another module.
-Its members are grouped into facets:
+`core` is the only thing a module touches: it never references another module. Its
+members are grouped into facets:
 
 | Facet | Member | What it is |
 | --- | --- | --- |
@@ -117,17 +43,16 @@ Its members are grouped into facets:
 | `pipeline` | | The transform pipeline for reshaping reads and writes. |
 | `hooks` | | The notification bus for module-to-module coordination. |
 
-Treat `core` as the authoring surface — it's not app-facing state.
+Treat `core` as the authoring surface: it is not app-facing state.
 
 ## Deriving state
 
 Build read models off `core.state.selected` with `computed`. To expose a *map*,
-wrap it with `toReadonlyState` so consumers get dot-access (`state.field`),
-matching `values`:
+wrap it with `toReadonlyState` so consumers read `state.field`, matching `values`:
 
 ```ts
-import { computed } from 'vue'
 import { toReadonlyState } from '@vuqs/core/shared'
+import { computed } from 'vue'
 
 const visible = computed(() => { /* derive a record from core.state.selected.value */ })
 
@@ -135,9 +60,9 @@ return { visible: toReadonlyState(visible) }
 ```
 
 `toReadonlyState` turns a `ComputedRef<record>` into a `Readonly<record>` whose keys
-track the computed live — the shape `withRuntimeDefaults` exposes for `selected` and
-`defaults`. A single scalar stays a plain `ComputedRef` (`.value`), like
-`withContext`'s `activeContext`.
+track the computed live, the shape `withRuntimeDefaults` exposes for `selected` and
+`defaults`. A single scalar stays a plain `ComputedRef`, like `withContext`'s
+`activeContext`.
 
 ## Layered defaults
 
@@ -154,20 +79,20 @@ const stop = core.defaults.register(runtimeDefaults)
 onScopeDispose(stop)
 ```
 
-The `source` is a `MaybeRefOrGetter`, so the layer stays reactive — update the ref
+The `source` is a `MaybeRefOrGetter`, so the layer stays reactive: update the ref
 and `values`/`resolved` re-resolve. Only defined values participate, so a layer
 never clobbers a lower one with `undefined`.
 
-Registering a layer also moves [`clearOnDefault`](/guide/navigation-options#clearondefault):
-a write clears when it equals the *resolved* default, not just the codec default.
-Reads and writes share one notion of "the default", which is what lets
-`withRuntimeDefaults` persist a write of the codec default while a differing runtime
-default exists.
+Registering a layer also moves
+[`clearOnDefault`](/guide/essentials/navigation-options#clearondefault): a write
+clears when it equals the *resolved* default, not just the codec default. Reads and
+writes share one notion of "the default", which is what lets `withRuntimeDefaults`
+persist a write of the codec default while a differing runtime default exists.
 
-## Shaping reads and writes — the pipeline
+## Shaping reads and writes
 
 `core.pipeline` reshapes the value maps the engine reads and writes. Three stages,
-owned by the core — you tap them, you can't add new ones:
+owned by the core: you tap them, you can't add new ones.
 
 | Stage | Reshapes |
 | --- | --- |
@@ -177,8 +102,8 @@ owned by the core — you tap them, you can't add new ones:
 
 `tap(stage | stages, transform, { enforce })` registers a transform and returns a
 disposer; `enforce` (`'pre' | 'default' | 'post'`) orders it within the stage.
-Transforms must be **pure** functions of their input: reactivity is pull-based, so
-a transform may *read* reactive sources — it re-runs when they change — but must not
+Transforms must be **pure** functions of their input. Reactivity is pull-based, so
+a transform may *read* reactive sources (it re-runs when they change) but must not
 mutate or cause side effects.
 
 ```ts
@@ -189,9 +114,9 @@ const untap = core.pipeline.tap(['read', 'write'], pickBy(key => isAllowed(key))
 onScopeDispose(untap)
 ```
 
-`@vuqs/core/shared` ships the two filter builders: `pickBy(predicate)` keeps matching
-keys, `omitBy(predicate)` drops them. Both return a transform you hand straight to
-`tap`.
+`@vuqs/core/shared` ships the two filter builders: `pickBy(predicate)` keeps
+matching keys, `omitBy(predicate)` drops them. Both return a transform you hand
+straight to `tap`.
 
 When a module derives a value map itself and wants it shaped like the engine's own
 reads, push it through a stage with `run`:
@@ -200,15 +125,12 @@ reads, push it through a stage with `run`:
 const shaped = computed(() => core.pipeline.run('read', { ...someMap }))
 ```
 
-The engine already runs `read` over `core.defaults.resolved` and
-`core.state.values`, so a layer you `register` is shaped consistently with a filter
-`withContext` taps onto `read` — no manual `run` needed for it.
-
-## Coordinating with other modules — hooks
+## Coordinating with other modules
 
 Modules never import each other. When one needs to react to another, they pass
-through `core.hooks`, a fire-and-forget bus. Declare your event on the shared
-`QueryHooks` interface so it's typed everywhere without an import:
+through `core.hooks`, a fire-and-forget bus, using a typed [signal](/modules/signals).
+Declare your event on the shared `QueryHooks` interface so it is typed everywhere
+without an import:
 
 ```ts
 declare module '@vuqs/core' {
@@ -218,7 +140,7 @@ declare module '@vuqs/core' {
 }
 ```
 
-Namespace the key by module (`'context:change'`). Emit when your state changes;
+Namespace the key by module (`'context:change'`). Emit when your state changes, and
 subscribe to others' events with `on`, pairing the disposer with `onScopeDispose`:
 
 ```ts
@@ -230,17 +152,75 @@ const stop = core.hooks.on('context:change', () => { /* reset per-context state 
 onScopeDispose(stop)
 ```
 
-Handlers run synchronously in an unspecified order and must be commutative — don't
-rely on ordering. A throwing handler is isolated and logged; it never aborts the
-others or the emitter. This is exactly how `withContext` tells `withRuntimeDefaults` to
-drop per-context defaults, with neither importing the other.
+Handlers run synchronously in an unspecified order and must be commutative, so do
+not rely on ordering. A throwing handler is isolated and logged: it never aborts
+the others or the emitter. The public signals modules can emit or react to are
+listed in the [Signals](/modules/signals) registry.
+
+## Single-param and dual modules
+
+A single-param module contributes API to `useQueryState`. Its projection receives
+`core` plus the logical `key` of the bound param. `defineQueryModule` packages the
+projections: `queryStates` for the group, `queryState` for the single param, either
+or both.
+
+```ts
+import { defineQueryModule } from '@vuqs/core'
+
+export function withPresence() {
+  return defineQueryModule({
+    // group projection: (core) => api
+    queryStates: core => ({
+      present: computed(() => Object.keys(core.state.selected.value)),
+    }),
+    // single projection: (core, key) => api
+    queryState: (core, key) => ({
+      isPresent: computed(() => core.state.selected.value[key] !== undefined),
+    }),
+  })
+}
+```
+
+Omit `queryStates` for a single-only module, or `queryState` for a grouped-only
+one. A grouped module stays callable, so existing function-only modules keep
+working with `useQueryStates`.
+
+### Value-typed single APIs
+
+When a single-param API depends on the **bound param's value type** (a `ComputedRef`
+of that value, a setter that takes it), a plain projection cannot express it
+soundly. Register the API shape on `QueryStateApiRegistry` under a namespaced URI,
+then build the projection with `defineQueryStateApi`:
+
+```ts
+import type { QueryStateSchema, QueryStateValueAt } from '@vuqs/core'
+import { defineQueryModule, defineQueryStateApi } from '@vuqs/core'
+import { computed } from 'vue'
+
+declare module '@vuqs/core' {
+  interface QueryStateApiRegistry<TSchema extends QueryStateSchema, TKey extends keyof TSchema & string> {
+    'my-lib:selection': { selection: ComputedRef<QueryStateValueAt<TSchema, TKey> | undefined> }
+  }
+}
+
+export function withSelection() {
+  return defineQueryModule({
+    queryState: defineQueryStateApi('my-lib:selection', (core, key) => ({
+      selection: computed(() => core.state.selected.value[key]),
+    })),
+  })
+}
+```
+
+`useQueryState` resolves the registered shape against the concrete schema and key,
+so `ref.selection` is typed as the bound param's value. This is exactly how
+`withRuntimeDefaults` exposes `selectedValue`/`defaultValue` on a single ref.
 
 ## Lifecycle and cleanup
 
-Call `.use()` synchronously during setup or another active Vue effect scope.
-Anything that outlives module setup, such as a `pipeline.tap`, a `hooks.on`, or a
-`watch`, returns a disposer. Pair each with `onScopeDispose` so it is torn down
-with the caller's scope.
+A module runs synchronously inside the composable's effect scope. Anything that
+outlives the call (a `pipeline.tap`, a `hooks.on`, a `watch`) returns a disposer.
+Pair each with `onScopeDispose` so it is torn down with the scope.
 
 ```ts
 import { onScopeDispose } from 'vue'
@@ -251,9 +231,9 @@ onScopeDispose(untap)
 
 ## The returned API
 
-Whatever you return is merged onto the composable and widens its type, so
-`q.yourField` is typed. Keys must be unique across modules — `.use()` throws if a
-module returns a key an earlier one already provided:
+Whatever you return is merged onto the composable and widens its type. Keys must be
+unique across modules: `.use()` throws if a module returns a key an earlier one
+already provided.
 
 ```
 [vuqs] module key "selected" is already provided by an earlier module
@@ -264,16 +244,16 @@ any module you expect to compose with.
 
 ## Full example
 
-A module that restricts the schema to an allow-list — useful for feature-flagged
-filters. It drops disallowed params from reads and writes, emits an event when the
-list changes, and exposes `isAllowed`:
+A grouped module that restricts the schema to an allow-list, useful for
+feature-flagged filters. It drops disallowed params from reads and writes, emits an
+event when the list changes, and exposes `isAllowed`:
 
 ```ts
 // with-allow-list.ts
-import type { MaybeRefOrGetter } from 'vue'
 import type { QueryCore, QueryStateSchema } from '@vuqs/core'
-import { computed, onScopeDispose, toValue, watch } from 'vue'
+import type { MaybeRefOrGetter } from 'vue'
 import { pickBy } from '@vuqs/core/shared'
+import { computed, onScopeDispose, toValue, watch } from 'vue'
 
 declare module '@vuqs/core' {
   interface QueryHooks {
@@ -281,14 +261,8 @@ declare module '@vuqs/core' {
   }
 }
 
-export interface AllowListApi {
-  isAllowed: (key: string) => boolean
-}
-
-export function withAllowList(
-  allowed: MaybeRefOrGetter<readonly string[]>,
-): <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>) => AllowListApi {
-  return (core) => {
+export function withAllowList(allowed: MaybeRefOrGetter<readonly string[]>) {
+  return <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>) => {
     const allowList = computed(() => toValue(allowed))
     const isAllowed = (key: string) => allowList.value.includes(key)
 
@@ -312,90 +286,55 @@ const { values, isAllowed } = useQueryStates(schema)
 isAllowed('status') // false → `status` is filtered out of `values` and the URL
 ```
 
-It reads `core` only — `pickBy` on the pipeline, `emit` on the hooks bus — so it
+It reads `core` only (`pickBy` on the pipeline, `emit` on the hooks bus), so it
 composes with any other module without knowing it exists.
 
 ## Authoring types <Badge type="info" text="@vuqs/core" />
 
 The exact shapes a module works with, exported from `@vuqs/core` (the
-[`@vuqs/core/shared`](#vuqs-core-shared-helpers) helpers below come from their own subpath).
+[`@vuqs/core/shared`](#vuqs-core-shared-helpers) helpers below come from their own
+subpath).
 
 ```ts
-type QueryStatesModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
-type QueryStateModule<TSchema, TAdded> = (core: QueryCore<TSchema>, key: keyof TSchema & string) => TAdded
-type DefinedQueryStatesModule<TSchema, TAdded> = QueryStatesModule<TSchema, TAdded>
-interface DefinedQueryStateModule<TAdded> { /* single-param projection */ }
-type DefinedQueryModule<TSchema, TQueryStatesApi, TQueryStateApi> = QueryStatesModule<TSchema, TQueryStatesApi> & {}
+// Projections
+type QueryStatesModule<TSchema, TApi> = (core: QueryCore<TSchema>) => TApi
+type QueryStateModule<TSchema, TApi> = (core: QueryCore<TSchema>, key: keyof TSchema & string) => TApi
 
-// Value-typed single-param API, keyed by URI (contributed types depend on the bound param).
-interface QueryStateApiRegistry<TSchema extends QueryStateSchema, TKey extends keyof TSchema & string> {}
+// Packaged modules, from defineQueryModule
+type DefinedQueryStatesModule<TSchema, TApi> // grouped-only
+type DefinedQueryStateModule<TApi> // single-only
+type DefinedQueryModule<TSchema, TStatesApi, TStateApi> // both
+
+// Registry for value-typed single-param APIs
+interface QueryStateApiRegistry<TSchema, TKey> {} // augment to register a URI
 type QueryStateApiUri = keyof QueryStateApiRegistry<QueryStateSchema, string>
-interface DefinedQueryStateApi<TUri extends QueryStateApiUri> { /* projection carrying the URI */ }
-function defineQueryStateApi<TUri extends QueryStateApiUri>(
-  uri: TUri,
-  project: (core: QueryCore<TSchema>, key: keyof TSchema & string) => QueryStateApiRegistry<TSchema, TKey>[TUri],
-): DefinedQueryStateApi<TUri>
 
-function defineQueryModule<TSchema, TQueryStatesApi, TQueryStateApi>(definition: {
-  queryStates: QueryStatesModule<TSchema, TQueryStatesApi>
-  queryState: QueryStateModule<QueryStateSchema, TQueryStateApi>
-}): DefinedQueryModule<TSchema, TQueryStatesApi, TQueryStateApi>
-function defineQueryModule<TSchema, TQueryStatesApi, TUri>(definition: {
-  queryStates: QueryStatesModule<TSchema, TQueryStatesApi>
-  queryState: DefinedQueryStateApi<TUri>
-}): DefinedQueryStatesModule<TSchema, TQueryStatesApi> & DefinedQueryStateApi<TUri>
-function defineQueryModule<TSchema, TQueryStatesApi>(definition: {
-  queryStates: QueryStatesModule<TSchema, TQueryStatesApi>
-}): DefinedQueryStatesModule<TSchema, TQueryStatesApi>
-function defineQueryModule<TQueryStateApi>(definition: {
-  queryState: QueryStateModule<QueryStateSchema, TQueryStateApi>
-}): DefinedQueryStateModule<TQueryStateApi>
-function defineQueryModule<TUri>(definition: {
-  queryState: DefinedQueryStateApi<TUri>
-}): DefinedQueryStateApi<TUri>
-
-interface QueryCore<TSchema> {
-  schema: TSchema
-  state: QueryStateReads<TSchema>          // { selected, values }
-  defaults: QueryDefaultsBus<TSchema>      // { resolved, register }
-  options: ResolvedQueryStateOptions       // resolved history/scroll/throttleMs/clearOnDefault
-  pipeline: QueryPipelineBus
-  hooks: QueryHookBus
-  query: {
-    current: () => ParsedQuery             // the current committed query
-    set: (key, value, options?: NavigateOptions) => void // optimistically set one param
-  }
-}
+function defineQueryModule(definition: { queryStates?, queryState? }): …
+function defineQueryStateApi(uri, project): DefinedQueryStateApi<Uri>
 ```
 
-### State, defaults, and options <Badge type="info" text="@vuqs/core" />
-
-The facets are exported from `@vuqs/core`, so a module can name them.
+### The core <Badge type="info" text="@vuqs/core" />
 
 ```ts
-interface QueryStateReads<TSchema> {
-  selected: ComputedRef<QueryStateValues<TSchema>> // selections + overlay, `read` applied, no defaults
-  values: ComputedRef<QueryStateValues<TSchema>>   // selection over the resolved defaults
-}
-
-interface QueryDefaultsBus<TSchema> {
-  resolved: ComputedRef<QueryStateValues<TSchema>> // merged layers, `read` applied
-  register: (source: MaybeRefOrGetter<QueryStateValues<TSchema>>) => () => void
-}
-
-interface ResolvedQueryStateOptions {
-  history?: 'replace' | 'push'
-  scroll?: boolean
-  throttleMs: number
-  clearOnDefault: boolean
+interface QueryCore<TSchema> {
+  schema: TSchema
+  state: { selected: ComputedRef<…>, values: ComputedRef<…> }
+  defaults: { resolved: ComputedRef<…>, register: (source) => () => void }
+  options: ResolvedQueryStateOptions // resolved history/scroll/throttleMs/clearOnDefault
+  pipeline: QueryPipelineBus // tap, run
+  hooks: QueryHookBus // on, emit
+  query: {
+    current: () => ParsedQuery
+    set: (key, value, options?: NavigateOptions) => void
+  }
 }
 ```
 
 ### Hooks
 
 `QueryHooks` is empty in the core; a module declares its event via
-`declare module '@vuqs/core'`. Handlers run synchronously, in an unspecified order, and
-must be commutative; a throwing handler is isolated and logged.
+`declare module '@vuqs/core'`. Handlers run synchronously, in an unspecified order,
+and must be commutative; a throwing handler is isolated and logged.
 
 ```ts
 interface QueryHooks {} // augment to add typed events, e.g. 'context:change'
@@ -412,22 +351,16 @@ Stages are core-owned and closed; transforms must be pure.
 
 ```ts
 interface QueryPipeline {
-  read: (values: QueryValues) => QueryValues          // values the app reads
-  write: (values: QueryValues) => QueryValues          // values written to the URL
-  navigate: (query: ParsedQueryRaw) => ParsedQueryRaw  // serialized query at the navigation boundary
+  read: (values: QueryValues) => QueryValues
+  write: (values: QueryValues) => QueryValues
+  navigate: (query: ParsedQueryRaw) => ParsedQueryRaw
 }
 type QueryPipelineStage = keyof QueryPipeline // 'read' | 'write' | 'navigate'
-type Enforce = 'pre' | 'default' | 'post'
 
 interface QueryPipelineBus {
-  tap: <S extends QueryPipelineStage>(
-    stage: S | S[],
-    transform: QueryPipeline[S],
-    options?: { enforce?: Enforce },
-  ) => () => void
+  tap: <S extends QueryPipelineStage>(stage: S | S[], transform: QueryPipeline[S], options?: { enforce?: 'pre' | 'default' | 'post' }) => () => void
   run: <S extends QueryPipelineStage>(stage: S, value: Parameters<QueryPipeline[S]>[0]) => ReturnType<QueryPipeline[S]>
 }
-type QueryValues = Record<string, unknown>
 ```
 
 ### `@vuqs/core/shared` helpers <Badge type="tip" text="@vuqs/core/shared" />
@@ -439,12 +372,13 @@ function definedOnly<T>(values: T): T
 function toReadonlyState<T>(source: ComputedRef<T>): Readonly<T>
 ```
 
-- `pickBy` / `omitBy` — build a pipeline transform that keeps / drops matching keys.
-- `definedOnly` — copy without `undefined`-valued keys (a cleared param reads as absent).
-- `toReadonlyState` — expose a `ComputedRef<record>` as a readonly reactive object.
+- `pickBy` / `omitBy`: build a pipeline transform that keeps / drops matching keys.
+- `definedOnly`: copy without `undefined`-valued keys (a cleared param reads as absent).
+- `toReadonlyState`: expose a `ComputedRef<record>` as a readonly reactive object.
 
 ## Nuxt
 
-Auto-imports cover the published modules. A module you write lives in your app, so
-import it normally — or register it under Nuxt's `imports` if you want it
-auto-imported alongside the [`@vuqs/core/modules` group](/nuxt/introduction#auto-imports).
+Auto-imports cover the published modules and `defineQueryModule`. A module you
+write lives in your app, so import it normally, or register it under Nuxt's
+`imports` if you want it auto-imported alongside the
+[`@vuqs/core/modules` group](/nuxt/auto-imports).

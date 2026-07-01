@@ -1,11 +1,11 @@
 # Testing
 
-You can unit-test components and composables that use `useQueryState` /
+You can unit-test components and composables that use `useQueryState` and
 `useQueryStates` without mocking a router. vuqs ships a **testing adapter** for
-**setting up** initial query state and **asserting** on URL changes, plus
-**codec helpers** for verifying your own [custom codecs](/guide/custom-codecs).
+setting up initial query state and asserting on URL changes, plus **codec
+helpers** for verifying your own [custom codecs](/guide/codecs/custom).
 
-Both live at dedicated subpaths so they're never pulled into your app bundle:
+Both live at dedicated subpaths, so they are never pulled into your app bundle:
 
 ```ts
 import { createTestingAdapter, withVuqsTestingAdapter } from '@vuqs/core/adapters/testing'
@@ -14,16 +14,17 @@ import { isCodecBijective } from '@vuqs/core/testing'
 
 ## Testing composables
 
-A composable reads `query` and `navigate` from the [adapter](/guide/adapters) in
-scope. `createTestingAdapter` gives you one backed by an in-memory ref: pass the
-initial query, install it on a throwaway app, and run the composable in that
-app's [injection context](/api/composables#installqueryadapter).
+A composable reads `query` and `navigate` from the
+[adapter](/guide/getting-started/adapters) in scope. `createTestingAdapter` gives
+you one backed by an in-memory ref: pass the initial query, install it on a
+throwaway app, and run the composable in that app's
+[injection context](/api/composables#installqueryadapter).
 
 ```ts
-import { describe, expect, it } from 'vitest'
-import { createApp } from 'vue'
 import { codecs, installQueryAdapter, useQueryState } from '@vuqs/core'
 import { createTestingAdapter } from '@vuqs/core/adapters/testing'
+import { describe, expect, it } from 'vitest'
+import { createApp } from 'vue'
 
 it('reads the initial value', () => {
   const adapter = createTestingAdapter({ searchParams: '?count=42' })
@@ -39,9 +40,9 @@ it('reads the initial value', () => {
 
 ### Asserting on URL writes
 
-Wire `onUrlUpdate` to a spy to assert what gets written. It fires once per
-flushed navigation, with the next query and the resolved
-[navigation options](/guide/navigation-options):
+Wire `onUrlUpdate` to a spy to assert what gets written. It fires once per flushed
+navigation, with the next query and the resolved
+[navigation options](/guide/essentials/navigation-options):
 
 ```ts
 import { vi } from 'vitest'
@@ -65,14 +66,15 @@ it('writes to the URL', async () => {
 ```
 
 ::: tip Writes are coalesced
-Like in a real app, writes within a tick are [coalesced](/guide/concepts) into a
-single navigation. `await` a microtask (or `vi.advanceTimersByTimeAsync` when
-using [`throttleMs`](/guide/navigation-options#throttlems)) before asserting.
+Like in a real app, writes within a tick are
+[coalesced](/guide/essentials/concepts) into a single navigation. `await` a
+microtask (or `vi.advanceTimersByTimeAsync` when using
+[`throttleMs`](/guide/essentials/navigation-options#throttlems)) before asserting.
 :::
 
 ### Memory: frozen vs. real
 
-By default the adapter is **immutable** — its `query` stays frozen at the initial
+By default the adapter is **immutable**: its `query` stays frozen at the initial
 `searchParams`, so each write is independent and a test stays focused on one unit
 of behavior. The composable still sees its own write optimistically, but
 `adapter.query.value` never changes.
@@ -99,8 +101,8 @@ The update queue that coalesces writes is a module-level singleton, so reset it
 between tests to keep one test's pending writes from leaking into the next:
 
 ```ts
-import { beforeEach } from 'vitest'
 import { resetQueues } from '@vuqs/core/adapters/testing'
+import { beforeEach } from 'vitest'
 
 beforeEach(() => {
   resetQueues()
@@ -114,8 +116,8 @@ into `@vue/test-utils`' `global.plugins`:
 
 ```ts
 import { mount } from '@vue/test-utils'
-import { vi } from 'vitest'
 import { withVuqsTestingAdapter } from '@vuqs/core/adapters/testing'
+import { vi } from 'vitest'
 import CounterButton from './CounterButton.vue'
 
 it('increments the count when clicked', async () => {
@@ -137,14 +139,15 @@ it('increments the count when clicked', async () => {
 })
 ```
 
-When you also need the adapter reference (to read `adapter.query.value`), build
-it with `createTestingAdapter` and install it yourself instead.
+When you also need the adapter reference (to read `adapter.query.value`), build it
+with `createTestingAdapter` and install it yourself instead.
 
 ## Initial query shapes
 
 `searchParams` accepts a query string, a `URLSearchParams`, or a query object.
-Dot-notation keys nest the same way the core resolves [paths](/guide/nested-keys),
-so all of these set up `{ filters: { sort: 'name' } }`:
+Dot-notation keys nest the same way the core resolves
+[paths](/guide/going-further/defining-params#nested-keys), so all of these set up
+`{ filters: { sort: 'name' } }`:
 
 ```ts
 createTestingAdapter({ searchParams: '?filters.sort=name' })
@@ -154,15 +157,15 @@ createTestingAdapter({ searchParams: { filters: { sort: 'name' } } })
 
 This matches what a router adapter delivers, so a composable bound to the
 `filters.sort` path reads its initial value in tests exactly as it would in the
-app. Repeated keys collapse into arrays — `'?tags=a&tags=b'` reads as
+app. Repeated keys collapse into arrays: `'?tags=a&tags=b'` reads as
 `{ tags: ['a', 'b'] }`.
 
 ## Testing custom codecs
 
-A [custom codec](/guide/custom-codecs) must be **bijective**: `parse` and
-`serialize` round-trip in both directions. `@vuqs/core/testing` turns that contract into
-assertions. All three return `true` on success and **throw** on failure, with a
-message that pinpoints which side broke:
+A [custom codec](/guide/codecs/custom) must be **bijective**: `parse` and
+`serialize` round-trip in both directions. `@vuqs/core/testing` turns that contract
+into assertions. All three return `true` on success and **throw** on failure, with
+a message that pinpoints which side broke:
 
 ```ts
 import { isCodecBijective, testParseThenSerialize, testSerializeThenParse } from '@vuqs/core/testing'
@@ -181,13 +184,13 @@ it('is bijective', () => {
 ```
 
 `isCodecBijective(codec, serialized, input)` checks everything at once:
-`serialize(input)` equals `serialized`, `parse(serialized)` equals `input` (by
-the codec's `eq`), and both round-trip directions hold. The codec's `eq` is used
-for value comparison, so date and array codecs compare correctly.
+`serialize(input)` equals `serialized`, `parse(serialized)` equals `input` (by the
+codec's `eq`), and both round-trip directions hold. The codec's `eq` is used for
+value comparison, so date and array codecs compare correctly.
 
 ::: warning Use canonical serialized values
-The serialized side must be the codec's **canonical** output. `testParseThenSerialize`
-re-serializes the parsed value and compares, so a non-canonical input like `'007'`
-(which an integer codec parses to `7` and re-serializes to `'7'`) is reported as a
-mismatch by design.
+The serialized side must be the codec's **canonical** output.
+`testParseThenSerialize` re-serializes the parsed value and compares, so a
+non-canonical input like `'007'` (which an integer codec parses to `7` and
+re-serializes to `'7'`) is reported as a mismatch by design.
 :::

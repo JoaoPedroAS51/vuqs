@@ -1,14 +1,12 @@
 # API: serializer & pure functions
 
-Framework-free building blocks — no Vue, no router. Use them to build URLs, run on
-the server, or compose your own behavior. See the [serializer guide](/guide/serializer)
-for the narrative.
+Framework-free building blocks: no Vue, no router. Use them to build URLs or
+compose your own behavior. See [Building URLs](/guide/going-further/serializer) for
+the narrative.
 
 ## createSerializer <Badge type="info" text="@vuqs/core" />
 
 Builds a reusable, schema-bound function that turns values into a query.
-
-### Signature
 
 ```ts
 function createSerializer<TSchema>(
@@ -17,38 +15,26 @@ function createSerializer<TSchema>(
 ): Serializer<TSchema, ParsedQuery, ParsedQueryRaw | string>
 ```
 
-### Parameters
+**Parameters**
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `schema` | `TSchema` | The params to serialize, keyed by logical name. |
-| `options` | `CreateSerializerOptions` | Output and base-format opt-ins (see below). |
+- `schema: TSchema`
+  - The params to serialize, keyed by logical name.
+- `options?: CreateSerializerOptions`
+  - `clearOnDefault?: boolean`: default `true`. Drop a value when it equals its codec default.
+  - `stringify?: (query: ParsedQueryRaw) => string`: enables string output. Provide it to return a query string instead of a query object.
+  - `parse?: (search: string) => ParsedQuery`: enables a string base. Provide it to accept a raw query string as the base argument.
+  - `stringify` and `parse` are symmetric opt-ins.
 
-```ts
-interface CreateSerializerOptions {
-  clearOnDefault?: boolean                      // default true
-  stringify?: (query: ParsedQueryRaw) => string // enables string output
-  parse?: (search: string) => ParsedQuery       // enables a string base
-}
-```
+**Returns**
 
-`stringify` and `parse` are symmetric opt-ins: `stringify` makes the output a
-string; `parse` lets the base be a string too.
+- `serialize: Serializer`
+  - Callable two ways: `serialize(values)` builds a fresh query from `values`, and
+    `serialize(base, values)` patches `values` over a `base` query.
+  - Write semantics match the reactive writers: `null` clears, `undefined`/absent
+    skips, a value sets. Unmanaged base params are always preserved.
+  - **Throws** if a string base is passed without a `parse` option.
 
-### Returns
-
-A `Serializer`, callable two ways:
-
-```ts
-serialize(values)        // fresh query from values
-serialize(base, values)  // patch values over a base
-```
-
-Write semantics match the reactive writers — `null` clears, `undefined`/absent
-skips, a value sets; unmanaged base params are always preserved. **Throws** if a
-string base is passed without a `parse` option.
-
-### Example
+**Example**
 
 ```ts
 import { createSerializer } from '@vuqs/core'
@@ -68,8 +54,8 @@ toUrl({ q: 'lease', page: 2 })             // '?q=lease&page=2'
 ## Pure functions <Badge type="info" text="@vuqs/core" />
 
 Framework-free helpers over a schema and a parsed query. `createSerializer` and
-the engine are built on these; reach for them for custom server-side or
-link-building logic.
+the engine are built on these; reach for them for custom link-building or
+query-reading logic.
 
 ### parseQueryStates
 
@@ -87,7 +73,7 @@ function serializeQueryStates<TSchema>(schema: TSchema, values: QueryStateValues
 ```
 
 Serializes a value map into a compacted nested query object. Pass selected values
-only — a param equal to its default should be omitted first (see `dropDefaults`).
+only: a param equal to its default should be omitted first (see `dropDefaults`).
 
 ### buildQuery
 
@@ -136,7 +122,7 @@ the composables.
 ## Path helpers <Badge type="info" text="@vuqs/core" />
 
 Dot-path read/write/delete over a parsed query, plus the normalizers used when
-writing [custom codecs](/guide/custom-codecs).
+writing [custom codecs](/guide/codecs/custom).
 
 ```ts
 function getPath(query: ParsedQuery, path: string): ParsedQueryValue
@@ -159,14 +145,24 @@ The deep structural comparison used as the default codec `eq`.
 
 ## createQueryStateEngine <Badge type="info" text="@vuqs/core" />
 
-The reactive core behind `useQueryStates` — the optimistic overlay,
+The reactive core behind `useQueryStates`: the optimistic overlay,
 reconciliation, write coalescing, and navigation.
-
-### Signature
 
 ```ts
 function createQueryStateEngine<TSchema>(options: QueryStateEngineOptions<TSchema>): QueryStateEngine<TSchema>
 ```
+
+**Parameters**
+
+- `options: QueryStateEngineOptions<TSchema>`
+  - The schema, resolved options, and injectable `parse`/`build` hooks. See
+    [`QueryStateEngineOptions`](/api/types#engine-types).
+
+**Returns**
+
+- `engine: QueryStateEngine<TSchema>`
+  - The reactive state map and scheduled `setValue`, plus the facets a
+    [module](/modules/authoring#the-core) receives.
 
 Takes injectable `parse`/`build` hooks so a caller can make reads/writes
 context-aware. Most apps never call this directly; it's exposed for building

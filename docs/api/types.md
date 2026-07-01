@@ -16,7 +16,7 @@ interface Codec<T> {
 
 interface CodecWithDefault<T> extends Codec<T> {
   readonly defaultValue: T
-  parse: (raw: ParsedQueryValue) => T // never undefined
+  // parse stays raw (T | undefined); the param resolves the default
 }
 
 interface CodecInput<T> {
@@ -42,6 +42,14 @@ interface DefinedQueryParamWithDefault<T> extends DefinedQueryParam<T> {
   readonly defaultValue: T
 }
 
+// The chainable builders `queryParam` returns; each is a DefinedQueryParam.
+type QueryParamBuilder<T> // .withDefault/.withEquality/.keepOnDefault/.transform
+type QueryParamBuilderWithDefault<T>
+type QueryParamObjectBuilder<T> // adds .withDefaultsWhenPresent
+type QueryParamObjectBuilderWithDefault<T>
+type PrefixedQueryParamBuilder<TParam>
+interface QueryParamTransform<TInput, TOutput> { read; write; eq? }
+
 type QueryStateSchema = Record<string, DefinedQueryParam<any>>
 type QueryStateSchemaInput = Record<string, Codec<any> | DefinedQueryParam<any>>
 
@@ -52,7 +60,7 @@ type QueryStateWriteValues<TSchema> = Partial<Record<keyof TSchema, unknown | nu
 ```
 
 `QueryStateWriteValues` is the three-state write map: omit/`undefined` skips,
-`null` clears, a value sets. See [null vs undefined](/guide/null-vs-undefined).
+`null` clears, a value sets. See [null vs undefined](/guide/going-further/null-vs-undefined).
 
 ## Composable types <Badge type="info" text="@vuqs/core" />
 
@@ -75,7 +83,7 @@ interface UseQueryStatesReturn<TSchema> extends QueryStatesActions<TSchema> { va
 
 type ToQueryRefs<T> = { [K in keyof T]: unknown } // one ref per field; QueryStateRef for values, ComputedRef for read-only maps
 
-// Module composition — details in /modules/authoring
+// Module composition; details in /modules/authoring
 type QueryComposable<TSchema, TApi> = TApi & {
   use: <TAdded>(module: QueryStatesModule<TSchema, TAdded>) => QueryComposable<TSchema, TApi & TAdded>
 }
@@ -209,6 +217,7 @@ Module-specific types live with each module: [`RuntimeDefaultsStatesApi`](/modul
 [`ContextStatesApi`](/modules/context#api),
 [`ContextStateApi`](/modules/context#api), plus the
 [authoring types](/modules/authoring#authoring-types) (`defineQueryModule`,
-`QueryCore`, `QueryStatesModule`, `QueryStateModule`, `DefinedQueryModule`,
-`DefinedQueryStateModule`, `DefinedQueryStatesModule`, `QueryHooks`, `QueryPipeline`,
-and the `@vuqs/core/shared` helpers).
+`defineQueryStateApi`, `QueryCore`, `QueryStatesModule`, `QueryStateModule`,
+`DefinedQueryModule`, `DefinedQueryStateModule`, `DefinedQueryStatesModule`, the
+registry types `QueryStateApiRegistry`/`QueryStateApiUri`/`ApplyQueryStateModuleApi`/`DefinedQueryStateApi`,
+`QueryHooks`, `QueryPipeline`, and the `@vuqs/core/shared` helpers).

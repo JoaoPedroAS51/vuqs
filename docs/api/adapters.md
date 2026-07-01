@@ -1,13 +1,11 @@
 # API: adapters
 
 The adapter is the boundary where vuqs reads and writes the URL. See the
-[Adapters guide](/guide/adapters) for the full picture.
+[Adapters guide](/guide/getting-started/adapters) for the full picture.
 
 ## QueryAdapter <Badge type="info" text="@vuqs/core" />
 
 The contract every adapter satisfies.
-
-### Properties
 
 ```ts
 interface QueryAdapter {
@@ -17,62 +15,59 @@ interface QueryAdapter {
 }
 ```
 
-| Property | Type | Description |
-| --- | --- | --- |
-| `query` | `MaybeRefOrGetter<ParsedQuery>` | The current parsed query, as a ref, getter, or plain value. |
-| `navigate` | `(query, options) => void \| Promise<void>` | Stringify the next query and apply it (push or replace per `options.history`). May be sync or async. |
-| `defaultOptions` | `QueryAdapterDefaultOptions` | App-wide defaults at the bottom of the [precedence chain](/guide/navigation-options#precedence). |
+**Properties**
+
+- `query: MaybeRefOrGetter<ParsedQuery>`
+  - The current parsed query, as a ref, getter, or plain value.
+- `navigate: (query, options) => void | Promise<void>`
+  - Stringify the next query and apply it, pushing or replacing per
+    `options.history`. May be sync or async.
+- `defaultOptions?: QueryAdapterDefaultOptions`
+  - App-wide defaults at the bottom of the
+    [precedence chain](/guide/essentials/navigation-options#precedence).
 
 ## QueryAdapterDefaultOptions <Badge type="info" text="@vuqs/core" />
 
-Defaults an adapter applies to every write.
+Defaults an adapter applies to every write. Extends `NavigateOptions`.
 
-### Properties
+**Properties**
 
-```ts
-interface QueryAdapterDefaultOptions extends NavigateOptions {
-  history?: 'replace' | 'push'
-  scroll?: boolean
-  throttleMs?: number
-  clearOnDefault?: boolean
-}
-```
+- `history?: 'replace' | 'push'`
+  - Push a new history entry, or replace the current one.
+- `scroll?: boolean`
+  - Whether the navigation scrolls, forwarded to the adapter.
+- `throttleMs?: number`
+  - Coalesce writes within this window into one navigation.
+- `clearOnDefault?: boolean`
+  - Drop a value from the URL when it equals its resolved default.
 
-See [Navigation options](/guide/navigation-options#precedence) for how these
-compose with per-instance and per-call options.
+See [Navigation & options](/guide/essentials/navigation-options#precedence) for how
+these compose with per-instance and per-call options.
 
 ## createVueRouterAdapter <Badge type="tip" text="@vuqs/core/adapters/vue-router" />
 
-Builds a [`QueryAdapter`](#queryadapter) backed by `vue-router`. `vue-router` is
-an **optional** peer dependency — pulled in only if you import this subpath.
-
-### Signature
+Builds a [`QueryAdapter`](#queryadapter) backed by `vue-router`. `vue-router` is an
+**optional** peer dependency, pulled in only if you import this subpath.
 
 ```ts
 function createVueRouterAdapter(options?: VueRouterAdapterOptions): QueryAdapter
-
-interface VueRouterAdapterOptions {
-  router?: Router                          // defaults to useRouter()
-  defaultOptions?: QueryAdapterDefaultOptions
-}
 ```
 
-### Parameters
+**Parameters**
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `options.router` | `Router` | The router instance. Defaults to `useRouter()`, so call inside `setup` unless passed. |
-| `options.defaultOptions` | `QueryAdapterDefaultOptions` | Adapter-level navigation defaults. |
+- `options?: VueRouterAdapterOptions`
+  - `router?: Router`: the router instance. Defaults to `useRouter()`, so call inside
+    `setup` unless you pass it (required in a plugin or `main.ts`).
+  - `defaultOptions?: QueryAdapterDefaultOptions`: adapter-level navigation defaults.
 
-### Returns
+**Returns**
 
-A `QueryAdapter` — returned **without** providing it. Pass it to
-[`installQueryAdapter`](/api/composables#installqueryadapter) or
-[`provideQueryAdapter`](/api/composables#providequeryadapter). It reads
-`router.currentRoute.value.query` and writes with `router.replace`, switching to
-`router.push` when `history` is `'push'`.
-
-### Example
+- `adapter: QueryAdapter`
+  - Returned **without** being provided. Pass it to
+    [`installQueryAdapter`](/api/composables#installqueryadapter) or
+    [`provideQueryAdapter`](/api/composables#providequeryadapter). It reads
+    `router.currentRoute.value.query` and writes with `router.replace`, switching to
+    `router.push` when `history` is `'push'`.
 
 ```ts
 import { createVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
@@ -82,7 +77,7 @@ const adapter = createVueRouterAdapter({ defaultOptions: { history: 'replace' } 
 
 ::: tip Nested keys
 Dotted keys (`filters.sort`) and array values require `vue-router` configured with
-`qs` for `parseQuery`/`stringifyQuery`. See [Nested keys](/guide/nested-keys).
+`qs` for `parseQuery`/`stringifyQuery`. See [Nested keys](/guide/going-further/defining-params#nested-keys).
 :::
 
 ::: tip `scroll`
@@ -94,22 +89,20 @@ option is ignored by this adapter.
 
 `provideQueryAdapter(createVueRouterAdapter(options))` in one call.
 
-### Signature
-
 ```ts
 function provideVueRouterAdapter(options?: VueRouterAdapterOptions): QueryAdapter
 ```
 
-### Parameters
+**Parameters**
 
-Same as [`createVueRouterAdapter`](#createvuerouteradapter).
+- `options?: VueRouterAdapterOptions`
+  - Same as [`createVueRouterAdapter`](#createvuerouteradapter).
 
-### Returns
+**Returns**
 
-The created `QueryAdapter`, already provided to descendants. Works for both Vue
-SPAs and Nuxt (Nuxt's router *is* `vue-router`).
-
-### Example
+- `adapter: QueryAdapter`
+  - The created adapter, already provided to descendant components. Works for both
+    Vue SPAs and Nuxt (Nuxt's router *is* `vue-router`).
 
 ```ts
 import { provideVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
@@ -120,5 +113,5 @@ provideVueRouterAdapter({ defaultOptions: { history: 'replace' } })
 ## Manual adapters
 
 Any object satisfying [`QueryAdapter`](#queryadapter) works. See
-[Manual adapter](/guide/adapters#manual-adapter) for framework-free and
-custom-provider recipes.
+[Bring your own adapter](/guide/getting-started/adapters#bring-your-own-adapter) for
+framework-free and custom-provider recipes.

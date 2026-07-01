@@ -3,15 +3,15 @@ layout: home
 
 hero:
   name: vuqs
-  text: Typed URL state, without the boilerplate
-  tagline: Codecs bind query params to typed, reactive refs in Vue 3 — with defaults and batched writes.
+  text: Type-safe query state for Vue.
+  tagline: The URL is the single source of truth for view state. Typed, reactive, and bound to your router.
   actions:
     - theme: brand
       text: Get started
-      link: /guide/getting-started
+      link: /guide/getting-started/installation
     - theme: alt
       text: Why vuqs?
-      link: /guide/introduction
+      link: /guide/going-further/about
     - theme: alt
       text: View on GitHub
       link: https://github.com/JoaoPedroAS51/vuqs
@@ -19,49 +19,57 @@ hero:
 features:
   - icon: 🔗
     title: The URL is your state
-    details: Bind search, sort, pagination, and filters to query keys and read them back as typed values — no separate ref to keep in sync.
+    details: Bind query params to typed, reactive refs. One source of truth for view state, with no separate ref to keep in sync.
   - icon: 🧬
     title: Codecs, not strings
-    details: A codec pairs parse with serialize as one unit, so a value and its URL form never drift. Strings, numbers, booleans, dates, arrays, enums, and JSON ship built-in.
+    details: A codec pairs parse with serialize as one unit, so a value and its URL form never drift. Rich built-ins cover the common types, or build your own.
   - icon: 🪝
     title: Reactive by design
-    details: useQueryState returns a writable ref; useQueryStates returns a reactive value map. v-model just works, and writes coalesce into a single navigation.
+    details: useQueryState returns a writable ref; useQueryStates returns a reactive map. v-model works, and concurrent writes coalesce into a single navigation.
   - icon: 🧭
-    title: Router-agnostic core
-    details: The core knows nothing about your router. A tiny adapter plugs in vue-router or Nuxt — or anything that can read and write a query.
-  - icon: 🗂️
-    title: Modules when you need them
-    details: "Compose opt-in modules with .use() — add runtime defaults, context-aware reset, and more without bloating the core. Pull in only what you need."
+    title: Router-agnostic
+    details: The core knows nothing about your router. A tiny adapter plugs in vue-router, Nuxt, or anything that reads and writes a query.
   - icon: 🧩
-    title: Tiny and tree-shakeable
-    details: No runtime dependencies, side-effect free, and built for Vue 3.5+. Pay only for the codecs and helpers you import.
+    title: Composable and extensible
+    details: Opt-in modules layer behavior onto your state with .use(). Tree-shakeable, so you pay only for what you import.
+  - icon: 🧱
+    title: Build URLs, don't navigate
+    details: Turn values into a query string for links and redirects with the same schema, without binding to the router.
+  - icon: 🧪
+    title: Testable
+    details: First-class testing utilities verify URL writes and codec round-trips without mounting a router.
+  - icon: 🪶
+    title: Tiny and typed
+    details: Zero runtime dependencies, side-effect free, built for Vue, with full type inference.
 ---
 
-## At a glance
+## Your state already lives in the URL
+
+Search, filters, sort, and pagination belong in the query string, where a shared
+link restores the exact view. vuqs makes that state typed and reactive: you read
+values back as the types you declared, and write them like any ref.
 
 ```vue
 <script setup lang="ts">
 import { codecs, useQueryState } from '@vuqs/core'
 
-// ?q=laptop&page=2  ⇄  reactive, typed refs
-const q = useQueryState('q', codecs.string.withDefault(''))
+const search = useQueryState('q', codecs.string.withDefault(''))
 const page = useQueryState('page', codecs.integer.withDefault(1))
 </script>
 
 <template>
-  <input v-model="q" placeholder="Search…">
-  <button @click="page = page + 1">Next page</button>
-  <p>Searching “{{ q }}” — page {{ page }}</p>
+  <input v-model="search" placeholder="Search…">
+  <button @click="page++">Next page</button>
+  <p>Searching “{{ search }}” on page {{ page }}</p>
 </template>
 ```
 
-Each param is a typed, writable ref bound to a query key: assigning it writes the
-URL, and the URL writes it back.
+Assigning a param writes the URL; the URL writes it back.
 
 <div class="vp-doc" style="margin-top: 2rem">
 
 > [!TIP]
-> New here? Start with **[Getting started](/guide/getting-started)** for a five-minute
-> setup, then skim **[Core concepts](/guide/concepts)** for the mental model.
+> New here? Start with **[Installation](/guide/getting-started/installation)**, then
+> read **[Concepts](/guide/essentials/concepts)** for the mental model.
 
 </div>

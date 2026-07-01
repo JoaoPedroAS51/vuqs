@@ -1,104 +1,114 @@
 # vuqs
 
-**Typed URL state for Vue 3 — without the boilerplate.**
+> Type-safe query state for Vue.
 
-[![npm version](https://img.shields.io/npm/v/vuqs.svg)](https://www.npmjs.com/package/vuqs)
+[![npm version](https://img.shields.io/npm/v/@vuqs/core.svg)](https://www.npmjs.com/package/@vuqs/core)
 [![CI](https://img.shields.io/github/actions/workflow/status/JoaoPedroAS51/vuqs/ci.yml?branch=main&label=CI)](https://github.com/JoaoPedroAS51/vuqs/actions/workflows/ci.yml)
-[![bundle size](https://img.shields.io/bundlejs/size/vuqs?label=bundle%20%28gzip%29)](https://bundlejs.com/?q=vuqs)
+[![bundle size](https://img.shields.io/bundlejs/size/@vuqs/core?label=bundle%20%28gzip%29)](https://bundlejs.com/?q=@vuqs/core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-Keep search, filters, sort, and pagination in the URL with full type safety. The
-URL becomes the single source of truth for view state — typed, reactive, and
-bound to your router.
-
-```bash
-pnpm add @vuqs/core
-```
-
-## Quick start
-
-Provide an adapter once, near the root of your app:
-
-```vue
-<!-- App.vue -->
-<script setup lang="ts">
-import { provideVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
-
-provideVueRouterAdapter()
-</script>
-```
-
-Then bind state to the URL anywhere below it:
+Keep search, filters, sort, and pagination in the URL, with full type safety.
+vuqs makes the query string a typed, reactive part of your app: the link your
+user shares restores the exact view they were looking at, with no separate ref to
+keep in sync.
 
 ```vue
 <script setup lang="ts">
 import { codecs, useQueryState } from '@vuqs/core'
 
-const q = useQueryState('q', codecs.string.withDefault(''))
+const search = useQueryState('q', codecs.string.withDefault(''))
 const page = useQueryState('page', codecs.integer.withDefault(1))
 </script>
 
 <template>
-  <input v-model="q" placeholder="Search…">
+  <input v-model="search" placeholder="Search…">
   <button @click="page++">Next page</button>
-  <p>Searching “{{ q }}” — page {{ page }}</p>
+  <p>Searching “{{ search }}” on page {{ page }}</p>
 </template>
 ```
 
-`q` and `page` are writable refs bound to the `q` and `page` query keys: assigning
-either writes the URL, and the URL writes it back.
+## Highlights
 
-Need a whole filter group? [`useQueryStates`](https://JoaoPedroAS51.github.io/vuqs/guide/use-query-states)
-binds many keys at once and coalesces multi-field writes into a single navigation.
-
-## Packages
-
-| Package | What it does |
-| --- | --- |
-| [`@vuqs/core`](https://JoaoPedroAS51.github.io/vuqs/guide/introduction) | The core — codecs, `useQueryState`/`useQueryStates`, adapters, serializer, and the [`@vuqs/core/modules`](https://JoaoPedroAS51.github.io/vuqs/modules/introduction) subpath. |
-| [`@vuqs/nuxt`](https://JoaoPedroAS51.github.io/vuqs/nuxt/introduction) | The Nuxt module — auto-imports and the vue-router adapter out of the box. |
-
-## Features
-
-- 🔗 **The URL is your state** — bind filters to query keys and read them back as typed values, with no separate ref to sync.
-- 🧬 **Codecs, not strings** — strings, numbers, booleans, dates, arrays, enums, JSON, or your own.
-- 🪝 **Reactive** — `useQueryState` returns a writable ref; `useQueryStates` a reactive map. `v-model` just works.
-- 🧭 **Router-agnostic** — a tiny adapter plugs in vue-router, Nuxt, or anything.
-- 🗂️ **Modules when you need them** — compose runtime defaults (`selected` / `defaults` / `effective`) and context-aware reset with `.use()`.
-- 🧩 **Tiny & tree-shakeable** — no runtime dependencies, built for Vue 3.5+.
+- 🔗 **The URL is your state.** Bind query params to typed, reactive refs.
+- 🧬 **Codecs, not strings.** `parse` and `serialize` travel as one unit, so a value and its URL form never drift.
+- 🪝 **Reactive by design.** `v-model` works, and concurrent writes coalesce into a single navigation.
+- 🧭 **Router-agnostic.** A tiny adapter plugs in vue-router, Nuxt, or anything that reads and writes a query.
+- 🧩 **Composable.** Opt-in modules layer behavior onto your state with `.use()`. Tree-shakeable.
+- 🪶 **Tiny and typed.** Zero runtime dependencies, side-effect free, built for Vue.
 
 ## Documentation
 
-📚 **[Full documentation →](https://JoaoPedroAS51.github.io/vuqs/)**
+📚 **[vuqs.dev](https://vuqs.dev)** has the full guide, module docs, and API reference.
 
-- [Getting started](https://JoaoPedroAS51.github.io/vuqs/guide/getting-started)
-- [Core concepts](https://JoaoPedroAS51.github.io/vuqs/guide/concepts)
-- [Codecs](https://JoaoPedroAS51.github.io/vuqs/guide/codecs)
-- [Modules](https://JoaoPedroAS51.github.io/vuqs/modules/introduction)
-- [API reference](https://JoaoPedroAS51.github.io/vuqs/api/)
+- [Getting started](https://vuqs.dev/guide/getting-started/installation)
+- [Concepts](https://vuqs.dev/guide/essentials/concepts)
+- [Codecs](https://vuqs.dev/guide/codecs/built-in)
+- [Modules](https://vuqs.dev/modules/)
+- [API reference](https://vuqs.dev/api/)
 
-## Requirements
+Using Nuxt? [`@vuqs/nuxt`](https://vuqs.dev/nuxt/getting-started) adds auto-imports
+and the vue-router adapter out of the box.
 
-- Vue 3.5+
-- `vue-router` 4 is an optional peer dependency (used only by the vue-router adapter)
-
-## Development
-
-This is a pnpm monorepo.
+## Install
 
 ```bash
-pnpm install
-pnpm build          # build all packages
-pnpm test           # run unit + type tests
-pnpm --filter @vuqs/playground dev   # interactive playground
-pnpm --filter @vuqs/docs dev         # docs site
+pnpm add @vuqs/core
+```
+
+<details><summary>npm / yarn / bun</summary>
+
+```bash
+npm install @vuqs/core
+yarn add @vuqs/core
+bun add @vuqs/core
+```
+
+</details>
+
+Requires Vue 3.5+ and Node 22+. ESM-only.
+
+## Usage
+
+Install an adapter on the app, after the router:
+
+```ts
+// main.ts
+import { installQueryAdapter } from '@vuqs/core'
+import { createVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
+import { createApp } from 'vue'
+import App from './App.vue'
+import { router } from './router'
+
+const app = createApp(App)
+
+app.use(router)
+installQueryAdapter(app, createVueRouterAdapter({ router }))
+
+app.mount('#app')
+```
+
+Bind a single param with `useQueryState`, or a group with `useQueryStates`:
+
+```ts
+import { codecs, useQueryStates } from '@vuqs/core'
+
+const { values } = useQueryStates({
+  q: codecs.string.withDefault(''),
+  page: codecs.integer.withDefault(1),
+})
+
+values.q = 'vue' // navigates
+values.page = 2 // coalesced into the same navigation
 ```
 
 ## Acknowledgements
 
-Inspired by [nuqs](https://nuqs.47ng.com/), the type-safe query state library for
-React. vuqs is a ground-up Vue implementation, adding its own runtime defaults and
-context-aware modules on top.
+Inspired by [nuqs](https://nuqs.dev), which brought type-safe URL state to React.
+vuqs takes the idea to Vue with its own architecture.
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## License
 

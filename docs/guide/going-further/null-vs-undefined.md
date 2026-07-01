@@ -5,8 +5,8 @@ worth stating plainly because it shows up in every write path.
 
 ## The one-line summary
 
-- **Reads are never `null`.** A param reads back `T` or `undefined` — never `null`.
-- **`null` is a write-only clear command,** and only in *batch* / *standalone*
+- **Reads are never `null`.** A param reads back `T` or `undefined`, never `null`.
+- **`null` is a write-only clear command,** and only in *batch* or *standalone*
   writes where a third "leave it alone" state is needed.
 
 ## Why two sentinels
@@ -19,7 +19,7 @@ A **batch** write needs to express three different intentions per param:
 | Clear this param | `null` |
 | Don't touch this param | omit it / `undefined` |
 
-If `undefined` meant *both* "clear" and "skip," you couldn't write "set `q`,
+If `undefined` meant *both* "clear" and "skip," you could not write "set `q`,
 clear `sort`, leave `page` alone" in a single object. So batch writes use `null`
 to clear and `undefined`/absent to skip:
 
@@ -28,22 +28,22 @@ setValues({ q: 'laptop', sort: null })
 //          set q ──┘      └── clear sort, page untouched
 ```
 
-This applies to [`setValues`](/guide/use-query-states#setvalues) and to the
-[serializer](/guide/serializer#write-semantics).
+This applies to [`setValues`](/guide/essentials/use-query-states#setvalues) and to
+the [serializer](/guide/going-further/serializer#write-semantics).
 
 ## Single params don't use null
 
-A **single** param has no "leave it alone" state — every write is *this* param. So
+A **single** param has no "leave it alone" state: every write is *this* param. So
 `useQueryState`'s ref clears via `undefined` or `.clear()`, and **does not** accept
 `null`:
 
 ```ts
 const color = useQueryState('color', codecs.literal(['red', 'blue'] as const))
 
-color.value = 'red'       // set
-color.value = undefined   // clear
-color.clear()             // clear (the explicit method)
-// color.value = null     // ✗ not allowed — there's no third state here
+color.value = 'red' // set
+color.value = undefined // clear
+color.clear() // clear (the explicit method)
+// color.value = null  // ✗ not allowed: there's no third state here
 ```
 
 This keeps `.value =` and `.set()` symmetric: both take a value or `undefined`,
@@ -51,8 +51,8 @@ never `null`.
 
 ## Reads always normalize away null
 
-A raw query value can be `null` (e.g. `?flag` with no `=`). Codecs normalize that
-to `undefined` on the way in, so your reads stay clean:
+A raw query value can be `null` (for example `?flag` with no `=`). Codecs
+normalize that to `undefined` on the way in, so your reads stay clean:
 
 ```ts
 const flag = useQueryState('flag', codecs.boolean)
@@ -61,33 +61,33 @@ const flag = useQueryState('flag', codecs.boolean)
 // ?flag=true → true
 ```
 
-You'll never see `null` come out of a read.
+You will never see `null` come out of a read.
 
 ## Why null survives where undefined doesn't
 
-There's a practical reason `null` is the clear command and not, say, key-presence
-(`'k' in obj`):
+There is a practical reason `null` is the clear command, rather than relying on a
+key's presence or absence:
 
 - **TypeScript erases** the difference between an explicitly-`undefined` key and an
   absent one at the type level.
-- **JSON round-trips drop `undefined` keys** entirely (relevant for SSR state
-  serialization, Pinia persistence, etc.).
+- **JSON round-trips drop `undefined` keys** entirely, which matters when state
+  crosses a JSON boundary, such as store persistence.
 
-`null` is type-distinct *and* survives a JSON round-trip, so a serialized
-"clear this param" instruction stays intact across the wire. That's why it earns
-its place as the write-side clear sentinel.
+`null` is type-distinct *and* survives a JSON round-trip, so a serialized "clear
+this param" instruction stays intact. That is why it earns its place as the
+write-side clear sentinel.
 
 ## Cheat sheet
 
 ```ts
 // Single param (useQueryState)
-ref.value = x          // set
-ref.value = undefined  // clear
-ref.clear()            // clear
+ref.value = x // set
+ref.value = undefined // clear
+ref.clear() // clear
 
 // Batch (setValues, serializer)
-setValues({ a: x })           // set a
-setValues({ a: null })        // clear a
+setValues({ a: x }) // set a
+setValues({ a: null }) // clear a
 setValues({ /* a absent */ }) // leave a untouched
-setValues({ a: undefined })   // leave a untouched (same as absent)
+setValues({ a: undefined }) // leave a untouched (same as absent)
 ```

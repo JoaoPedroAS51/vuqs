@@ -1,26 +1,49 @@
 # API: composables
 
-The reactive composables — bind query params to refs — plus the functions that
-wire up the [adapter](/api/adapters) they read and write through.
+The reactive composables (bind query params to refs) plus the functions that wire
+up the [adapter](/api/adapters) they read and write through.
 
 ## useQueryState <Badge type="info" text="@vuqs/core" />
 
 Binds a single query key to a writable ref.
 
-### Signature
-
 ```ts
-function useQueryState<T>(
-  path: string,
-  codec?: Codec<T>,
-  options?: UseQueryStatesOptions,
-): UseQueryStateReturn<T>
+const state = useQueryState(path, codec?, options?)
+const state = useQueryState(param, options?)
 ```
 
-### Overloads
+**Parameters**
 
+- `path: string`
+  - The query key to bind. Use a dot-path (`'filters.sort'`) for [nested keys](/guide/going-further/defining-params#nested-keys).
+  - Pass either `path` (with an optional `codec`) **or** a pre-built `param`.
+- `codec?: Codec<T>`
+  - How the value parses and serializes. Defaults to `codecs.string`.
+  - A codec built with `.withDefault(v)` narrows the ref to a non-nullable `T` and keeps the default out of the URL.
+- `param?: DefinedQueryParam<T>`
+  - A param from [`queryParam`](#queryparam), passed in place of `path` + `codec`.
+- `options?: UseQueryStatesOptions`
+  - Per-instance navigation and write behavior. See [`UseQueryStatesOptions`](#usequerystatesoptions).
+  - String shorthand only: pass `{ defaultValue: string }` for a plain string key. `defaultValue` is string-only; for other types pass `codecs.X.withDefault(...)`.
+
+**Returns**
+
+- `state: UseQueryStateReturn<T>`
+  - A writable computed ref (`QueryStateRef<T>`) with a `.use()` for modules. `T` is
+    non-nullable when the codec or param carries a default, otherwise `T | undefined`.
+  - `state.value: T`
+    - Read or write the value; `v-model` binds here. Assigning `undefined` clears a nullable param.
+  - `state.set(value, options?): void`
+    - Write with per-call [navigation options](/guide/essentials/navigation-options).
+  - `state.clear(options?): void`
+    - Remove the key from the URL, reverting to its default.
+  - `state.use(module): UseQueryStateReturn<…>`
+    - Compose a single-param [module](/modules/) onto the ref, merging its API and
+      widening the type. Returns the same ref object.
+
+::: details Type signature
 ```ts
-// With a codec (canonical)
+// With a codec
 function useQueryState<T>(path: string, codec: CodecWithDefault<T>, options?: UseQueryStatesOptions): UseQueryStateReturn<T>
 function useQueryState<T>(path: string, codec: Codec<T>, options?: UseQueryStatesOptions): UseQueryStateReturn<T | undefined>
 
@@ -28,105 +51,65 @@ function useQueryState<T>(path: string, codec: Codec<T>, options?: UseQueryState
 function useQueryState(path: string, options: StringOptions & { defaultValue: string }): UseQueryStateReturn<string>
 function useQueryState(path: string, options?: StringOptions): UseQueryStateReturn<string | undefined>
 
-// With a pre-built param definition
-function useQueryState<T>(definition: DefinedQueryParamWithDefault<T>, options?: UseQueryStatesOptions): UseQueryStateReturn<T>
-function useQueryState<T>(definition: DefinedQueryParam<T>, options?: UseQueryStatesOptions): UseQueryStateReturn<T | undefined>
+// With a pre-built param
+function useQueryState<T>(param: DefinedQueryParamWithDefault<T>, options?: UseQueryStatesOptions): UseQueryStateReturn<T>
+function useQueryState<T>(param: DefinedQueryParam<T>, options?: UseQueryStatesOptions): UseQueryStateReturn<T | undefined>
 ```
+`StringOptions` is `UseQueryStatesOptions` with `parse`/`serialize` forbidden, so a
+codec routes to the codec overloads.
+:::
 
-### Parameters
-
-| Name | Type | Description |
-| --- | --- | --- |
-| `path` | `string` | The query key. Use a dot-path (`'filters.sort'`) for [nested keys](/guide/nested-keys). |
-| `codec` | `Codec<T>` | How the value is parsed and serialized. Defaults to `codecs.string`. A `.withDefault()` codec narrows the ref to non-nullable. |
-| `definition` | `DefinedQueryParam<T>` | A pre-built param from [`queryParam`](#queryparam), passed in place of `path` + `codec`. |
-| `options` | `UseQueryStatesOptions` | Per-instance behavior. Optional when an [adapter](/api/adapters) is provided. |
-
-`StringOptions` is `UseQueryStatesOptions` with `parse`/`serialize` forbidden, so
-a codec routes to the codec overloads. `defaultValue` is **string-only** — for
-other types pass `codecs.X.withDefault(...)`.
-
-### Returns
-
-`UseQueryStateReturn<T>` — a writable ref augmented with methods:
-
-```ts
-interface QueryStateRef<T> extends WritableComputedRef<T> {
-  set: (value: T, options?: NavigateOptions) => void
-  clear: (options?: NavigateOptions) => void
-}
-
-type UseQueryStateReturn<T, TApi = object> = QueryStateRef<T> & TApi & {
-  use: <TStateApi>(
-    module: DefinedQueryStateModule<TStateApi>,
-  ) => UseQueryStateReturn<T, TApi & TStateApi>
-}
-```
-
-- `.value` — read/write; assigning `undefined` clears a nullable param.
-- `.set(value, options?)` — write with per-call [navigation options](/guide/navigation-options).
-- `.clear(options?)` — remove the key (revert to its default).
-- `.use(module)` — compose a single-compatible module onto the same ref object,
-  preserving Vue ref identity and widening the returned type.
-
-Call `.use()` synchronously during setup or another active Vue effect scope so
-module cleanup registered with `onScopeDispose` is tied to the caller's lifecycle.
-
-### Example
+**Example**
 
 ```ts
 import { codecs, useQueryState } from '@vuqs/core'
 
 const page = useQueryState('page', codecs.integer.withDefault(1))
 
-page.value++                    // ?page=2
+page.value++ // ?page=2
 page.set(1, { history: 'push' }) // push a history entry
-page.clear()                    // back to the default
+page.clear() // back to the default
 ```
 
 ::: warning `.set` / `.clear` aren't reachable in templates
 Vue auto-unwraps a top-level ref in templates, so call them from a function in
-`<script setup>`. See [the guide](/guide/use-query-state#using-it-in-templates).
+`<script setup>`. See [the guide](/guide/essentials/use-query-state#using-it-in-templates).
 :::
 
 ## useQueryStates <Badge type="info" text="@vuqs/core" />
 
-Binds a [schema](/guide/concepts#schema-a-map-of-params) of params to a reactive
-value map plus batch writers.
-
-### Signature
+Binds a [schema](/guide/essentials/concepts#schema-a-map-of-params) of params to a
+reactive value map plus batch writers.
 
 ```ts
-function useQueryStates<TSchema extends QueryStateSchema>(
-  schema: TSchema,
-  options?: UseQueryStatesOptions,
-): UseQueryStatesReturn<TSchema>
+const { values, setValues, clear } = useQueryStates(schema, options?)
 ```
 
-### Parameters
+**Parameters**
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `schema` | `TSchema` | A map of logical name → [param definition](#queryparam). |
-| `options` | `UseQueryStatesOptions` | Per-instance behavior. Optional when an adapter is provided. |
+- `schema: TSchema`
+  - A map of logical name to a **codec** (the map key becomes the query key) or a
+    param from [`queryParam`](#queryparam) (for a custom key, object param, or
+    modifier).
+- `options?: UseQueryStatesOptions`
+  - Per-instance navigation and write behavior, shared by every param in the
+    schema. See [`UseQueryStatesOptions`](#usequerystatesoptions).
 
-### Returns
+**Returns**
 
-`UseQueryStatesReturn<TSchema>`:
-
-```ts
-interface UseQueryStatesReturn<TSchema> {
-  values: { [K in keyof TSchema]: QueryStateRefValue<TSchema[K]> }
-  setValues: (values: QueryStateWriteValues<TSchema>, options?: NavigateOptions) => void
-  clear: (options?: NavigateOptions) => void
-}
-```
-
-- `values` — reactive and writable; `values.k` is the value, not a ref. Params
-  with a default are non-nullable. **Replace, don't mutate** arrays/objects.
-- `setValues(values, options?)` — batch write; `null` clears, `undefined`/absent
-  skips, a value sets. Coalesced into one navigation.
-- `clear(options?)` — reset every param.
+- `values: { [K in keyof TSchema]: … }`
+  - A reactive, writable map. `values.k` *is* the value, not a ref. A param with a
+    default reads as non-nullable, otherwise `T | undefined`.
+  - Replace, don't mutate: assign a new array or object; in-place mutation does not
+    navigate.
+- `setValues(values, options?): void`
+  - Batch write, coalesced into one navigation. Per param: a value sets, `null`
+    clears, `undefined`/absent skips.
+- `clear(options?): void`
+  - Reset every param to its default in one navigation.
+- `.use(module): QueryComposable<…>`
+  - Layer a [module](/modules/) onto the composable, merging its API and widening
+    the return type. See the [`.use()` model](/modules/#the-use-model).
 
 The grouped `values` map drops the per-field `.set`/`.clear` that
 [`useQueryState`](#usequerystate) gives a single param. Explode it with
@@ -135,197 +118,127 @@ The grouped `values` map drops the per-field `.set`/`.clear` that
 **Throws** if two params declare the same query path, or if no adapter has been
 provided (see [`provideQueryAdapter`](#providequeryadapter)).
 
-### Example
+**Example**
 
 ```ts
-import { codecs, queryParam, useQueryStates } from '@vuqs/core'
+import { codecs, useQueryStates } from '@vuqs/core'
 
 const { values, setValues, clear } = useQueryStates({
-  q: queryParam('q', codecs.string.withDefault('')),
-  page: queryParam('page', codecs.integer.withDefault(1)),
+  q: codecs.string.withDefault(''),
+  page: codecs.integer.withDefault(1),
 })
 
-values.q = 'laptop'              // ?q=laptop
+values.q = 'laptop' // ?q=laptop
 setValues({ q: 'phone', page: 1 }) // one navigation
-clear()                          // reset all
+clear() // reset all
 ```
-
-::: tip `.use(module)`
-`useQueryStates` returns a [`QueryComposable`](/modules/introduction#the-use-model) —
-call `.use()` to layer modules like [`withRuntimeDefaults`](/modules/runtime-defaults) and
-[`withContext`](/modules/context) onto it.
-
-Modules authored with [`defineQueryModule`](/modules/authoring) can also expose a
-single-param projection for [`useQueryState`](#usequerystate).
-:::
 
 ## toQueryRefs <Badge type="info" text="@vuqs/core" />
 
 Explodes a value map into one ref per field, the way Pinia's `storeToRefs` explodes
 a store. Use it to recover the per-field `.set`/`.clear` that the grouped `values`
-map drops, or to pass a single field around. For one param from the start, reach for
-[`useQueryState`](#usequerystate) instead.
-
-### Signature
+map drops, or to pass a single field around.
 
 ```ts
 function toQueryRefs<T extends object>(map: T): ToQueryRefs<T>
 ```
 
-### Parameters
+**Parameters**
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `map` | `T` | A value map from [`useQueryStates`](#usequerystates) (`values`) or a module (`selected`/`defaults`). |
+- `map: T`
+  - A value map from [`useQueryStates`](#usequerystates) (`values`) or a module
+    (`selected`/`defaults`).
 
-### Returns
+**Returns**
 
-`ToQueryRefs<T>` — one ref per field, keyed by param:
-
-- The writable [`values`](#usequerystates) map explodes into a
-  [`QueryStateRef`](#usequerystate) per field: writable `.value`, plus `.set(value,
-  options?)` and `.clear(options?)` for per-call navigation options. Assigning
-  `undefined` clears, like `.clear()`.
-- A read-only map (`selected`/`defaults`) explodes into a `ComputedRef` per field.
-
-The helper carries no behavior of its own: writes route back through the source
-map. A ref off the effective `values` under [`withRuntimeDefaults`](/modules/runtime-defaults)
-clears against the *effective* default, exactly as `values.x = …` would.
-
-### Example
-
-```ts
-import { codecs, queryParam, toQueryRefs, useQueryStates } from '@vuqs/core'
-
-const { values } = useQueryStates({
-  q: queryParam('q', codecs.string),
-  sort: queryParam('sort', codecs.literal(['asc', 'desc'] as const)),
-})
-
-const { q, sort } = toQueryRefs(values)
-
-q.value = 'sale'                  // write
-sort.set('desc', { history: 'push' }) // per-call options
-q.clear()                         // remove ?q
-```
-
-::: tip Writable vs read-only
-The writable `values` map explodes into writable refs with `.set`/`.clear`; a
-read-only map (`selected`/`defaults`) explodes into read-only refs. `toQueryRefs`
-detects which on its own — nothing to annotate on your side.
-:::
+- `refs: ToQueryRefs<T>`
+  - One ref per field, keyed by param. The helper detects the source shape on its
+    own.
+  - From the writable `values` map: a [`QueryStateRef`](#usequerystate) per field,
+    with writable `.value` plus `.set`/`.clear`. Assigning `undefined` clears.
+  - From a read-only map (`selected`/`defaults`): a `ComputedRef` per field.
 
 ## UseQueryStatesOptions <Badge type="info" text="@vuqs/core" />
 
 Per-instance behavior for both composables. The query source and URL writer come
 from the [adapter](/api/adapters#queryadapter), never from here.
 
-### Properties
+**Properties**
 
-```ts
-interface UseQueryStatesOptions extends NavigateOptions {
-  history?: 'replace' | 'push' // from NavigateOptions
-  scroll?: boolean             // from NavigateOptions
-  throttleMs?: number          // coalescing window; default microtask
-  clearOnDefault?: boolean     // default true
-}
-```
+- `history?: 'replace' | 'push'`
+  - Default `'replace'`. Push a new history entry, or replace the current one.
+- `scroll?: boolean`
+  - Default adapter-defined. Forwarded to the adapter.
+- `throttleMs?: number`
+  - Default a microtask. Coalesce writes within this window into one navigation.
+- `clearOnDefault?: boolean`
+  - Default `true`. Drop a value from the URL when it equals its resolved default.
 
-| Property | Type | Default | Description |
-| --- | --- | --- | --- |
-| `history` | `'replace' \| 'push'` | `'replace'` | Push a history entry or replace the current one. |
-| `scroll` | `boolean` | adapter-defined | Forwarded to the adapter. |
-| `throttleMs` | `number` | microtask | Coalesce writes within this window into one navigation. |
-| `clearOnDefault` | `boolean` | `true` | Drop a value from the URL when it equals its codec default. |
-
-See [Navigation options](/guide/navigation-options) for behavior and precedence.
+See [Navigation & options](/guide/essentials/navigation-options) for behavior and
+precedence.
 
 ## queryParam <Badge type="info" text="@vuqs/core" />
 
-Builds a reusable [param](/guide/defining-params) from a path + codec, or a
-composed object param.
-
-### Signature
+Builds a reusable [param](/guide/going-further/defining-params). Returns a chainable
+**builder** that is itself a param, so it drops into a schema, `useQueryState`, or
+the serializer.
 
 ```ts
-// String shorthand (codec defaults to codecs.string)
-function queryParam(path: string): QueryParamBuilder<string>
-function queryParam(path: string, options: { defaultValue: string }): QueryParamBuilderWithDefault<string>
-
-// Single key
-function queryParam<T>(path: string, codec: CodecWithDefault<T>): QueryParamBuilderWithDefault<T>
-function queryParam<T>(path: string, codec: Codec<T>): QueryParamBuilder<T>
-
-// Object composition
-queryParam.object(children)
-queryParam.object(prefix, children)
-queryParam.object(prefix, param)
+const param = queryParam(path, codec?)
+const param = queryParam.object(children)
 ```
 
-### Parameters
+**Parameters**
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `path` | `string` | The query key the param owns. |
-| `options` | `{ defaultValue: string }` | String-shorthand default, equivalent to `codecs.string.withDefault(...)`. |
-| `codec` | `Codec<T>` | The codec bound to `path`. |
-| `children` | `Record<string, DefinedQueryParam<any>>` | Child params for object composition. |
-| `prefix` | `string` | Path prefix applied to child params or to an existing param. |
-| `param` | `DefinedQueryParam<T>` | An existing param or object to prefix and reuse. |
+- `path: string`
+  - The query key the param owns.
+- `codec?: Codec<T>`
+  - The codec bound to `path`. With none, the param is a plain string;
+    `{ defaultValue }` is shorthand for a string with a default. A `CodecWithDefault`
+    produces a defaulted param.
 
-### Returns
+**Returns**
 
-A builder — `QueryParamBuilder<T>`, or `QueryParamBuilderWithDefault<T>` when the
-codec, options, or a modifier carries a default. A builder is a
-`DefinedQueryParam<T>` with chainable modifiers.
+- `builder: QueryParamBuilder<T>` (or `QueryParamBuilderWithDefault<T>` when defaulted)
+  - A `DefinedQueryParam<T>` with chainable modifiers, each returning a new builder:
+    - `.withDefault(v)`: sets the param's default.
+    - `.withEquality(eq)`: sets how values compare (drives `clearOnDefault`).
+    - `.keepOnDefault()`: keeps a default-valued write in the URL.
+    - `.transform({ read, write, eq? })`: maps the param to a different public shape.
 
-### Modifiers
+**`queryParam.object`** composes a multi-key param from child params:
 
-Every builder is chainable. `withDefaultsWhenPresent` is available on object
-builders only.
+```ts
+queryParam.object(children) // merge child params into one object value
+queryParam.object(prefix, children) // prefix every child key
+queryParam.object(prefix, param) // reuse a param under a prefix
+```
 
-| Modifier | Description |
-| --- | --- |
-| `.withDefault(value)` | Sets the param's default. Layers over the codec default and, for objects, accepts a partial fill. |
-| `.withEquality((a, b) => boolean)` | Sets how the param's value is compared, which drives `clearOnDefault`. |
-| `.keepOnDefault()` | Param-level `clearOnDefault: false`: a default value stays in the URL. |
-| `.withDefaultsWhenPresent()` | Object only: apply child defaults only when the object is present in the URL or carries its own default. |
-| `.transform({ read, write, eq? })` | Maps the param to a different public shape. Derives its default and equality from the source unless overridden. |
+See [Defining params](/guide/going-further/defining-params) for the full walkthrough.
 
-See [composite params](/guide/nested-keys#composite-params) for object composition.
-
-### Example
+**Example**
 
 ```ts
 import { codecs, queryParam } from '@vuqs/core'
 
-const q = queryParam('q', { defaultValue: '' })
 const sort = queryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc'))
-
-const bounds = queryParam.object('bounds', {
-  north: queryParam('n', codecs.float).withDefault(1),
-  east: queryParam('e', codecs.float),
-}).withDefaultsWhenPresent()
 ```
 
 ## provideQueryAdapter <Badge type="info" text="@vuqs/core" />
 
-Provides a [`QueryAdapter`](/api/adapters#queryadapter) to descendant components,
-so their composables resolve `query` / `navigate` automatically.
-
-### Signature
+Provides a [`QueryAdapter`](/api/adapters#queryadapter) to descendant components, so
+their composables resolve `query`/`navigate` automatically.
 
 ```ts
 function provideQueryAdapter(adapter: QueryAdapter): void
 ```
 
-### Parameters
+**Parameters**
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `adapter` | `QueryAdapter` | The adapter to provide. Call from a component `setup`. |
+- `adapter: QueryAdapter`
+  - The adapter to provide. Call from a component `setup`.
 
-### Example
+**Example**
 
 ```ts
 import { provideQueryAdapter } from '@vuqs/core'
@@ -336,26 +249,24 @@ provideQueryAdapter(createVueRouterAdapter())
 
 ## installQueryAdapter <Badge type="info" text="@vuqs/core" />
 
-The app-level counterpart to `provideQueryAdapter`: provides the adapter on the
-Vue `App` rather than the current component instance.
-
-### Signature
+The app-level counterpart to `provideQueryAdapter`: provides the adapter on the Vue
+`App` rather than the current component instance.
 
 ```ts
 function installQueryAdapter(app: App, adapter: QueryAdapter): void
 ```
 
-### Parameters
+**Parameters**
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `app` | `App` | The Vue [application instance](https://vuejs.org/api/application.html). |
-| `adapter` | `QueryAdapter` | The adapter to install app-wide. |
+- `app: App`
+  - The Vue [application instance](https://vuejs.org/api/application.html).
+- `adapter: QueryAdapter`
+  - The adapter to install app-wide.
 
-### Example
+**Example**
 
-Runs where there is no active component instance — most notably a Nuxt plugin,
-which is what the [Nuxt module](/nuxt/introduction) does under the hood:
+Runs where there is no active component instance, most notably a Nuxt plugin, which
+is what the [Nuxt module](/nuxt/getting-started) does under the hood:
 
 ```ts
 installQueryAdapter(nuxtApp.vueApp, createVueRouterAdapter())
@@ -365,13 +276,12 @@ installQueryAdapter(nuxtApp.vueApp, createVueRouterAdapter())
 
 Reads the adapter provided by an ancestor.
 
-### Signature
-
 ```ts
 function useQueryAdapter(): QueryAdapter | undefined
 ```
 
-### Returns
+**Returns**
 
-The provided [`QueryAdapter`](/api/adapters#queryadapter), or `undefined` when
-there's no injection context or no adapter — safe to call outside a component.
+- `adapter: QueryAdapter | undefined`
+  - The provided [`QueryAdapter`](/api/adapters#queryadapter), or `undefined` when
+    there is no injection context or no adapter. Safe to call outside a component.
