@@ -1,6 +1,6 @@
 import type { Codec } from './codec'
 import type { ParsedQuery, ParsedQueryRaw } from './types'
-import { structuralEq } from './equality'
+import { structuralClone, structuralEq } from './equality'
 import { collectLeafPaths, getPath, setPath } from './path'
 
 /**
@@ -54,7 +54,7 @@ export function createDefinedQueryParam<T>(
   },
 ): DefinedQueryParam<T> {
   const write = guardWrite(input.paths, input.write)
-  const read = input.read
+  const read = withDefaultFallback(input.read, input.defaultValue)
 
   return {
     paths: input.paths,
@@ -67,18 +67,66 @@ export function createDefinedQueryParam<T>(
 }
 
 /**
- * Binds a codec to a single dot-path.
+ * The raw executable pieces of a codec bound to a single dot-path.
+ *
+ * @remarks
+ * `read` stays raw (`undefined` when absent), so both the plain param and the
+ * builder resolve the codec default through the single default layer.
  *
  * @internal
  */
-export function defineCodecQueryParam<T>(path: string, codec: Codec<T>): DefinedQueryParam<T> {
-  return createDefinedQueryParam({
+export function codecParamInput<T>(path: string, codec: Codec<T>): {
+  paths: readonly string[]
+  read: (query: ParsedQuery) => T | undefined
+  write: (value: T) => ParsedQueryRaw
+  eq: (a: T, b: T) => boolean
+  defaultValue?: T
+} {
+  return {
     paths: [path],
     read: query => codec.parse(getPath(query, path)),
     write: value => setPath({}, path, codec.serialize(value)),
     eq: codec.eq,
     defaultValue: codec.defaultValue,
-  })
+  }
+}
+
+/**
+ * Binds a codec to a single dot-path.
+ *
+ * @internal
+ */
+export function defineCodecQueryParam<T>(path: string, codec: Codec<T>): DefinedQueryParam<T> {
+  return createDefinedQueryParam(codecParamInput(path, codec))
+}
+
+/**
+ * Wraps a raw read so an absent value resolves to the declared default.
+ *
+ * @remarks
+ * This is the single place a default is applied: the wrapped `read` stays raw
+ * (`undefined` when absent), and the default layers on top here. It upholds the
+ * {@link DefinedQueryParamWithDefault} contract that a defaulted param never
+ * reads back `undefined`, whether the default comes from the codec or a builder
+ * modifier. The default is cloned per read so a consumer that mutates the
+ * returned value cannot corrupt the shared default, matching how a value decoded
+ * from the URL is always a fresh object.
+ *
+ * @internal
+ */
+function withDefaultFallback<T>(
+  read: (query: ParsedQuery) => T | undefined,
+  defaultValue: T | undefined,
+): (query: ParsedQuery) => T | undefined {
+  if (defaultValue === undefined) {
+    return read
+  }
+
+  return (query) => {
+    const value = read(query)
+
+    return value === undefined ? structuralClone(defaultValue) : value
+  }
 }
 
 /**
@@ -101,7 +149,7 @@ export function guardWrite<T>(
     for (const path of collectLeafPaths(output)) {
       if (!declared.has(path)) {
         throw new Error(
-          `[vuqs] serialize() wrote "${path}", which is not in the declared paths [${paths.join(', ')}].`,
+          `[vuqs] write() wrote "${path}", which is not in the declared paths [${paths.join(', ')}].`,
         )
       }
     }

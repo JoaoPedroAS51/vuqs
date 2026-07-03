@@ -131,8 +131,9 @@ const percent = createCodec<number>({
 
 ## Codec.withDefault <Badge type="info" text="@vuqs/core" />
 
-Returns a variant of a codec whose `parse` falls back to `defaultValue` instead of
-`undefined`.
+Returns a variant of a codec carrying `defaultValue`. `parse` stays raw
+(`undefined` when absent or invalid); the param that binds the codec resolves the
+default, so it applies in one place rather than being baked into `parse`.
 
 ### Signature
 
@@ -144,13 +145,13 @@ function withDefault<T>(defaultValue: T): CodecWithDefault<T>
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `defaultValue` | `T` | The value an absent or invalid key reads back as. |
+| `defaultValue` | `T` | The value a param reads back when the key is absent or invalid. |
 
 ### Returns
 
-A `CodecWithDefault<T>` (`parse` returns `T`, and `defaultValue` is exposed), which
-downstream APIs use to narrow refs to non-nullable and to drop the value from the
-URL when it equals the default ([`clearOnDefault`](/guide/navigation-options#clearondefault)).
+A `CodecWithDefault<T>` (`parse` stays `T | undefined`, with `defaultValue`
+exposed), which downstream APIs use to narrow refs to non-nullable and to drop the
+value from the URL when it equals the default ([`clearOnDefault`](/guide/navigation-options#clearondefault)).
 
 ### Example
 

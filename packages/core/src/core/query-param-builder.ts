@@ -6,6 +6,7 @@ import type {
   QueryParamTransform,
 } from './query-param-types'
 import { createDefinedQueryParam } from './defined-query-param'
+import { structuralEq } from './equality'
 
 export function createQueryParamBuilder<T, TDefaultInput = DefaultInput<T>>(
   options: QueryParamBuilderOptions<T>,
@@ -33,9 +34,6 @@ export function createQueryParamBuilder<T, TDefaultInput = DefaultInput<T>>(
         eq,
       })
     },
-    withDefaultsWhenPresent() {
-      return createQueryParamBuilder<T, TDefaultInput>(options)
-    },
     keepOnDefault() {
       return createQueryParamBuilder<T, TDefaultInput>({
         ...options,
@@ -43,9 +41,14 @@ export function createQueryParamBuilder<T, TDefaultInput = DefaultInput<T>>(
       })
     },
     transform<TOutput>(transformer: QueryParamTransform<T, TOutput>) {
+      const inputEq = options.eq ?? structuralEq
+
       return createQueryParamBuilder<TOutput>({
         paths: options.paths,
         read(query) {
+          // Read the raw input (undefined when absent), so the transformed
+          // param's own default resolves in the single default layer instead of
+          // being shadowed by the input's default.
           const value = options.read(query)
 
           return value === undefined ? undefined : transformer.read(value)
@@ -53,7 +56,10 @@ export function createQueryParamBuilder<T, TDefaultInput = DefaultInput<T>>(
         write(value) {
           return options.write(transformer.write(value))
         },
-        eq: transformer.eq,
+        eq: transformer.eq ?? ((a, b) => inputEq(transformer.write(a), transformer.write(b))),
+        defaultValue: options.defaultValue === undefined
+          ? undefined
+          : transformer.read(options.defaultValue),
         clearOnDefault: options.clearOnDefault,
       })
     },

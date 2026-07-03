@@ -21,7 +21,7 @@ export interface Codec<T> {
   eq: (a: T, b: T) => boolean
   /** The fallback value, present only on codecs produced by {@link Codec.withDefault}. */
   readonly defaultValue?: T
-  /** Returns a variant whose `parse` falls back to `defaultValue` instead of `undefined`. */
+  /** Returns a variant carrying `defaultValue`, which the param layer applies when the value is absent. */
   withDefault: (defaultValue: T) => CodecWithDefault<T>
 }
 
@@ -29,15 +29,16 @@ export interface Codec<T> {
  * A {@link Codec} carrying a static default value.
  *
  * @remarks
- * `parse` always returns a value, falling back to `defaultValue` when the query
- * node is absent or invalid. `defaultValue` is exposed so a consumer can omit
- * the value from its output when it equals the default.
+ * `parse` stays raw: it returns `undefined` when the query node is absent or
+ * invalid, exactly like the base codec. The default is resolved one layer up, by
+ * the param that binds the codec, so it is applied once rather than baked into
+ * `parse`. `defaultValue` is exposed so a consumer can omit the value from its
+ * output when it equals the default.
  *
  * @typeParam T - The decoded value type.
  */
 export interface CodecWithDefault<T> extends Codec<T> {
   readonly defaultValue: T
-  parse: (raw: ParsedQueryValue) => T
 }
 
 /**
@@ -86,11 +87,6 @@ export function createCodec<T>(input: CodecInput<T>): Codec<T> {
       return {
         ...codec,
         defaultValue,
-        parse: (raw) => {
-          const value = input.parse(raw)
-
-          return value === undefined ? defaultValue : value
-        },
       }
     },
   }

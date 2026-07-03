@@ -329,15 +329,12 @@ describe('createCodec', () => {
   })
 
   describe('withDefault', () => {
-    it('falls back to the default when absent', () => {
+    it('keeps parse raw and exposes the default separately', () => {
       const page = codecs.integer.withDefault(1)
 
-      expect(page.parse(undefined)).toBe(1)
+      expect(page.parse(undefined)).toBeUndefined()
       expect(page.parse('3')).toBe(3)
-    })
-
-    it('exposes the default value', () => {
-      expect(codecs.integer.withDefault(1).defaultValue).toBe(1)
+      expect(page.defaultValue).toBe(1)
     })
 
     it('does not mutate the base codec', () => {
