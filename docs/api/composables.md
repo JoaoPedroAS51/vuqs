@@ -248,13 +248,18 @@ composed object param.
 ### Signature
 
 ```ts
+// String shorthand (codec defaults to codecs.string)
+function queryParam(path: string): QueryParamBuilder<string>
+function queryParam(path: string, options: { defaultValue: string }): QueryParamBuilderWithDefault<string>
+
 // Single key
-function queryParam<T>(path: string, codec: CodecWithDefault<T>): DefinedQueryParamWithDefault<T>
-function queryParam<T>(path: string, codec: Codec<T>): DefinedQueryParam<T>
+function queryParam<T>(path: string, codec: CodecWithDefault<T>): QueryParamBuilderWithDefault<T>
+function queryParam<T>(path: string, codec: Codec<T>): QueryParamBuilder<T>
 
 // Object composition
 queryParam.object(children)
-queryParam.object(prefix, childrenOrParam)
+queryParam.object(prefix, children)
+queryParam.object(prefix, param)
 ```
 
 ### Parameters
@@ -262,21 +267,45 @@ queryParam.object(prefix, childrenOrParam)
 | Name | Type | Description |
 | --- | --- | --- |
 | `path` | `string` | The query key the param owns. |
+| `options` | `{ defaultValue: string }` | String-shorthand default, equivalent to `codecs.string.withDefault(...)`. |
 | `codec` | `Codec<T>` | The codec bound to `path`. |
 | `children` | `Record<string, DefinedQueryParam<any>>` | Child params for object composition. |
-| `prefix` | `string` | Optional path prefix applied to child params. |
+| `prefix` | `string` | Path prefix applied to child params or to an existing param. |
+| `param` | `DefinedQueryParam<T>` | An existing param or object to prefix and reuse. |
 
 ### Returns
 
-A `DefinedQueryParam<T>` (or `DefinedQueryParamWithDefault<T>` when the
-codec or param carries a default). See [composite params](/guide/nested-keys#composite-params).
+A builder — `QueryParamBuilder<T>`, or `QueryParamBuilderWithDefault<T>` when the
+codec, options, or a modifier carries a default. A builder is a
+`DefinedQueryParam<T>` with chainable modifiers.
+
+### Modifiers
+
+Every builder is chainable. `withDefaultsWhenPresent` is available on object
+builders only.
+
+| Modifier | Description |
+| --- | --- |
+| `.withDefault(value)` | Sets the param's default. Layers over the codec default and, for objects, accepts a partial fill. |
+| `.withEquality((a, b) => boolean)` | Sets how the param's value is compared, which drives `clearOnDefault`. |
+| `.keepOnDefault()` | Param-level `clearOnDefault: false`: a default value stays in the URL. |
+| `.withDefaultsWhenPresent()` | Object only: apply child defaults only when the object is present in the URL or carries its own default. |
+| `.transform({ read, write, eq? })` | Maps the param to a different public shape. Derives its default and equality from the source unless overridden. |
+
+See [composite params](/guide/nested-keys#composite-params) for object composition.
 
 ### Example
 
 ```ts
 import { codecs, queryParam } from '@vuqs/core'
 
+const q = queryParam('q', { defaultValue: '' })
 const sort = queryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc'))
+
+const bounds = queryParam.object('bounds', {
+  north: queryParam('n', codecs.float).withDefault(1),
+  east: queryParam('e', codecs.float),
+}).withDefaultsWhenPresent()
 ```
 
 ## provideQueryAdapter <Badge type="info" text="@vuqs/core" />

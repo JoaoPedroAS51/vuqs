@@ -69,6 +69,29 @@ queryParam('filters.sort', codecs.string)          // a nested key — see below
 A codec carrying `.withDefault()` produces a `DefinedQueryParamWithDefault`,
 which is what lets `useQueryStates` narrow that param to non-nullable.
 
+For a plain string param the codec is optional: `queryParam('q')` is
+`queryParam('q', codecs.string)`, and `queryParam('q', { defaultValue: '' })` is
+the `codecs.string.withDefault('')` form.
+
+## Modifiers
+
+A param is a builder: chain modifiers to adjust its behavior. Each returns a new
+param, so definitions stay immutable.
+
+```ts
+queryParam('page', codecs.integer)
+  .withDefault(1)                        // set the default
+  .withEquality((a, b) => a === b)       // set how values compare
+  .keepOnDefault()                       // keep the default in the URL
+```
+
+- `.withDefault(value)` layers over the codec default. On an object param it
+  accepts a [partial fill](/guide/nested-keys#composite-params).
+- `.withEquality(fn)` sets the comparison that drives `clearOnDefault`.
+- `.keepOnDefault()` is a param-level `clearOnDefault: false`.
+- `.withDefaultsWhenPresent()` (object params only) applies child defaults only
+  when the object is present in the URL or carries its own default.
+
 ## Nested keys
 
 A path can be dotted to target a nested query object:
@@ -110,8 +133,8 @@ const range = queryParam.object({
 Child params provide the owned `paths`; clearing `range` clears every child key.
 See [composite params](/guide/nested-keys#composite-params) for the full walkthrough.
 
-Object params also support `.withEquality(...)`, `.withDefault(...)`, and the
-other `queryParam` modifiers.
+Object params support every [modifier](#modifiers), plus
+`.withDefaultsWhenPresent()`.
 
 ## Definitions never collide
 
