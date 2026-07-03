@@ -4,6 +4,7 @@ import type { ParsedQuery, ParsedQueryRaw } from './types'
 import { defineCodecQueryParam } from './defined-query-param'
 import { deletePath, pruneEmptyAncestors } from './path'
 import { cloneQuery, compactQuery, mergeQueries } from './query-object'
+import { isDefinedQueryParam } from './query-param-utils'
 
 /**
  * A map of param name to its {@link DefinedQueryParam}.
@@ -289,17 +290,6 @@ export function dropDefaults<TSchema extends QueryStateSchema>(
  */
 function keysOf<TSchema extends QueryStateSchema>(schema: TSchema): Array<keyof TSchema & string> {
   return Object.keys(schema) as Array<keyof TSchema & string>
-}
-
-/**
- * Duck-types a normalized query param.
- *
- * @internal
- */
-function isDefinedQueryParam(value: Codec<any> | DefinedQueryParam<any>): value is DefinedQueryParam<any> {
-  return typeof (value as DefinedQueryParam<any>).read === 'function'
-    && typeof (value as DefinedQueryParam<any>).write === 'function'
-    && Array.isArray((value as DefinedQueryParam<any>).paths)
 }
 
 /**

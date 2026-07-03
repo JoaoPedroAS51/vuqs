@@ -13,7 +13,7 @@ import { createQueryBinding } from './binding'
 import { applyQueryModule } from './module'
 import { normalizeQueryStateSchema } from './schema'
 
-export type { DefinedQueryModule, QueryModule, QueryStateModule, QueryStatesModule } from './module'
+export type { DefinedQueryModule, QueryModule, QueryStateModule } from './module'
 export type { QueryCore } from './query-core'
 export type { NavigateOptions, QueryStateNavigate } from './types'
 export type { QueryStateRef, UseQueryStateReturn } from './use-query-state'

@@ -42,12 +42,7 @@ type ApplyQueryStateModuleApi<
  * @typeParam TSchema - The schema being managed.
  * @typeParam TApi - The API this module adds.
  */
-export type QueryStatesModule<TSchema extends QueryStateSchema, TApi> = (core: QueryCore<TSchema>) => TApi
-
-/**
- * Backward-compatible name for a grouped module projection.
- */
-export type QueryModule<TSchema extends QueryStateSchema, TApi> = QueryStatesModule<TSchema, TApi>
+export type QueryModule<TSchema extends QueryStateSchema, TApi> = (core: QueryCore<TSchema>) => TApi
 
 /**
  * A module projection that contributes API to {@link useQueryState}.
@@ -81,7 +76,7 @@ export type DefinedQueryModule<
   TSchema extends QueryStateSchema,
   TQueryStatesApi,
   TQueryStateApi,
-> = QueryStatesModule<TSchema, TQueryStatesApi> & {
+> = QueryModule<TSchema, TQueryStatesApi> & {
   readonly [QUERY_STATE_MODULE]: {
     bivarianceHack: QueryStateModule<QueryStateSchema, TQueryStateApi>
   }['bivarianceHack']
@@ -122,7 +117,7 @@ export function defineQueryModule<
   TSchema extends QueryStateSchema,
   TQueryStatesApi,
   TQueryStateApi,
-  TQueryStates extends QueryStatesModule<TSchema, TQueryStatesApi> = QueryStatesModule<TSchema, TQueryStatesApi>,
+  TQueryStates extends QueryModule<TSchema, TQueryStatesApi> = QueryModule<TSchema, TQueryStatesApi>,
   TQueryState extends QueryStateModule<QueryStateSchema, TQueryStateApi> = QueryStateModule<QueryStateSchema, TQueryStateApi>,
 >(
   definition: {
@@ -162,7 +157,7 @@ export function mergeModuleApi(target: object, added: object): void {
 export function applyQueryModule<TSchema extends QueryStateSchema, TAdded>(
   composable: object,
   core: QueryCore<TSchema>,
-  module: QueryStatesModule<TSchema, TAdded>,
+  module: QueryModule<TSchema, TAdded>,
 ): void {
   applyWithRollback(composable, () => module(core) as object)
 }
