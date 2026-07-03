@@ -23,14 +23,26 @@ interface ObjectBuilderOptions<TChildren extends AnyObjectChildren> {
   defaultsWhenPresent?: boolean
 }
 
+/**
+ * Composes a multi-key param from child params, optionally under a prefix.
+ *
+ * @remarks
+ * Passing a child map builds an object param whose value merges the children.
+ * Passing a `prefix` with a child map prefixes every child key. Passing a
+ * `prefix` with an existing param or object reuses it under the prefix,
+ * preserving its default and presence semantics.
+ */
 export interface QueryParamObjectFactory {
+  /** Builds an object param from a child map. */
   <TChildren extends AnyObjectChildren>(
     children: TChildren,
   ): QueryParamObjectBuilderFor<TChildren>
+  /** Builds an object param, prefixing every child key with `prefix`. */
   <TChildren extends AnyObjectChildren>(
     prefix: string,
     children: TChildren,
   ): QueryParamObjectBuilderFor<TChildren>
+  /** Reuses an existing param or object under `prefix`. */
   <TParam extends AnyDefinedQueryParam>(
     prefix: string,
     param: TParam,
