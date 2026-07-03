@@ -120,6 +120,33 @@ describe('scalar queryParam inference', () => {
     expectTypeOf(queryParam('currency', codecs.string)).toMatchTypeOf<DefinedQueryParam<string>>()
     expectTypeOf(queryParam('page', codecs.integer.withDefault(1))).toMatchTypeOf<DefinedQueryParamWithDefault<number>>()
   })
+
+  it('does not expose withDefaultsWhenPresent on scalar params', () => {
+    // @ts-expect-error withDefaultsWhenPresent is an object-only modifier
+    queryParam('page', codecs.integer).withDefaultsWhenPresent()
+  })
+
+  it('exposes withDefaultsWhenPresent on object params', () => {
+    const bounds = queryParam.object('bounds', {
+      north: queryParam('n', codecs.float),
+    })
+
+    expectTypeOf(bounds.withDefaultsWhenPresent).toBeFunction()
+  })
+
+  it('keeps object semantics when prefixing an object param', () => {
+    const point = queryParam.object({
+      lat: queryParam('lat', codecs.float),
+      lng: queryParam('lng', codecs.float),
+    }).withDefault({ lat: 5 })
+    const northEast = queryParam.object('ne', point)
+
+    expectTypeOf(northEast.withDefaultsWhenPresent).toBeFunction()
+    expectTypeOf(northEast).toMatchTypeOf<DefinedQueryParamWithDefault<{
+      lat?: number
+      lng?: number
+    }>>()
+  })
 })
 
 describe('schema value inference', () => {

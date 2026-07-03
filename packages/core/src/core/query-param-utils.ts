@@ -1,4 +1,5 @@
 import type { DefinedQueryParam } from './defined-query-param'
+import type { QueryParamBuilder } from './query-param-types'
 import type { ParsedQuery, ParsedQueryRaw } from './types'
 import { collectLeafPaths, getPath, setPath } from './path'
 
@@ -8,6 +9,11 @@ export function isDefinedQueryParam(value: unknown): value is DefinedQueryParam<
     && typeof (value as DefinedQueryParam<any>).read === 'function'
     && typeof (value as DefinedQueryParam<any>).write === 'function'
     && Array.isArray((value as DefinedQueryParam<any>).paths)
+}
+
+export function isQueryParamBuilder(value: DefinedQueryParam<any>): value is QueryParamBuilder<any, any> {
+  return typeof (value as QueryParamBuilder<any, any>).withDefault === 'function'
+    && typeof (value as QueryParamBuilder<any, any>).withEquality === 'function'
 }
 
 export function joinPath(prefix: string, path: string): string {

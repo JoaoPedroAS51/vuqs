@@ -30,8 +30,11 @@ export const queryParam = Object.assign(queryParamFactory, {
 }) as QueryParamFactory
 
 export type {
+  PrefixedQueryParamBuilder,
   QueryParamBuilder,
   QueryParamBuilderWithDefault,
+  QueryParamObjectBuilder,
+  QueryParamObjectBuilderWithDefault,
   QueryParamTransform,
 } from './query-param-types'
 

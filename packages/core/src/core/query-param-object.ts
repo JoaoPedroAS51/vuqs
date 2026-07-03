@@ -1,20 +1,18 @@
 import type {
-  DefinedQueryParamWithDefault,
-} from './defined-query-param'
-import type {
   AnyDefinedQueryParam,
   AnyObjectChildren,
   DefinedValue,
   ObjectValue,
-  QueryParamBuilder,
-  QueryParamBuilderWithDefault,
+  PrefixedQueryParamBuilder,
+  QueryParamObjectBuilder,
+  QueryParamObjectBuilderFor,
   QueryParamObjectDefault,
 } from './query-param-types'
 import type { ParsedQueryRaw } from './types'
 import { getPath } from './path'
 import { compactQuery, mergeQueries } from './query-object'
 import { createQueryParamBuilder } from './query-param-builder'
-import { isDefinedQueryParam, joinPath, prefixQuery, unprefixQuery } from './query-param-utils'
+import { isDefinedQueryParam, isQueryParamBuilder, joinPath, prefixQuery, unprefixQuery } from './query-param-utils'
 
 interface ObjectBuilderOptions<TChildren extends AnyObjectChildren> {
   prefix?: string
@@ -28,31 +26,36 @@ interface ObjectBuilderOptions<TChildren extends AnyObjectChildren> {
 export interface QueryParamObjectFactory {
   <TChildren extends AnyObjectChildren>(
     children: TChildren,
-  ): QueryParamBuilder<ObjectValue<TChildren>, QueryParamObjectDefault<ObjectValue<TChildren>>>
+  ): QueryParamObjectBuilderFor<TChildren>
   <TChildren extends AnyObjectChildren>(
     prefix: string,
     children: TChildren,
-  ): QueryParamBuilder<ObjectValue<TChildren>, QueryParamObjectDefault<ObjectValue<TChildren>>>
+  ): QueryParamObjectBuilderFor<TChildren>
   <TParam extends AnyDefinedQueryParam>(
     prefix: string,
     param: TParam,
-  ): TParam extends DefinedQueryParamWithDefault<infer TValue>
-    ? QueryParamBuilderWithDefault<TValue>
-    : QueryParamBuilder<DefinedValue<TParam>>
+  ): PrefixedQueryParamBuilder<TParam>
 }
 
 export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
   options: ObjectBuilderOptions<TChildren>,
-): QueryParamBuilder<ObjectValue<TChildren>, QueryParamObjectDefault<ObjectValue<TChildren>>> {
+): QueryParamObjectBuilderFor<TChildren> {
   const children = prefixChildren(options.prefix, options.children)
   const paths = Object.values(children).flatMap(child => child.paths)
+  const mergedDefault = buildObjectDefault(children, options.defaultValue)
+  // With defaultsWhenPresent, child defaults only materialize the object when the
+  // URL contains it or an object-level default exists, so an absent object stays
+  // absent instead of resolving to its child defaults.
+  const defaultValue = options.defaultsWhenPresent && options.defaultValue === undefined
+    ? undefined
+    : mergedDefault
 
   const builder = createQueryParamBuilder<ObjectValue<TChildren>, QueryParamObjectDefault<ObjectValue<TChildren>>>({
     paths,
     read(query) {
       const hasUrlPresence = paths.some(path => getPath(query, path) !== undefined)
 
-      if (options.defaultsWhenPresent && !hasUrlPresence && options.defaultValue === undefined) {
+      if (!hasUrlPresence) {
         return undefined
       }
 
@@ -69,18 +72,10 @@ export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
           continue
         }
 
-        const childDefault = child.defaultValue
+        const objectDefault = options.defaultValue?.[key as keyof ObjectValue<TChildren>]
 
-        if (childDefault !== undefined) {
-          value[key] = childDefault
-          hasValue = true
-          continue
-        }
-
-        const defaultValue = options.defaultValue?.[key as keyof ObjectValue<TChildren>]
-
-        if (defaultValue !== undefined) {
-          value[key] = defaultValue
+        if (objectDefault !== undefined) {
+          value[key] = objectDefault
           hasValue = true
         }
       }
@@ -101,21 +96,19 @@ export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
       return compactQuery(query)
     },
     eq: options.eq,
-    defaultValue: options.defaultValue === undefined
-      ? undefined
-      : buildObjectDefault(children, options.defaultValue) as ObjectValue<TChildren>,
+    defaultValue: defaultValue as ObjectValue<TChildren> | undefined,
     clearOnDefault: options.clearOnDefault,
-  }) as QueryParamBuilder<ObjectValue<TChildren>, QueryParamObjectDefault<ObjectValue<TChildren>>>
+  })
 
   return {
     ...builder,
-    withDefault(defaultValue) {
+    withDefault(defaultValue: QueryParamObjectDefault<ObjectValue<TChildren>>) {
       return createObjectQueryParam({
         ...options,
         defaultValue: defaultValue as Partial<ObjectValue<TChildren>>,
-      }) as QueryParamBuilderWithDefault<ObjectValue<TChildren>, QueryParamObjectDefault<ObjectValue<TChildren>>>
+      })
     },
-    withEquality(eq) {
+    withEquality(eq: (a: ObjectValue<TChildren>, b: ObjectValue<TChildren>) => boolean) {
       return createObjectQueryParam({
         ...options,
         eq,
@@ -133,14 +126,14 @@ export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
         clearOnDefault: false,
       })
     },
-  }
+  } as QueryParamObjectBuilderFor<TChildren>
 }
 
 export function createPrefixedQueryParam<TParam extends AnyDefinedQueryParam>(
   prefix: string,
   param: TParam,
-): QueryParamBuilder<DefinedValue<TParam>> | QueryParamBuilderWithDefault<DefinedValue<TParam>> {
-  return createQueryParamBuilder<DefinedValue<TParam>>({
+): PrefixedQueryParamBuilder<TParam> {
+  const base = createQueryParamBuilder<DefinedValue<TParam>>({
     paths: param.paths.map(path => joinPath(prefix, path)),
     read(query) {
       return param.read(unprefixQuery(query, prefix, param.paths))
@@ -152,6 +145,27 @@ export function createPrefixedQueryParam<TParam extends AnyDefinedQueryParam>(
     defaultValue: param.defaultValue,
     clearOnDefault: param.clearOnDefault,
   })
+
+  if (!isQueryParamBuilder(param)) {
+    return base as PrefixedQueryParamBuilder<TParam>
+  }
+
+  // Modifiers delegate to the wrapped builder and re-prefix, so the wrapped
+  // param's own semantics (an object's partial default merge, its presence
+  // gating) survive prefixing instead of degrading to plain replacement.
+  const prefixed: Record<string, unknown> = {
+    ...base,
+    withDefault: (defaultValue: unknown) => createPrefixedQueryParam(prefix, param.withDefault(defaultValue)),
+    withEquality: (eq: (a: unknown, b: unknown) => boolean) => createPrefixedQueryParam(prefix, param.withEquality(eq)),
+    keepOnDefault: () => createPrefixedQueryParam(prefix, param.keepOnDefault()),
+  }
+  const withDefaultsWhenPresent = (param as unknown as Partial<QueryParamObjectBuilder<unknown>>).withDefaultsWhenPresent
+
+  if (typeof withDefaultsWhenPresent === 'function') {
+    prefixed.withDefaultsWhenPresent = () => createPrefixedQueryParam(prefix, withDefaultsWhenPresent())
+  }
+
+  return prefixed as unknown as PrefixedQueryParamBuilder<TParam>
 }
 
 export const createObjectQueryParamFromArgs: QueryParamObjectFactory = ((
@@ -188,19 +202,23 @@ function prefixChildren<TChildren extends AnyObjectChildren>(
   return prefixed as TChildren
 }
 
+// Child defaults win over the object-level default, so the merged result is the
+// same object `read` resolves when the URL holds no child key.
 function buildObjectDefault<TChildren extends AnyObjectChildren>(
   children: TChildren,
-  defaultValue: Partial<ObjectValue<TChildren>>,
-): Partial<ObjectValue<TChildren>> {
-  const result: Record<string, unknown> = {}
+  defaultValue: Partial<ObjectValue<TChildren>> | undefined,
+): Partial<ObjectValue<TChildren>> | undefined {
+  const result: Record<string, unknown> = { ...defaultValue }
+  let hasDefault = defaultValue !== undefined
 
   for (const key of Object.keys(children)) {
     const childDefault = children[key].defaultValue
 
     if (childDefault !== undefined) {
       result[key] = childDefault
+      hasDefault = true
     }
   }
 
-  return { ...defaultValue, ...result } as Partial<ObjectValue<TChildren>>
+  return hasDefault ? result as Partial<ObjectValue<TChildren>> : undefined
 }

@@ -27,7 +27,7 @@ export { deletePath, getPath, getQueryString, getQueryStringArray, setPath } fro
 export type { Enforce, QueryPipeline, QueryPipelineBus, QueryPipelineStage, QueryValues } from './core/pipeline'
 export type { QueryCore } from './core/query-core'
 export { queryParam } from './core/query-param'
-export type { QueryParam, QueryParamBuilder, QueryParamBuilderWithDefault, QueryParamTransform, QueryParamWithDefault } from './core/query-param'
+export type { PrefixedQueryParamBuilder, QueryParam, QueryParamBuilder, QueryParamBuilderWithDefault, QueryParamObjectBuilder, QueryParamObjectBuilderWithDefault, QueryParamTransform, QueryParamWithDefault } from './core/query-param'
 export { resetQueues } from './core/queues/throttle'
 export { assertUniquePaths, buildQuery, dropDefaults, getManagedKeys, normalizeQueryStateSchema, omitManagedKeys, parseQueryStates, serializeQueryStates } from './core/schema'
 export type { NormalizeQueryStateSchema, QueryStateRefValue, QueryStateSchema, QueryStateSchemaInput, QueryStateValueOf, QueryStateValues, QueryStateWriteValues } from './core/schema'

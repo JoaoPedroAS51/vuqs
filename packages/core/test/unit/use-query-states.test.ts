@@ -262,6 +262,41 @@ describe('useQueryStates', () => {
     })
   })
 
+  describe('object params', () => {
+    it('resolves child defaults through the engine when the object is absent', () => {
+      const bounds = queryParam.object('bounds', {
+        north: queryParam('n', codecs.float).withDefault(1),
+        east: queryParam('e', codecs.float),
+      })
+      const { run } = setup()
+      const { values } = run(() => useQueryStates({ bounds }))
+
+      expect(values.bounds).toEqual({ north: 1 })
+    })
+
+    it('layers URL values over child defaults', () => {
+      const bounds = queryParam.object('bounds', {
+        north: queryParam('n', codecs.float).withDefault(1),
+        east: queryParam('e', codecs.float),
+      })
+      const { run } = setup({ bounds: { e: '20' } })
+      const { values } = run(() => useQueryStates({ bounds }))
+
+      expect(values.bounds).toEqual({ north: 1, east: 20 })
+    })
+
+    it('gates child defaults on presence with withDefaultsWhenPresent', () => {
+      const bounds = queryParam.object('bounds', {
+        north: queryParam('n', codecs.float).withDefault(1),
+        east: queryParam('e', codecs.float),
+      }).withDefaultsWhenPresent()
+      const { run } = setup()
+      const { values } = run(() => useQueryStates({ bounds }))
+
+      expect(values.bounds).toBeUndefined()
+    })
+  })
+
   describe('throttleMs', () => {
     it('coalesces writes within the throttle window', async () => {
       vi.useFakeTimers()
