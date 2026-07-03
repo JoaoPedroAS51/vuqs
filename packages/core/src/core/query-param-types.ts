@@ -8,8 +8,6 @@ export type AnyDefinedQueryParam = DefinedQueryParam<any>
 /** @internal */
 export type AnyObjectChildren = Record<string, AnyDefinedQueryParam>
 /** @internal */
-export type DefaultInput<T> = T
-/** @internal */
 export type DefinedValue<TParam> = TParam extends DefinedQueryParam<infer TValue> ? TValue : never
 
 type RequiredObjectChildren<TChildren extends AnyObjectChildren> = {
@@ -75,7 +73,7 @@ export interface QueryParamTransform<TInput, TOutput> {
  * @typeParam T - The param's value type.
  * @typeParam TDefaultInput - The type accepted by `withDefault`.
  */
-export interface QueryParamBuilder<T, TDefaultInput = DefaultInput<T>> extends DefinedQueryParam<T> {
+export interface QueryParamBuilder<T, TDefaultInput = T> extends DefinedQueryParam<T> {
   /** Sets the param's default, layered over the codec default. */
   withDefault: (defaultValue: TDefaultInput) => QueryParamBuilderWithDefault<T, TDefaultInput>
   /** Sets how the value is compared, which drives `clearOnDefault`. */
@@ -96,7 +94,7 @@ export interface QueryParamBuilder<T, TDefaultInput = DefaultInput<T>> extends D
  * @typeParam T - The param's value type.
  * @typeParam TDefaultInput - The type accepted by `withDefault`.
  */
-export interface QueryParamBuilderWithDefault<T, TDefaultInput = DefaultInput<T>>
+export interface QueryParamBuilderWithDefault<T, TDefaultInput = T>
   extends DefinedQueryParamWithDefault<T> {
   /** Replaces the current default. */
   withDefault: (defaultValue: TDefaultInput) => QueryParamBuilderWithDefault<T, TDefaultInput>

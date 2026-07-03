@@ -1,5 +1,4 @@
 import type {
-  DefaultInput,
   QueryParamBuilder,
   QueryParamBuilderOptions,
   QueryParamBuilderWithDefault,
@@ -8,7 +7,7 @@ import type {
 import { createDefinedQueryParam } from './defined-query-param'
 import { structuralEq } from './equality'
 
-export function createQueryParamBuilder<T, TDefaultInput = DefaultInput<T>>(
+export function createQueryParamBuilder<T, TDefaultInput = T>(
   options: QueryParamBuilderOptions<T>,
 ): QueryParamBuilder<T, TDefaultInput> | QueryParamBuilderWithDefault<T, TDefaultInput> {
   const defined = createDefinedQueryParam({
