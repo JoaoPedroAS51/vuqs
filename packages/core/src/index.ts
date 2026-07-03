@@ -16,11 +16,17 @@ export type {
 } from './core/engine'
 export { structuralEq } from './core/equality'
 export type { QueryHookBus, QueryHooks } from './core/hooks'
-export { defineQueryModule } from './core/module'
+export { defineQueryModule, defineQueryStateApi } from './core/module'
 export type {
+  ApplyQueryStateModuleApi,
   DefinedQueryModule,
-  QueryModule,
+  DefinedQueryStateApi,
+  DefinedQueryStateModule,
+  DefinedQueryStatesModule,
+  QueryStateApiRegistry,
+  QueryStateApiUri,
   QueryStateModule,
+  QueryStatesModule,
 } from './core/module'
 export { deletePath, getPath, getQueryString, getQueryStringArray, setPath } from './core/path'
 export type { Enforce, QueryPipeline, QueryPipelineBus, QueryPipelineStage, QueryValues } from './core/pipeline'
@@ -29,7 +35,7 @@ export { queryParam } from './core/query-param'
 export type { PrefixedQueryParamBuilder, QueryParamBuilder, QueryParamBuilderWithDefault, QueryParamObjectBuilder, QueryParamObjectBuilderWithDefault, QueryParamTransform } from './core/query-param'
 export { resetQueues } from './core/queues/throttle'
 export { assertUniquePaths, buildQuery, dropDefaults, getManagedKeys, normalizeQueryStateSchema, omitManagedKeys, parseQueryStates, serializeQueryStates } from './core/schema'
-export type { NormalizeQueryStateSchema, QueryStateRefValue, QueryStateSchema, QueryStateSchemaInput, QueryStateValueOf, QueryStateValues, QueryStateWriteValues } from './core/schema'
+export type { NormalizeQueryStateSchema, QueryStateRefValue, QueryStateSchema, QueryStateSchemaInput, QueryStateValueAt, QueryStateValueOf, QueryStateValues, QueryStateWriteValues } from './core/schema'
 export { createSerializer } from './core/serializer'
 export type { CreateSerializerOptions, Serializer, SerializerParse, SerializerStringify } from './core/serializer'
 export { toQueryRefs } from './core/to-query-refs'

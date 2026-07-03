@@ -1,14 +1,26 @@
+import type { ComputedRef } from 'vue'
 import type { QueryCore } from '../../src/core/query-core'
-import type { QueryStateSchema } from '../../src/core/schema'
+import type { QueryStateSchema, QueryStateValueAt } from '../../src/core/schema'
 import { describe, expectTypeOf, it } from 'vitest'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { codecs } from '../../src/core/codec'
-import { defineQueryModule } from '../../src/core/module'
+import { defineQueryModule, defineQueryStateApi } from '../../src/core/module'
 import { queryParam } from '../../src/core/query-param'
 import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
 import { withContext } from '../../src/modules/context'
 import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
+
+interface SelectionApi<TValue> {
+  selection: ComputedRef<TValue | undefined>
+  resetTo: (value: TValue) => void
+}
+
+declare module '../../src/core/module' {
+  interface QueryStateApiRegistry<TSchema extends QueryStateSchema, TKey extends keyof TSchema & string> {
+    'test:selection': SelectionApi<QueryStateValueAt<TSchema, TKey>>
+  }
+}
 
 const schema = {
   q: queryParam('q', codecs.string),
@@ -69,6 +81,27 @@ describe('module composition', () => {
     // @ts-expect-error setDefault follows the composite value shape
     range.setDefault({ from: '2026-01-01' })
   })
+
+  it('adds single context APIs to useQueryState', () => {
+    const tab = ref<'products' | 'orders'>('products')
+    const category = useQueryState('category').use(
+      withContext({ active: tab, preserve: true, only: ['products'] }),
+    )
+
+    expectTypeOf(category.value).toEqualTypeOf<string | undefined>()
+    expectTypeOf(category.activeContext.value).toEqualTypeOf<'products' | 'orders'>()
+    category.switchTo('orders')
+    category.buildContextQuery({}, 'products')
+    // @ts-expect-error context target follows the active context union
+    category.switchTo('customers')
+  })
+
+  it('adds active-only context APIs to both facades', () => {
+    const tab = ref<'products' | 'orders'>('products')
+
+    useQueryStates(schema).use(withContext({ active: tab }))
+    useQueryState('q').use(withContext({ active: tab }))
+  })
 })
 
 describe('single-state module composition', () => {
@@ -95,11 +128,13 @@ describe('single-state module composition', () => {
   })
 
   it('rejects queryState projections bound to the grouped schema', () => {
-    defineQueryModule({
+    const boundToGroupedSchema = {
       queryStates: () => ({ grouped: true }),
-      // @ts-expect-error queryState must accept the single-param core passed by useQueryState
       queryState: (_core: QueryCore<typeof schema>, key: keyof typeof schema & string) => ({ key }),
-    })
+    }
+
+    // @ts-expect-error queryState must accept the single-param core passed by useQueryState
+    defineQueryModule(boundToGroupedSchema)
   })
 
   it('uses the grouped projection on useQueryStates', () => {
@@ -114,6 +149,52 @@ describe('single-state module composition', () => {
     const q = useQueryStates(schema).use(functionOnly)
 
     expectTypeOf(q.grouped).toEqualTypeOf<true>()
+  })
+
+  it('supports single-only modules and rejects them on useQueryStates', () => {
+    const singleOnly = defineQueryModule({
+      queryState: (_core, key) => ({ single: true, key }),
+    })
+
+    const q = useQueryState('q').use(singleOnly)
+
+    expectTypeOf(q.single).toEqualTypeOf<boolean>()
+    expectTypeOf(q.key).toEqualTypeOf<string>()
+    // @ts-expect-error single-only modules are not callable grouped modules
+    useQueryStates(schema).use(singleOnly)
+  })
+})
+
+describe('registry-based single-state authoring', () => {
+  const withSelection = defineQueryModule({
+    queryState: defineQueryStateApi('test:selection', (core, key) => ({
+      selection: computed(() => core.state.selected.value[key]),
+      resetTo: value => core.query.set(key, value),
+    })),
+  })
+
+  it('resolves the contributed API against the bound param value type', () => {
+    const page = useQueryState('page', codecs.integer.withDefault(1)).use(withSelection)
+
+    expectTypeOf(page.value).toEqualTypeOf<number>()
+    expectTypeOf(page.selection.value).toEqualTypeOf<number | undefined>()
+    page.resetTo(2)
+    // @ts-expect-error resetTo follows the param value type
+    page.resetTo('2')
+  })
+
+  it('resolves the value type for the implicit string param', () => {
+    const q = useQueryState('q').use(withSelection)
+
+    expectTypeOf(q.selection.value).toEqualTypeOf<string | undefined>()
+    q.resetTo('next')
+    // @ts-expect-error resetTo follows the string value type
+    q.resetTo(1)
+  })
+
+  it('rejects the kinded single-only module on useQueryStates', () => {
+    // @ts-expect-error a kinded single-only module is not a callable grouped module
+    useQueryStates(schema).use(withSelection)
   })
 })
 
@@ -146,5 +227,23 @@ describe('withContext key-safety (checked by use)', () => {
     useQueryStates(schema).use(withContext({ active: tab, preserve: ['nope'] }))
     // @ts-expect-error 'nope' is not a field of the schema
     useQueryStates(schema).use(withContext({ active: tab, only: { nope: ['products'] } }))
+  })
+
+  it('rejects single context options on useQueryStates', () => {
+    // @ts-expect-error single preserve is not a grouped module
+    useQueryStates(schema).use(withContext({ active: tab, preserve: true }))
+    // @ts-expect-error single only is not a grouped module
+    useQueryStates(schema).use(withContext({ active: tab, only: ['products'] }))
+  })
+})
+
+describe('withContext key-safety (useQueryState)', () => {
+  const tab = ref<'products' | 'orders'>('products')
+
+  it('rejects grouped context options on useQueryState', () => {
+    // @ts-expect-error grouped preserve is not a single-param module
+    useQueryState('q').use(withContext({ active: tab, preserve: ['q'] }))
+    // @ts-expect-error grouped only is not a single-param module
+    useQueryState('q').use(withContext({ active: tab, only: { q: ['products'] } }))
   })
 })

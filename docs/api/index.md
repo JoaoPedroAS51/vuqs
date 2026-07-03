@@ -38,7 +38,7 @@ section.
 // Composables
 export { useQueryState, useQueryStates, toQueryRefs }
 export { installQueryAdapter, provideQueryAdapter, useQueryAdapter }
-export { defineQueryModule }
+export { defineQueryModule, defineQueryStateApi }
 
 // Params & codecs
 export { codecs, createCodec }
@@ -76,6 +76,7 @@ export type {
   QueryStateValues,
   QueryStateWriteValues,
   QueryStateValueOf,
+  QueryStateValueAt,
   QueryStateRefValue,
   QueryStatesValues,
   QueryStatesActions,
@@ -85,9 +86,14 @@ export type {
   QueryComposable,
   QueryCore,
   DefinedQueryModule,
-  QueryModule,
+  DefinedQueryStateApi,
+  DefinedQueryStateModule,
+  DefinedQueryStatesModule,
+  QueryStateApiRegistry,
+  QueryStateApiUri,
   QueryStateModule,
   QueryStatesModule,
+  ApplyQueryStateModuleApi,
   QueryHooks,
   QueryHookBus,
   QueryPipeline,
@@ -125,7 +131,16 @@ export type { VueRouterAdapterOptions }
 
 ```ts
 export { withContext, withRuntimeDefaults }
-export type { ContextApi, ContextOptions, RuntimeDefaultsApi, RuntimeDefaultsStateApi }
+export type {
+  ContextBaseOptions,
+  ContextNavigate,
+  ContextStateApi,
+  ContextStatesApi,
+  QueryStateContextOptions,
+  QueryStatesContextOptions,
+  RuntimeDefaultsStateApi,
+  RuntimeDefaultsStatesApi,
+}
 ```
 
 ### `@vuqs/core/shared`

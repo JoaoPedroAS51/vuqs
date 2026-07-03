@@ -81,20 +81,6 @@ export function createQueryBinding<TSchema extends QueryStateSchema>(
   return { engine, refs, core }
 }
 
-/**
- * Builds the engine and one writable computed per param.
- *
- * @internal
- */
-export function createQueryStateRefs<TSchema extends QueryStateSchema>(
-  schema: TSchema,
-  options: UseQueryStatesOptions,
-): Pick<QueryBinding<TSchema>, 'engine' | 'refs'> {
-  const { engine, refs } = createQueryBinding(schema, options)
-
-  return { engine, refs }
-}
-
 function resolveSchemaClearOnDefault<TSchema extends QueryStateSchema>(
   schema: TSchema,
   instanceClearOnDefault: boolean | undefined,

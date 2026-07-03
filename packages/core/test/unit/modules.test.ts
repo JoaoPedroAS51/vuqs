@@ -264,6 +264,52 @@ describe('withContext', () => {
 
     expect(q.buildContextQuery(query.value, 'orders')).toEqual({ q: 'foo' })
   })
+
+  it('composes with useQueryState using single-param rules', async () => {
+    const { query, build } = setup({ category: 'cpu' })
+    const tab = ref<'products' | 'orders'>('products')
+    const category = build(() =>
+      useQueryState('category', codecs.literal(['cpu', 'gpu'] as const)).use(
+        withContext({ active: tab, preserve: true, only: ['products'] }),
+      ),
+    )
+
+    expect(isRef(category)).toBe(true)
+    expect(category.value).toBe('cpu')
+    expect(category.activeContext.value).toBe('products')
+    expect(category.buildContextQuery(query.value, 'products')).toEqual({ category: 'cpu' })
+    expect(category.buildContextQuery(query.value, 'orders')).toEqual({})
+
+    tab.value = 'orders'
+    await nextTick()
+    await flush()
+
+    expect(category.value).toBeUndefined()
+
+    category.set('gpu')
+    await flush()
+
+    expect(query.value).toEqual({})
+  })
+
+  it('supports active-only context modules on useQueryState', () => {
+    const { build } = setup({ q: 'foo' })
+    const tab = ref<'products' | 'orders'>('products')
+    const switches: Array<{ target: string, query: ParsedQueryRaw }> = []
+    const q = build(() =>
+      useQueryState('q').use(
+        withContext({
+          active: tab,
+          navigate: (target, reconciled) => switches.push({ target, query: reconciled }),
+        }),
+      ),
+    )
+
+    q.switchTo('orders')
+
+    expect(q.value).toBe('foo')
+    expect(switches).toEqual([{ target: 'orders', query: {} }])
+  })
 })
 
 describe('withContext buildContextQuery', () => {

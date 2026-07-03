@@ -69,6 +69,20 @@ export type QueryStateValueOf<TDefinition>
   = TDefinition extends DefinedQueryParam<infer TValue> ? TValue : never
 
 /**
+ * Extracts the decoded value type of one param in a schema, by key.
+ *
+ * @remarks
+ * Resolves to `never` when `TKey` does not name a param of `TSchema`.
+ *
+ * @typeParam TSchema - The schema holding the param.
+ * @typeParam TKey - The param key to read the value type from.
+ */
+export type QueryStateValueAt<TSchema extends QueryStateSchema, TKey extends string>
+  = TSchema extends { [Key in TKey]: infer TDefinition }
+    ? QueryStateValueOf<TDefinition>
+    : never
+
+/**
  * The value a param's reactive ref exposes: `T` when the param declares a
  * default, otherwise `T | undefined`.
  *

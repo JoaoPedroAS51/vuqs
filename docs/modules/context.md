@@ -21,16 +21,26 @@ Hand-rolling this is fiddly. `withContext` declares it.
 
 ## API
 
-`withContext(options)` — or `withContext(schema, options)` for explicit key
+`withContext(options)` or `withContext(schema, options)` for explicit key
 checking (see [Typing `preserve` and `only`](#typing-preserve-and-only)) —
-contributes `ContextApi`:
+contributes `ContextStatesApi` or `ContextStateApi`:
 
 ```ts
 function withContext<TSchema, TContext extends string>(
-  options: ContextOptions<TSchema, TContext>,
-): QueryModule<TSchema, ContextApi<TContext>>
+  options: QueryStatesContextOptions<TSchema, TContext>,
+): QueryStatesModule<TSchema, ContextStatesApi<TContext>>
 
-interface ContextApi<TContext extends string> {
+function withContext<TContext extends string>(
+  options: QueryStateContextOptions<TContext>,
+): DefinedQueryStateModule<ContextStateApi<TContext>>
+
+interface ContextStatesApi<TContext extends string> {
+  activeContext: ComputedRef<TContext>
+  buildContextQuery: (currentQuery: ParsedQuery, nextContext: TContext) => ParsedQueryRaw
+  switchTo: (target: TContext, options?: NavigateOptions) => void
+}
+
+interface ContextStateApi<TContext extends string> {
   activeContext: ComputedRef<TContext>
   buildContextQuery: (currentQuery: ParsedQuery, nextContext: TContext) => ParsedQueryRaw
   switchTo: (target: TContext, options?: NavigateOptions) => void
@@ -53,12 +63,59 @@ pastes an invalid param has it dropped on the next write.
 ## Options
 
 ```ts
-interface ContextOptions<TSchema, TContext extends string> {
+interface ContextBaseOptions<TContext extends string> {
   active: MaybeRefOrGetter<TContext>
-  preserve?: ReadonlyArray<keyof TSchema & string>
-  only?: Partial<Record<keyof TSchema & string, readonly TContext[]>>
   navigate?: (target: TContext, query: ParsedQueryRaw, options?: NavigateOptions) => void
 }
+
+type QueryStatesContextOptions<TSchema, TContext extends string> = ContextBaseOptions<TContext> & (
+  | {
+    preserve: ReadonlyArray<keyof TSchema & string>
+    only?: Partial<Record<keyof TSchema & string, readonly TContext[]>>
+  }
+  | {
+    preserve?: ReadonlyArray<keyof TSchema & string>
+    only: Partial<Record<keyof TSchema & string, readonly TContext[]>>
+  }
+)
+
+type QueryStateContextOptions<TContext extends string> = ContextBaseOptions<TContext> & (
+  | {
+    preserve: boolean
+    only?: readonly TContext[]
+  }
+  | {
+    preserve?: boolean
+    only: readonly TContext[]
+  }
+)
+```
+
+`ContextBaseOptions` with only `active` and optional `navigate` creates a module
+that works with both `useQueryStates` and `useQueryState`. It adds the context
+controls and keeps the default reconciliation rule: `buildContextQuery` and
+`switchTo` reset managed params because no param is marked as preserved.
+
+```ts
+withContext({ active })
+```
+
+Grouped and single-param rules use different option shapes:
+
+```ts
+// grouped
+withContext({
+  active,
+  preserve: ['q'],
+  only: { category: ['products'] },
+})
+
+// single
+withContext({
+  active,
+  preserve: true,
+  only: ['products'],
+})
 ```
 
 ### `active` — the current context
@@ -78,7 +135,8 @@ is irreducible — two params can both be valid in both contexts yet one should
 persist and the other shouldn't.
 
 ```ts
-withContext({ preserve: ['q'] }) // q carries over; everything else resets
+withContext({ active, preserve: ['q'] }) // q carries over; everything else resets
+useQueryState('q').use(withContext({ active, preserve: true }))
 ```
 
 ### `only` — param validity per context
@@ -90,11 +148,14 @@ make it valid everywhere.
 
 ```ts
 withContext({
+  active,
   only: {
     category: ['products'], // category exists only on Products
     status: ['orders'],     // status exists only on Orders
   },
 })
+
+useQueryState('category').use(withContext({ active, only: ['products'] }))
 ```
 
 ### `navigate` — how to switch
@@ -106,9 +167,9 @@ context maps to a route, so you own that mapping.
 
 ```ts
 // context lives in a route param:
-withContext({ navigate: (target, query) => router.push({ params: { tab: target }, query }) })
+withContext({ active, navigate: (target, query) => router.push({ params: { tab: target }, query }) })
 // or in the query string:
-withContext({ navigate: (target, query) => router.replace({ query: { ...query, tab: target } }) })
+withContext({ active, navigate: (target, query) => router.replace({ query: { ...query, tab: target } }) })
 ```
 
 Omit it and `switchTo` throws; you can still drive navigation yourself with
@@ -153,8 +214,8 @@ const query = buildContextQuery(route.query, 'orders')
 
 ### Typing `preserve` and `only`
 
-`withContext` has two overloads, so the param keys in `preserve`/`only` are always
-type-checked:
+`withContext` infers the option shape from the facade that consumes it.
+Grouped options use schema keys:
 
 ```ts
 // Inferred from the schema you chain off — no extra argument:
@@ -165,6 +226,20 @@ useQueryStates(schema).use(withContext(schema, { active, preserve: ['q'] }))
 ```
 
 Either way, TypeScript rejects a `preserve` or `only` key that isn't in the schema.
+
+Single-param options describe the one param bound by `useQueryState`. They never
+expose the internal single schema key:
+
+```ts
+useQueryState('category').use(withContext({
+  active,
+  preserve: true,
+  only: ['products'],
+}))
+```
+
+`withContext({ active })` has no param-specific rules and works with both
+`useQueryStates` and `useQueryState`.
 
 ## Example
 

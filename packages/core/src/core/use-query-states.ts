@@ -1,4 +1,4 @@
-import type { QueryModule } from './module'
+import type { QueryStatesModule } from './module'
 import type { QueryCore } from './query-core'
 import type {
   NormalizeQueryStateSchema,
@@ -10,10 +10,16 @@ import type {
 import type { NavigateOptions } from './types'
 import { reactive } from 'vue'
 import { createQueryBinding } from './binding'
-import { applyQueryModule } from './module'
+import { applyQueryStatesModule } from './module'
 import { normalizeQueryStateSchema } from './schema'
 
-export type { DefinedQueryModule, QueryModule, QueryStateModule } from './module'
+export type {
+  DefinedQueryModule,
+  DefinedQueryStateModule,
+  DefinedQueryStatesModule,
+  QueryStateModule,
+  QueryStatesModule,
+} from './module'
 export type { QueryCore } from './query-core'
 export type { NavigateOptions, QueryStateNavigate } from './types'
 export type { QueryStateRef, UseQueryStateReturn } from './use-query-state'
@@ -47,7 +53,7 @@ export interface UseQueryStatesOptions extends NavigateOptions {
  * @typeParam TApi - The API accumulated so far.
  */
 export type QueryComposable<TSchema extends QueryStateSchema, TApi> = TApi & {
-  use: <TAdded>(module: QueryModule<TSchema, TAdded>) => QueryComposable<TSchema, TApi & TAdded>
+  use: <TAdded>(module: QueryStatesModule<TSchema, TAdded>) => QueryComposable<TSchema, TApi & TAdded>
 }
 
 /**
@@ -192,8 +198,8 @@ export function useQueryStates<TSchema extends QueryStateSchemaInput>(
     clear,
   } as QueryComposable<TNormalizedSchema, UseQueryStatesReturn<TNormalizedSchema>>
 
-  composable.use = <TAdded>(module: QueryModule<TNormalizedSchema, TAdded>) => {
-    applyQueryModule(composable, core, module)
+  composable.use = <TAdded>(module: QueryStatesModule<TNormalizedSchema, TAdded>) => {
+    applyQueryStatesModule(composable, core, module)
 
     return composable as QueryComposable<TNormalizedSchema, UseQueryStatesReturn<TNormalizedSchema> & TAdded>
   }

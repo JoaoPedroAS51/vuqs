@@ -1,7 +1,7 @@
 import type { WritableComputedRef } from 'vue'
 import type { Codec, CodecWithDefault } from './codec'
 import type { DefinedQueryParam, DefinedQueryParamWithDefault } from './defined-query-param'
-import type { DefinedQueryModule, QueryStateApiOf } from './module'
+import type { DefinedQueryStateModule, QueryStateApiOf } from './module'
 import type { QueryStateSchema } from './schema'
 import type { NavigateOptions } from './types'
 import type { UseQueryStatesOptions } from './use-query-states'
@@ -47,7 +47,7 @@ export interface QueryStateRef<T> extends WritableComputedRef<T> {
 export type UseQueryStateReturn<T, TApi = object, TValue = T> = QueryStateRef<T> & TApi & {
   use: {
     <TModule>(
-      module: TModule & DefinedQueryModule<any, any, any>,
+      module: TModule & DefinedQueryStateModule<any>,
     ): UseQueryStateReturn<T, TApi & QueryStateApiOf<TModule, SingleQueryStateSchema<TValue>, 'value'>, TValue>
   }
 }
@@ -206,7 +206,7 @@ function toQueryStateRef<T>(
     clear: (perCall?: NavigateOptions) => engine.query.set('value', undefined, perCall),
   }) as UseQueryStateReturn<T | undefined, object, T>
 
-  queryRef.use = ((module: DefinedQueryModule<any, any, any>) => {
+  queryRef.use = ((module: DefinedQueryStateModule<any>) => {
     applyQueryStateModule(queryRef, core, 'value', module)
 
     return queryRef

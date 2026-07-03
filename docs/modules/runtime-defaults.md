@@ -76,12 +76,12 @@ that equals the *resolved* default, which here is `eur`.
 ## API
 
 `withRuntimeDefaults()` takes no options. With `useQueryStates`, it contributes
-`RuntimeDefaultsApi`:
+`RuntimeDefaultsStatesApi`:
 
 ```ts
-function withRuntimeDefaults(): QueryModule<TSchema, RuntimeDefaultsApi<TSchema>>
+function withRuntimeDefaults(): QueryStatesModule<TSchema, RuntimeDefaultsStatesApi<TSchema>>
 
-interface RuntimeDefaultsApi<TSchema> {
+interface RuntimeDefaultsStatesApi<TSchema> {
   selected: Readonly<QueryStateValues<TSchema>>
   defaults: Readonly<QueryStateValues<TSchema>>
   setDefaults: (values: QueryStateValues<TSchema>) => void

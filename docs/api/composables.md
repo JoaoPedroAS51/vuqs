@@ -58,7 +58,7 @@ interface QueryStateRef<T> extends WritableComputedRef<T> {
 
 type UseQueryStateReturn<T, TApi = object> = QueryStateRef<T> & TApi & {
   use: <TStateApi>(
-    module: DefinedQueryModule<any, any, TStateApi>,
+    module: DefinedQueryStateModule<TStateApi>,
   ) => UseQueryStateReturn<T, TApi & TStateApi>
 }
 ```

@@ -4,11 +4,11 @@ A grouped-only module is a function `(core) => addedApi`. `.use(module)` runs it
 against the composable's shared [`QueryCore`](#the-core), merges the returned
 object onto the composable, and widens the type.
 
-Use `defineQueryModule({ queryStates, queryState })` when a module should support both
-[`useQueryStates`](/api/composables#usequerystates) and
-[`useQueryState`](/api/composables#usequerystate). `queryStates(core)` contributes
-the grouped API; `queryState(core, key)` contributes the single-param API on the
-same ref object returned by `useQueryState`.
+Use `defineQueryModule(...)` for authored modules. Pass `queryStates` for grouped
+composition, `queryState` for single-param composition, or both for a dual
+module. `queryStates(core)` contributes the grouped API; `queryState(core, key)`
+contributes the single-param API on the same ref object returned by
+`useQueryState`.
 
 ```ts
 import type { ComputedRef } from 'vue'
@@ -25,7 +25,7 @@ export function withCount(): <TSchema extends QueryStateSchema>(core: QueryCore<
 Return a generic `(core) => api` function rather than one bound to a fixed schema,
 so the module adapts to whatever schema it's applied to — the pattern every
 built-in uses. When the API *or* the options need to reference param names, use the
-`QueryModule<TSchema, TAdded>` overload form instead, as [`withContext`](/modules/context#typing-preserve-and-only)
+`QueryStatesModule<TSchema, TAdded>` overload form instead, as [`withContext`](/modules/context#typing-preserve-and-only)
 does.
 
 The dual-facade form keeps grouped and single behavior explicit:
@@ -45,6 +45,59 @@ export function withSelectedValue() {
   })
 }
 ```
+
+## Typing the single-param API against the bound param
+
+When the single-param API's types depend on the param `useQueryState` binds it to
+(its value type, key, or schema), register the API shape on the
+`QueryStateApiRegistry` under a namespaced URI, then build the `queryState`
+projection with `defineQueryStateApi(uri, project)`. The URI rides on the module as
+a type-only marker, so `useQueryState(...).use(...)` looks the API up against that
+param's schema and key, exactly as [`withRuntimeDefaults`](/modules/runtime-defaults)
+types `setDefault` and `selectedValue`.
+
+The registry is parameterized by the concrete schema and key, so they arrive as real
+type parameters: derive the bound value type with `QueryStateValueAt<TSchema, TKey>`
+and the API is sound in every position, including writes.
+
+```ts
+import type { ComputedRef } from 'vue'
+import type { QueryStateSchema, QueryStateValueAt } from '@vuqs/core'
+import { computed } from 'vue'
+import { defineQueryModule, defineQueryStateApi } from '@vuqs/core'
+
+interface SelectionApi<TValue> {
+  selection: ComputedRef<TValue | undefined>
+  resetTo: (value: TValue) => void
+}
+
+declare module '@vuqs/core' {
+  interface QueryStateApiRegistry<TSchema extends QueryStateSchema, TKey extends keyof TSchema & string> {
+    'my-lib:selection': SelectionApi<QueryStateValueAt<TSchema, TKey>>
+  }
+}
+
+export function withSelection() {
+  return defineQueryModule({
+    queryState: defineQueryStateApi('my-lib:selection', (core, key) => ({
+      selection: computed(() => core.state.selected.value[key]),
+      resetTo: value => core.query.set(key, value),
+    })),
+  })
+}
+```
+
+```ts
+const page = useQueryState('page', codecs.integer.withDefault(1)).use(withSelection())
+
+page.selection.value // number | undefined
+page.resetTo(2) // resetTo takes number, the param's value type
+```
+
+Namespace the URI by library (`'my-lib:selection'`) to avoid collisions with other
+modules, the way hook keys are namespaced. Add a `queryStates` projection alongside
+`queryState` for a dual module; a `queryState`-only definition is single-only and not
+callable for grouped composition.
 
 ## The core
 
@@ -268,15 +321,38 @@ The exact shapes a module works with, exported from `@vuqs/core` (the
 [`@vuqs/core/shared`](#vuqs-core-shared-helpers) helpers below come from their own subpath).
 
 ```ts
-type QueryModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
-type QueryStatesModule<TSchema, TAdded> = QueryModule<TSchema, TAdded>
+type QueryStatesModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
 type QueryStateModule<TSchema, TAdded> = (core: QueryCore<TSchema>, key: keyof TSchema & string) => TAdded
+type DefinedQueryStatesModule<TSchema, TAdded> = QueryStatesModule<TSchema, TAdded>
+interface DefinedQueryStateModule<TAdded> { /* single-param projection */ }
 type DefinedQueryModule<TSchema, TQueryStatesApi, TQueryStateApi> = QueryStatesModule<TSchema, TQueryStatesApi> & {}
+
+// Value-typed single-param API, keyed by URI (contributed types depend on the bound param).
+interface QueryStateApiRegistry<TSchema extends QueryStateSchema, TKey extends keyof TSchema & string> {}
+type QueryStateApiUri = keyof QueryStateApiRegistry<QueryStateSchema, string>
+interface DefinedQueryStateApi<TUri extends QueryStateApiUri> { /* projection carrying the URI */ }
+function defineQueryStateApi<TUri extends QueryStateApiUri>(
+  uri: TUri,
+  project: (core: QueryCore<TSchema>, key: keyof TSchema & string) => QueryStateApiRegistry<TSchema, TKey>[TUri],
+): DefinedQueryStateApi<TUri>
 
 function defineQueryModule<TSchema, TQueryStatesApi, TQueryStateApi>(definition: {
   queryStates: QueryStatesModule<TSchema, TQueryStatesApi>
   queryState: QueryStateModule<QueryStateSchema, TQueryStateApi>
 }): DefinedQueryModule<TSchema, TQueryStatesApi, TQueryStateApi>
+function defineQueryModule<TSchema, TQueryStatesApi, TUri>(definition: {
+  queryStates: QueryStatesModule<TSchema, TQueryStatesApi>
+  queryState: DefinedQueryStateApi<TUri>
+}): DefinedQueryStatesModule<TSchema, TQueryStatesApi> & DefinedQueryStateApi<TUri>
+function defineQueryModule<TSchema, TQueryStatesApi>(definition: {
+  queryStates: QueryStatesModule<TSchema, TQueryStatesApi>
+}): DefinedQueryStatesModule<TSchema, TQueryStatesApi>
+function defineQueryModule<TQueryStateApi>(definition: {
+  queryState: QueryStateModule<QueryStateSchema, TQueryStateApi>
+}): DefinedQueryStateModule<TQueryStateApi>
+function defineQueryModule<TUri>(definition: {
+  queryState: DefinedQueryStateApi<TUri>
+}): DefinedQueryStateApi<TUri>
 
 interface QueryCore<TSchema> {
   schema: TSchema

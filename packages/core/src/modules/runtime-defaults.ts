@@ -1,13 +1,20 @@
 import type { ComputedRef, Ref } from 'vue'
-import type { QUERY_STATE_MODULE, QUERY_STATE_MODULE_API, QueryModule, QueryStateModuleApiKind } from '../core/module'
+import type { DefinedQueryStateApi, QUERY_STATE_MODULE, QUERY_STATE_MODULE_URI, QueryStatesModule } from '../core/module'
 import type { QueryCore } from '../core/query-core'
-import type { QueryStateSchema, QueryStateValueOf, QueryStateValues } from '../core/schema'
+import type { QueryStateSchema, QueryStateValueAt, QueryStateValues } from '../core/schema'
 import { computed, onScopeDispose, ref } from 'vue'
-import { defineQueryModule } from '../core/module'
+import { defineQueryModule, defineQueryStateApi } from '../core/module'
 import { toReadonlyState } from '../shared'
 
+declare module '../core/module' {
+  interface QueryStateApiRegistry<TSchema extends QueryStateSchema, TKey extends keyof TSchema & string> {
+    /** Contributed by {@link withRuntimeDefaults} to {@link useQueryState}. */
+    'vuqs:runtime-defaults': RuntimeDefaultsStateApi<TSchema, Extract<TKey, keyof TSchema & string>>
+  }
+}
+
 /**
- * API contributed by {@link withRuntimeDefaults}.
+ * Grouped API contributed by {@link withRuntimeDefaults}.
  *
  * @remarks
  * `selected` exposes the explicit URL selection and `defaults` the fallback
@@ -17,7 +24,7 @@ import { toReadonlyState } from '../shared'
  *
  * @typeParam TSchema - The schema being managed.
  */
-export interface RuntimeDefaultsApi<TSchema extends QueryStateSchema> {
+export interface RuntimeDefaultsStatesApi<TSchema extends QueryStateSchema> {
   /** Explicit URL selections, with no runtime or codec defaults. */
   selected: Readonly<QueryStateValues<TSchema>>
   /** Fallback values: runtime defaults from `setDefaults` over codec defaults. */
@@ -53,35 +60,13 @@ export interface RuntimeDefaultsStateApi<
   clearDefault: () => void
 }
 
-type QueryStateValueAt<
-  TSchema extends QueryStateSchema,
-  TKey extends keyof TSchema & string,
-> = TSchema extends { [Key in TKey]: infer TDefinition }
-  ? QueryStateValueOf<TDefinition>
-  : never
-
 type RuntimeDefaultsQueryStatesModule = <TSchema extends QueryStateSchema>(
   core: QueryCore<TSchema>,
-) => RuntimeDefaultsApi<TSchema>
-
-type RuntimeDefaultsQueryStateModule = <
-  TSchema extends QueryStateSchema,
-  TKey extends keyof TSchema & string,
->(
-  core: QueryCore<TSchema>,
-  key: TKey,
-) => RuntimeDefaultsStateApi<TSchema, TKey>
-
-interface RuntimeDefaultsQueryStateApiKind extends QueryStateModuleApiKind {
-  readonly api: RuntimeDefaultsStateApi<
-    this['schema'],
-    Extract<this['key'], keyof this['schema'] & string>
-  >
-}
+) => RuntimeDefaultsStatesApi<TSchema>
 
 type RuntimeDefaultsModule = RuntimeDefaultsQueryStatesModule & {
-  readonly [QUERY_STATE_MODULE]: RuntimeDefaultsQueryStateModule
-  readonly [QUERY_STATE_MODULE_API]: RuntimeDefaultsQueryStateApiKind
+  readonly [QUERY_STATE_MODULE]: DefinedQueryStateApi<'vuqs:runtime-defaults'>
+  readonly [QUERY_STATE_MODULE_URI]: 'vuqs:runtime-defaults'
 }
 
 /**
@@ -98,7 +83,7 @@ type RuntimeDefaultsModule = RuntimeDefaultsQueryStatesModule & {
  * this module with {@link withContext} clears stale per-context defaults without
  * direct coupling.
  *
- * @returns A query module that contributes {@link RuntimeDefaultsApi} to
+ * @returns A query module that contributes {@link RuntimeDefaultsStatesApi} to
  * {@link useQueryStates} and {@link RuntimeDefaultsStateApi} to
  * {@link useQueryState}.
  *
@@ -111,18 +96,18 @@ type RuntimeDefaultsModule = RuntimeDefaultsQueryStatesModule & {
  * values.currency // selection over the runtime default over the codec default
  * ```
  */
-export function withRuntimeDefaults<TSchema extends QueryStateSchema>(): QueryModule<TSchema, RuntimeDefaultsApi<TSchema>> & {
-  readonly [QUERY_STATE_MODULE]: RuntimeDefaultsQueryStateModule
-  readonly [QUERY_STATE_MODULE_API]: RuntimeDefaultsQueryStateApiKind
+export function withRuntimeDefaults<TSchema extends QueryStateSchema>(): QueryStatesModule<TSchema, RuntimeDefaultsStatesApi<TSchema>> & {
+  readonly [QUERY_STATE_MODULE]: DefinedQueryStateApi<'vuqs:runtime-defaults'>
+  readonly [QUERY_STATE_MODULE_URI]: 'vuqs:runtime-defaults'
 }
 export function withRuntimeDefaults(): RuntimeDefaultsModule {
   return defineQueryModule({
-    queryStates: createRuntimeDefaultsApi,
-    queryState: createRuntimeDefaultsStateApi,
+    queryStates: createRuntimeDefaultsStatesApi,
+    queryState: defineQueryStateApi('vuqs:runtime-defaults', createRuntimeDefaultsStateApi),
   }) as RuntimeDefaultsModule
 }
 
-function createRuntimeDefaultsApi<TSchema extends QueryStateSchema>(core: QueryCore<TSchema>): RuntimeDefaultsApi<TSchema> {
+function createRuntimeDefaultsStatesApi<TSchema extends QueryStateSchema>(core: QueryCore<TSchema>): RuntimeDefaultsStatesApi<TSchema> {
   const provided = useRuntimeDefaultsLayer(core)
 
   return {

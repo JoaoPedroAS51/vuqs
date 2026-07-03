@@ -1,4 +1,11 @@
 export { withContext } from './context'
-export type { ContextApi, ContextOptions } from './context'
+export type {
+  ContextBaseOptions,
+  ContextNavigate,
+  ContextStateApi,
+  ContextStatesApi,
+  QueryStateContextOptions,
+  QueryStatesContextOptions,
+} from './context'
 export { withRuntimeDefaults } from './runtime-defaults'
-export type { RuntimeDefaultsApi, RuntimeDefaultsStateApi } from './runtime-defaults'
+export type { RuntimeDefaultsStateApi, RuntimeDefaultsStatesApi } from './runtime-defaults'
