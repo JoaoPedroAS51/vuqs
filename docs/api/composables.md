@@ -224,6 +224,39 @@ import { codecs, queryParam } from '@vuqs/core'
 const sort = queryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc'))
 ```
 
+## defineQuerySchema <Badge type="info" text="@vuqs/core" />
+
+Names a reusable [schema](/guide/going-further/defining-params#reusing-a-schema),
+normalized so its type stays stable across composables and `typeof` derivations.
+
+```ts
+function defineQuerySchema<TSchema>(schema: TSchema): NormalizeQueryStateSchema<TSchema>
+```
+
+**Parameters**
+
+- `schema: TSchema`
+  - A map of logical name to a codec or a [`queryParam`](#queryparam) definition,
+    the same input `useQueryStates` accepts.
+
+**Returns**
+
+- `schema: NormalizeQueryStateSchema<TSchema>`
+  - The schema with codec-shorthand entries normalized to `DefinedQueryParam`. Pass
+    it to `useQueryStates` or [`createSerializer`](/api/serializer#createserializer),
+    and derive value types with `QueryStateValues<typeof schema>`.
+
+**Example**
+
+```ts
+import { codecs, defineQuerySchema, queryParam } from '@vuqs/core'
+
+export const filters = defineQuerySchema({
+  q: codecs.string,
+  status: queryParam('status', codecs.literal(['open', 'closed'] as const)),
+})
+```
+
 ## provideQueryAdapter <Badge type="info" text="@vuqs/core" />
 
 Provides a [`QueryAdapter`](/api/adapters#queryadapter) to descendant components, so

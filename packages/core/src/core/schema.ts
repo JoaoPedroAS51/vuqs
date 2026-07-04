@@ -48,6 +48,36 @@ export function normalizeQueryStateSchema<TSchema extends QueryStateSchemaInput>
 }
 
 /**
+ * Defines a reusable query-state schema, normalized to its canonical form.
+ *
+ * @remarks
+ * Normalizes codec-shorthand entries to {@link DefinedQueryParam} (the form the
+ * composables build internally), so the exported schema has a stable type to reuse
+ * across {@link useQueryStates}, {@link createSerializer}, and `typeof`-derived
+ * types like {@link QueryStateValues}.
+ *
+ * @typeParam TSchema - The schema input, keyed by logical param name.
+ * @param schema - The params, each a `queryParam` definition or a bare {@link Codec}.
+ * @returns The schema, normalized to {@link DefinedQueryParam} entries.
+ *
+ * @example
+ * ```ts
+ * export const filters = defineQuerySchema({
+ *   q: codecs.string,
+ *   status: queryParam('status', codecs.literal(['open', 'closed'] as const)),
+ * })
+ *
+ * const { values } = useQueryStates(filters)
+ * type Filters = QueryStateValues<typeof filters>
+ * ```
+ */
+export function defineQuerySchema<const TSchema extends QueryStateSchemaInput>(
+  schema: TSchema,
+): NormalizeQueryStateSchema<TSchema> {
+  return normalizeQueryStateSchema(schema)
+}
+
+/**
  * The normalized schema type produced from a public schema input.
  */
 export type NormalizeQueryStateSchema<TSchema extends QueryStateSchemaInput> = {

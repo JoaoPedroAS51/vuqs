@@ -8,7 +8,7 @@ import type { UseQueryStateReturn } from '../../src/core/use-query-state'
 import { describe, expectTypeOf, it } from 'vitest'
 import { codecs } from '../../src/core/codec'
 import { queryParam } from '../../src/core/query-param'
-import { parseQueryStates } from '../../src/core/schema'
+import { defineQuerySchema, parseQueryStates } from '../../src/core/schema'
 import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
 
@@ -246,5 +246,34 @@ describe('useQueryStates inference', () => {
 
     expectTypeOf(values.q).toEqualTypeOf<string | undefined>()
     expectTypeOf(values.page).toEqualTypeOf<number>()
+  })
+})
+
+describe('defineQuerySchema', () => {
+  const filters = defineQuerySchema({
+    q: codecs.string,
+    page: queryParam('page', codecs.integer.withDefault(1)),
+    status: queryParam('status', codecs.literal(['open', 'closed'] as const)),
+  })
+
+  it('normalizes codec shorthand to a defined param', () => {
+    expectTypeOf(filters.q).toExtend<DefinedQueryParam<string>>()
+    expectTypeOf(filters.page).toExtend<DefinedQueryParamWithDefault<number>>()
+  })
+
+  it('derives value types from the normalized schema', () => {
+    const values = {} as QueryStateValues<typeof filters>
+
+    expectTypeOf(values.q).toEqualTypeOf<string | undefined>()
+    expectTypeOf(values.page).toEqualTypeOf<number | undefined>()
+    expectTypeOf(values.status).toEqualTypeOf<'open' | 'closed' | undefined>()
+  })
+
+  it('binds through useQueryStates', () => {
+    const { values } = useQueryStates(filters)
+
+    expectTypeOf(values.q).toEqualTypeOf<string | undefined>()
+    expectTypeOf(values.page).toEqualTypeOf<number>()
+    expectTypeOf(values.status).toEqualTypeOf<'open' | 'closed' | undefined>()
   })
 })

@@ -37,6 +37,28 @@ const schema = {
 // values.lat ⇄ ?latitude=…
 ```
 
+## Reusing a schema
+
+`defineQuerySchema` names a whole schema, normalizing its entries (a bare codec
+becomes a full param) so a type derived from it stays in sync with what the
+composables build. Define it once and share it:
+
+```ts
+// filters.ts
+import type { QueryStateValues } from '@vuqs/core'
+import { codecs, defineQuerySchema, queryParam } from '@vuqs/core'
+
+export const filters = defineQuerySchema({
+  q: codecs.string,
+  status: queryParam('status', codecs.literal(['open', 'closed'] as const)),
+})
+
+export type Filters = QueryStateValues<typeof filters>
+```
+
+`useQueryStates(filters)`, [`createSerializer(filters)`](/guide/going-further/serializer),
+and `QueryStateValues<typeof filters>` all read the same normalized shape.
+
 ## Single-key params
 
 `queryParam(path, codec)` binds a codec to `path`. With no codec it is a plain

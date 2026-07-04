@@ -41,7 +41,7 @@ export { installQueryAdapter, provideQueryAdapter, useQueryAdapter }
 
 // Params & codecs
 export { codecs, createCodec }
-export { queryParam }
+export { queryParam, defineQuerySchema }
 
 // Module authoring
 export { defineQueryModule }
