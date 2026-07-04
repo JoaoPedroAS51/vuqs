@@ -44,7 +44,7 @@ export { codecs, createCodec }
 export { queryParam }
 
 // Module authoring
-export { defineQueryModule, defineQueryStateApi }
+export { defineQueryModule }
 
 // Serializer & pure functions
 export { createSerializer }
@@ -85,8 +85,9 @@ export type {
   QueryStateValueOf, QueryStateValueAt, QueryStateRefValue,
   // Modules
   QueryCore, QueryStatesModule, QueryStateModule,
-  DefinedQueryModule, DefinedQueryStatesModule, DefinedQueryStateModule, DefinedQueryStateApi,
-  QueryStateApiRegistry, QueryStateApiUri, ApplyQueryStateModuleApi,
+  DefinedQueryModule, DefinedQueryStatesModule, DefinedQueryStateModule,
+  QueryModuleFacade, QueryStatesFacadeModule, QueryStateFacadeModule, QueryFacadeModule,
+  QueryModuleRegistry, QueryModuleName,
   QueryHooks, QueryHookBus,
   QueryPipeline, QueryPipelineBus, QueryPipelineStage, QueryValues, Enforce,
   // Adapter & navigation
@@ -123,7 +124,6 @@ export type {
 ```ts
 // Helpers for writing your own module
 export { pickBy, omitBy, definedOnly, toReadonlyState }
-export type { NoInferType }
 ```
 
 ### `@vuqs/core/adapters/testing`

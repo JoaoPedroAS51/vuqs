@@ -1,7 +1,7 @@
 import type { WritableComputedRef } from 'vue'
 import type { Codec, CodecWithDefault } from './codec'
 import type { DefinedQueryParam, DefinedQueryParamWithDefault } from './defined-query-param'
-import type { DefinedQueryStateModule, QueryStateApiOf } from './module'
+import type { DefinedQueryStateModule, QueryFacadeModule, QueryStateFacadeModule, QueryStateNameApiOf, QueryStateNameModule } from './module'
 import type { QueryStateSchema } from './schema'
 import type { NavigateOptions } from './types'
 import type { UseQueryStatesOptions } from './use-query-states'
@@ -46,9 +46,18 @@ export interface QueryStateRef<T> extends WritableComputedRef<T> {
  */
 export type UseQueryStateReturn<T, TApi = object, TValue = T> = QueryStateRef<T> & TApi & {
   use: {
-    <TModule>(
-      module: TModule & DefinedQueryStateModule<any>,
-    ): UseQueryStateReturn<T, TApi & QueryStateApiOf<TModule, SingleQueryStateSchema<TValue>, 'value'>, TValue>
+    <TStateApi>(
+      module: QueryFacadeModule<'state', SingleQueryStateSchema<TValue>, any, TStateApi>,
+    ): UseQueryStateReturn<T, TApi & TStateApi, TValue>
+    <TModule extends QueryStateNameModule<any>>(
+      module: TModule,
+    ): UseQueryStateReturn<T, TApi & QueryStateNameApiOf<TModule, SingleQueryStateSchema<TValue>>, TValue>
+    <TAdded>(
+      module: QueryStateFacadeModule<'state', TAdded>,
+    ): UseQueryStateReturn<T, TApi & TAdded, TValue>
+    <TAdded>(
+      module: DefinedQueryStateModule<TAdded>,
+    ): UseQueryStateReturn<T, TApi & TAdded, TValue>
   }
 }
 

@@ -4,7 +4,7 @@ import type { QueryStateSchema, QueryStateValueAt } from '../../src/core/schema'
 import { describe, expectTypeOf, it } from 'vitest'
 import { computed, ref } from 'vue'
 import { codecs } from '../../src/core/codec'
-import { defineQueryModule, defineQueryStateApi } from '../../src/core/module'
+import { defineQueryModule } from '../../src/core/module'
 import { queryParam } from '../../src/core/query-param'
 import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
@@ -17,8 +17,11 @@ interface SelectionApi<TValue> {
 }
 
 declare module '../../src/core/module' {
-  interface QueryStateApiRegistry<TSchema extends QueryStateSchema, TKey extends keyof TSchema & string> {
-    'test:selection': SelectionApi<QueryStateValueAt<TSchema, TKey>>
+  // eslint-disable-next-line unused-imports/no-unused-vars -- TParam must match the base registry signature
+  interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
+    'test:selection': {
+      state: { api: SelectionApi<QueryStateValueAt<TSchema, 'value'>> }
+    }
   }
 }
 
@@ -105,15 +108,15 @@ describe('module composition', () => {
 })
 
 describe('single-state module composition', () => {
-  const dualMode = defineQueryModule<typeof schema, { grouped: true }, { single: true, key: string }>({
-    queryStates: () => ({ grouped: true }),
-    queryState: (_core, key) => ({ single: true, key }),
+  const dualMode = defineQueryModule({
+    queryStates: () => ({ grouped: true as const }),
+    queryState: (_core, key) => ({ single: true as const, key }),
   })
 
   const functionOnly = <TSchema extends QueryStateSchema>(_core: QueryCore<TSchema>): { grouped: true } => ({ grouped: true })
 
   it('accumulates single module API on useQueryState', () => {
-    const q = useQueryState('q').use(dualMode)
+    const q = useQueryState('q').use(dualMode())
 
     expectTypeOf(q.value).toEqualTypeOf<string | undefined>()
     expectTypeOf(q.single).toEqualTypeOf<true>()
@@ -138,7 +141,7 @@ describe('single-state module composition', () => {
   })
 
   it('uses the grouped projection on useQueryStates', () => {
-    const q = useQueryStates(schema).use(dualMode)
+    const q = useQueryStates(schema).use(dualMode())
 
     expectTypeOf(q.grouped).toEqualTypeOf<true>()
     // @ts-expect-error the single projection is not added to useQueryStates
@@ -156,25 +159,26 @@ describe('single-state module composition', () => {
       queryState: (_core, key) => ({ single: true, key }),
     })
 
-    const q = useQueryState('q').use(singleOnly)
+    const q = useQueryState('q').use(singleOnly())
 
     expectTypeOf(q.single).toEqualTypeOf<boolean>()
     expectTypeOf(q.key).toEqualTypeOf<string>()
     // @ts-expect-error single-only modules are not callable grouped modules
-    useQueryStates(schema).use(singleOnly)
+    useQueryStates(schema).use(singleOnly())
   })
 })
 
 describe('registry-based single-state authoring', () => {
   const withSelection = defineQueryModule({
-    queryState: defineQueryStateApi('test:selection', (core, key) => ({
+    name: 'test:selection',
+    queryState: (core, key) => ({
       selection: computed(() => core.state.selected.value[key]),
       resetTo: value => core.query.set(key, value),
-    })),
+    }),
   })
 
   it('resolves the contributed API against the bound param value type', () => {
-    const page = useQueryState('page', codecs.integer.withDefault(1)).use(withSelection)
+    const page = useQueryState('page', codecs.integer.withDefault(1)).use(withSelection())
 
     expectTypeOf(page.value).toEqualTypeOf<number>()
     expectTypeOf(page.selection.value).toEqualTypeOf<number | undefined>()
@@ -184,7 +188,7 @@ describe('registry-based single-state authoring', () => {
   })
 
   it('resolves the value type for the implicit string param', () => {
-    const q = useQueryState('q').use(withSelection)
+    const q = useQueryState('q').use(withSelection())
 
     expectTypeOf(q.selection.value).toEqualTypeOf<string | undefined>()
     q.resetTo('next')
@@ -192,9 +196,18 @@ describe('registry-based single-state authoring', () => {
     q.resetTo(1)
   })
 
-  it('rejects the kinded single-only module on useQueryStates', () => {
-    // @ts-expect-error a kinded single-only module is not a callable grouped module
-    useQueryStates(schema).use(withSelection)
+  it('enforces the value type against the param the single form binds', () => {
+    const category = useQueryState('category', codecs.literal(['cpu', 'gpu'] as const)).use(withSelection())
+
+    expectTypeOf(category.selection.value).toEqualTypeOf<'cpu' | 'gpu' | undefined>()
+    category.resetTo('cpu')
+    // @ts-expect-error resetTo follows the literal value type
+    category.resetTo('nope')
+  })
+
+  it('rejects the single-only registry module on useQueryStates', () => {
+    // @ts-expect-error a single-only registry module is not a callable grouped module
+    useQueryStates(schema).use(withSelection())
   })
 })
 
@@ -245,5 +258,41 @@ describe('withContext key-safety (useQueryState)', () => {
     useQueryState('q').use(withContext({ active: tab, preserve: ['q'] }))
     // @ts-expect-error grouped only is not a single-param module
     useQueryState('q').use(withContext({ active: tab, only: { q: ['products'] } }))
+  })
+})
+
+describe('withContext standalone forms', () => {
+  const tab = ref<'products' | 'orders'>('products')
+
+  it('binds the inline base form to either facade', () => {
+    useQueryStates(schema).use(withContext({ active: tab }))
+    useQueryState('q').use(withContext({ active: tab }))
+  })
+
+  it('builds a grouped module from an explicit schema', () => {
+    const grouped = useQueryStates(schema).use(
+      withContext(schema, { active: tab, preserve: ['q'], only: { category: ['products'] } }),
+    )
+
+    expectTypeOf(grouped.activeContext.value).toEqualTypeOf<'products' | 'orders'>()
+    // @ts-expect-error unknown key in the explicit schema form
+    withContext(schema, { active: tab, preserve: ['nope'] })
+    // @ts-expect-error a grouped module is not usable on useQueryState
+    useQueryState('q').use(withContext(schema, { active: tab }))
+  })
+
+  it('builds a single module from a param definition', () => {
+    const category = queryParam('category', codecs.literal(['cpu', 'gpu'] as const))
+    const single = useQueryState(category).use(withContext(category, { active: tab, preserve: true, only: ['products'] }))
+
+    expectTypeOf(single.activeContext.value).toEqualTypeOf<'products' | 'orders'>()
+    // @ts-expect-error a single module is not usable on useQueryStates
+    useQueryStates(schema).use(withContext(category, { active: tab, preserve: true }))
+  })
+
+  it('builds a single module from a param path', () => {
+    const single = useQueryState('q').use(withContext('q', { active: tab, preserve: true }))
+
+    expectTypeOf(single.activeContext.value).toEqualTypeOf<'products' | 'orders'>()
   })
 })

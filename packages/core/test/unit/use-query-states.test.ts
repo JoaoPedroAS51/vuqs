@@ -395,7 +395,7 @@ describe('useQueryState', () => {
     const q = run(() => useQueryState('q', codecs.string))
 
     expect(isRef(q)).toBe(true)
-    const used = q.use(module)
+    const used = q.use(module())
 
     expect(used).toBe(q)
     expect(isRef(q)).toBe(true)
@@ -423,7 +423,7 @@ describe('useQueryState', () => {
     })
     const q = run(() => useQueryState('q', codecs.string))
 
-    expect(() => q.use(module)).toThrow(/module key "set" is already provided/)
+    expect(() => q.use(module())).toThrow(/module key "set" is already provided/)
   })
 
   it('rolls back single-state module side effects when composition fails', () => {
@@ -441,7 +441,7 @@ describe('useQueryState', () => {
     })
     const q = run(() => useQueryState('q', codecs.string))
 
-    expect(() => q.use(module)).toThrow(/module key "set" is already provided/)
+    expect(() => q.use(module())).toThrow(/module key "set" is already provided/)
     expect(disposed).toBe(1)
   })
 
@@ -471,7 +471,7 @@ describe('useQueryState', () => {
       }),
     })
     const q = run(() => useQueryState(range))
-    const used = q.use(module)
+    const used = q.use(module())
 
     expect(used).toBe(q)
     expect(used.currentValue.value).toEqual({ from: '2026-01-01', to: '2026-01-31' })

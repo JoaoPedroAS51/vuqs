@@ -16,16 +16,18 @@ export type {
 } from './core/engine'
 export { structuralEq } from './core/equality'
 export type { QueryHookBus, QueryHooks } from './core/hooks'
-export { defineQueryModule, defineQueryStateApi } from './core/module'
+export { defineQueryModule } from './core/module'
 export type {
-  ApplyQueryStateModuleApi,
   DefinedQueryModule,
-  DefinedQueryStateApi,
   DefinedQueryStateModule,
   DefinedQueryStatesModule,
-  QueryStateApiRegistry,
-  QueryStateApiUri,
+  QueryFacadeModule,
+  QueryModuleFacade,
+  QueryModuleName,
+  QueryModuleRegistry,
+  QueryStateFacadeModule,
   QueryStateModule,
+  QueryStatesFacadeModule,
   QueryStatesModule,
 } from './core/module'
 export { deletePath, getPath, getQueryString, getQueryStringArray, setPath } from './core/path'

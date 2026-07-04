@@ -1,9 +1,7 @@
 import type { ComputedRef, MaybeRefOrGetter } from 'vue'
-import type { DefinedQueryStateModule, QueryStatesModule } from '../core/module'
 import type { QueryCore } from '../core/query-core'
 import type { QueryStateSchema, QueryStateValues } from '../core/schema'
 import type { NavigateOptions, ParsedQuery, ParsedQueryRaw } from '../core/types'
-import type { NoInferType } from '../shared'
 import { computed, onScopeDispose, toValue, watch } from 'vue'
 import { defineQueryModule } from '../core/module'
 import { buildQuery, dropDefaults, parseQueryStates } from '../core/schema'
@@ -13,6 +11,21 @@ declare module '@vuqs/core' {
   interface QueryHooks {
     /** Published by {@link withContext} when the active context changes. */
     'context:change': (context: string) => void
+  }
+}
+
+declare module '../core/module' {
+  interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
+    'vuqs:context': {
+      states: {
+        options: QueryStatesContextOptions<TSchema, TParam>
+        api: ContextStatesApi<TParam>
+      }
+      state: {
+        options: QueryStateContextOptions<TParam>
+        api: ContextStateApi<TParam>
+      }
+    }
   }
 }
 
@@ -47,15 +60,17 @@ export interface ContextBaseOptions<TContext extends string> {
  * Grouped options for {@link withContext}.
  *
  * @remarks
- * `preserve` and `only` are keyed by schema param names. They are checked either
- * from the schema passed to {@link withContext} or from the schema supplied by
- * {@link QueryComposable.use}.
+ * `preserve` and `only` are keyed by schema param names. Omitting both selects
+ * the base form (active context only). These options apply on
+ * {@link useQueryStates}, either inferred from the composable schema or checked
+ * against the schema passed to {@link withContext}.
  *
  * @typeParam TSchema - The schema whose param names key `preserve` and `only`.
  * @typeParam TContext - The union of context identifiers.
  */
 export type QueryStatesContextOptions<TSchema extends QueryStateSchema, TContext extends string>
   = ContextBaseOptions<TContext> & (
+    | { preserve?: undefined, only?: undefined }
     | {
       /** Params kept across a context change; everything else resets. */
       preserve: ReadonlyArray<keyof TSchema & string>
@@ -74,12 +89,13 @@ export type QueryStatesContextOptions<TSchema extends QueryStateSchema, TContext
  * Single-param options for {@link withContext}.
  *
  * @remarks
- * `preserve` and `only` describe the single param bound by {@link useQueryState}.
- * Use `withContext({ active })` when no single-specific option is needed.
+ * `preserve` and `only` describe the one param bound by {@link useQueryState}.
+ * Omitting both selects the base form (active context only).
  *
  * @typeParam TContext - The union of context identifiers.
  */
 export type QueryStateContextOptions<TContext extends string> = ContextBaseOptions<TContext> & (
+  | { preserve?: undefined, only?: undefined }
   | {
     /** Whether this param is kept across a context change when valid in the target. */
     preserve: boolean
@@ -93,10 +109,6 @@ export type QueryStateContextOptions<TContext extends string> = ContextBaseOptio
     only: readonly TContext[]
   }
 )
-
-type BaseContextModule<TContext extends string> = DefinedQueryStateModule<ContextStateApi<TContext>> & {
-  <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>): ContextStatesApi<TContext>
-}
 
 interface ResolvedContextOptions<TSchema extends QueryStateSchema, TContext extends string> extends ContextBaseOptions<TContext> {
   isPreserved: (key: keyof TSchema & string) => boolean
@@ -134,34 +146,28 @@ interface ContextControls<TContext extends string> {
 }
 
 /**
- * Creates a context module with schema-checked param keys.
+ * Creates a context module that binds to whichever facade composes it.
  *
  * @remarks
- * The `schema` argument binds `preserve` and `only` to the schema's param names.
- * TypeScript rejects keys that are not present in the schema.
+ * The facade `use` composes it on picks the options: {@link useQueryStates}
+ * types `preserve`/`only` against its schema, {@link useQueryState} types them
+ * for the single param. Passing only `active` yields the base form, valid on
+ * either facade. Call `withContext(schema, options)` to build a grouped module
+ * with schema-checked keys outside a `use`, or `withContext(param, options)` /
+ * `withContext(path, options)` to build a single-param module.
  *
  * The module taps a `read`/`write` pipeline transform that drops params invalid
  * in the active context, so such a param never enters `values` or derived module
  * state, and a write to one is dropped. An invalid param already in the URL (a
  * pasted stale link) stays hidden from reads and is cleared on the next context
- * switch via `switchTo` or `buildContextQuery`.
- *
- * On a context change the module emits the `'context:change'` hook (so modules
- * such as {@link withRuntimeDefaults} clear per-context state) and the read/write
- * filter follows the active context. It never navigates on its own: drive the
- * switch with `switchTo` (one navigation, via the `navigate` option) or build the
- * query yourself with `buildContextQuery`.
- *
- * @typeParam TSchema - The schema whose param names key `preserve` and `only`.
- * @typeParam TContext - The union of context identifiers.
- * @param schema - The schema used to type-check `preserve` and `only`.
- * @param options - The active context, preserved params, per-param validity, and the `navigate` mapping.
- * @returns A query module that contributes {@link ContextStatesApi}.
+ * switch via `switchTo` or `buildContextQuery`. On a context change the module
+ * emits the `'context:change'` hook (so modules such as {@link withRuntimeDefaults}
+ * clear per-context state). It never navigates on its own.
  *
  * @example
  * ```ts
  * const { switchTo } = useQueryStates(schema)
- *   .use(withContext(schema, {
+ *   .use(withContext({
  *     active: () => route.name as 'products' | 'orders',
  *     preserve: ['q'],
  *     only: { category: ['products'] },
@@ -171,117 +177,20 @@ interface ContextControls<TContext extends string> {
  * switchTo('orders') // one navigation: preserved params kept, the rest reset
  * ```
  */
-export function withContext<TSchema extends QueryStateSchema, TContext extends string>(
-  schema: TSchema,
-  options: QueryStatesContextOptions<TSchema, TContext>,
-): QueryStatesModule<TSchema, ContextStatesApi<TContext>>
-export function withContext<TSchema extends QueryStateSchema, TContext extends string>(
-  schema: TSchema,
-  options: ContextBaseOptions<TContext>,
-): QueryStatesModule<TSchema, ContextStatesApi<TContext>>
-/**
- * Creates a single-param context module.
- *
- * @remarks
- * `preserve` and `only` describe the single param bound by
- * `useQueryState(...).use(...)`. The internal single schema key is not exposed in
- * the public options.
- *
- * @typeParam TContext - The union of context identifiers.
- * @param options - The active context, single-param preservation, validity, and navigation mapping.
- * @returns A single-param query module that contributes {@link ContextStateApi}.
- */
-export function withContext<TContext extends string>(
-  options: QueryStateContextOptions<TContext>,
-): DefinedQueryStateModule<ContextStateApi<TContext>>
-/**
- * Creates a context module whose param keys are checked by `use`.
- *
- * @remarks
- * This overload returns a {@link QueryStatesModule}. When it is passed to
- * `useQueryStates(schema).use(...)`, TypeScript checks `preserve` and `only`
- * against that schema's param names.
- *
- * Invalid params are filtered out, and a context change emits the
- * `'context:change'` hook. Navigate with `switchTo` or `buildContextQuery`.
- *
- * @typeParam TSchema - The schema inferred from `useQueryStates(...).use(...)`.
- * @typeParam TContext - The union of context identifiers.
- * @param options - The active context, preserved params, and per-param validity.
- * @returns A query module that contributes {@link ContextStatesApi}.
- *
- * @example
- * ```ts
- * const { activeContext } = useQueryStates(schema)
- *   .use(withContext({ active: () => route.name, preserve: ['q'] }))
- *
- * activeContext.value // mirrors the active context
- * ```
- */
-export function withContext<TSchema extends QueryStateSchema, TContext extends string>(
-  options: QueryStatesContextOptions<NoInferType<TSchema>, TContext>,
-): QueryStatesModule<TSchema, ContextStatesApi<TContext>>
-/**
- * Creates a context module with no param-specific rules.
- *
- * @remarks
- * The returned module supports both `useQueryStates` and `useQueryState`. Add a
- * grouped `preserve` array or `only` map for grouped-specific rules; add a
- * single `preserve` boolean or `only` array for single-param rules.
- *
- * @typeParam TContext - The union of context identifiers.
- * @param options - The active context and optional navigation mapping.
- * @returns A query module that contributes {@link ContextStatesApi} and {@link ContextStateApi}.
- */
-export function withContext<TContext extends string>(
-  options: ContextBaseOptions<TContext>,
-): BaseContextModule<TContext>
-export function withContext<TContext extends string>(
-  schemaOrOptions: QueryStateSchema | QueryStatesContextOptions<QueryStateSchema, TContext> | QueryStateContextOptions<TContext> | ContextBaseOptions<TContext>,
-  maybeOptions?: QueryStatesContextOptions<QueryStateSchema, TContext> | ContextBaseOptions<TContext>,
-): QueryStatesModule<QueryStateSchema, ContextStatesApi<TContext>> | DefinedQueryStateModule<ContextStateApi<TContext>> | BaseContextModule<TContext> {
-  const options = (maybeOptions ?? schemaOrOptions) as QueryStatesContextOptions<QueryStateSchema, TContext> | QueryStateContextOptions<TContext> | ContextBaseOptions<TContext>
-
-  if (isSingleContextOptions(options)) {
-    return defineQueryModule({
-      queryState: (core, key) => createContextStateApi(core, resolveQueryStateContextOptions(options), key),
-    })
-  }
-
-  if (isBaseContextOptions(options)) {
-    const queryStates = <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>): ContextStatesApi<TContext> =>
-      createContextStatesApi(core, resolveBaseContextOptions(options))
-    const queryState = <TSchema extends QueryStateSchema, TKey extends keyof TSchema & string>(
-      core: QueryCore<TSchema>,
-      key: TKey,
-    ): ContextStateApi<TContext> => createContextStateApi(core, resolveBaseContextOptions(options), key)
-
-    return defineQueryModule({ queryStates, queryState }) as BaseContextModule<TContext>
-  }
-
-  const groupedOptions = options as QueryStatesContextOptions<QueryStateSchema, TContext>
-
-  return <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>) =>
-    createContextStatesApi<TSchema, TContext>(
-      core,
-      resolveQueryStatesContextOptions<TSchema, TContext>(groupedOptions),
-    )
-}
-
-function createContextStatesApi<TSchema extends QueryStateSchema, TContext extends string>(
-  core: QueryCore<TSchema>,
-  options: ResolvedContextOptions<TSchema, TContext>,
-): ContextStatesApi<TContext> {
-  return createContextControls(core, options)
-}
-
-function createContextStateApi<TSchema extends QueryStateSchema, TContext extends string>(
-  core: QueryCore<TSchema>,
-  options: ResolvedContextOptions<TSchema, TContext>,
-  key: keyof TSchema & string,
-): ContextStateApi<TContext> {
-  return createContextControls(core, options, key)
-}
+export const withContext = /* @__PURE__ */ defineQueryModule({
+  name: 'vuqs:context',
+  queryStates: <TSchema extends QueryStateSchema, TContext extends string>(
+    core: QueryCore<TSchema>,
+    options: QueryStatesContextOptions<TSchema, TContext>,
+  ): ContextStatesApi<TContext> =>
+    createContextControls(core, resolveQueryStatesContextOptions(options)),
+  queryState: <TSchema extends QueryStateSchema, TKey extends keyof TSchema & string, TContext extends string>(
+    core: QueryCore<TSchema>,
+    key: TKey,
+    options: QueryStateContextOptions<TContext>,
+  ): ContextStateApi<TContext> =>
+    createContextControls(core, resolveQueryStateContextOptions<TSchema, TContext>(options), key),
+})
 
 function createContextControls<TSchema extends QueryStateSchema, TContext extends string>(
   core: QueryCore<TSchema>,
@@ -337,7 +246,7 @@ function createContextControls<TSchema extends QueryStateSchema, TContext extend
 }
 
 function resolveQueryStatesContextOptions<TSchema extends QueryStateSchema, TContext extends string>(
-  options: QueryStatesContextOptions<QueryStateSchema, TContext>,
+  options: QueryStatesContextOptions<TSchema, TContext>,
 ): ResolvedContextOptions<TSchema, TContext> {
   return {
     active: options.active,
@@ -351,37 +260,13 @@ function resolveQueryStatesContextOptions<TSchema extends QueryStateSchema, TCon
   }
 }
 
-function resolveQueryStateContextOptions<TContext extends string>(
+function resolveQueryStateContextOptions<TSchema extends QueryStateSchema, TContext extends string>(
   options: QueryStateContextOptions<TContext>,
-): ResolvedContextOptions<QueryStateSchema, TContext> {
+): ResolvedContextOptions<TSchema, TContext> {
   return {
     active: options.active,
     navigate: options.navigate,
     isPreserved: () => options.preserve === true,
     isValidIn: (_key, context) => options.only === undefined || options.only.includes(context),
   }
-}
-
-function resolveBaseContextOptions<TContext extends string>(
-  options: ContextBaseOptions<TContext>,
-): ResolvedContextOptions<QueryStateSchema, TContext> {
-  return {
-    active: options.active,
-    navigate: options.navigate,
-    isPreserved: () => false,
-    isValidIn: () => true,
-  }
-}
-
-function isSingleContextOptions<TContext extends string>(
-  options: QueryStatesContextOptions<QueryStateSchema, TContext> | QueryStateContextOptions<TContext> | ContextBaseOptions<TContext>,
-): options is QueryStateContextOptions<TContext> {
-  return typeof (options as { preserve?: unknown }).preserve === 'boolean'
-    || Array.isArray((options as { only?: unknown }).only)
-}
-
-function isBaseContextOptions<TContext extends string>(
-  options: QueryStatesContextOptions<QueryStateSchema, TContext> | ContextBaseOptions<TContext>,
-): options is ContextBaseOptions<TContext> {
-  return !('preserve' in options) && !('only' in options)
 }

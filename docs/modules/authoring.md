@@ -4,26 +4,45 @@ A module contributes API to a group (`useQueryStates`), to a single param
 (`useQueryState`), or to both. It receives the shared [`QueryCore`](#the-core),
 returns the object to merge onto the composable, and `.use()` widens the type.
 
-## The grouped module
+## Defining a module
 
-The simplest module is a function `(core) => api`, a `QueryStatesModule`. Pass it
-straight to `useQueryStates(...).use(...)`:
+A module contributes API to `useQueryStates` through a `queryStates` projection
+(`(core) => api`), to `useQueryState` through a `queryState` projection
+(`(core, key) => api`), or to both. `defineQueryModule` packages the projections
+into a factory you call to compose the module:
 
 ```ts
-import type { QueryCore, QueryStateSchema } from '@vuqs/core'
+import { defineQueryModule } from '@vuqs/core'
 import { computed } from 'vue'
 
-export function withCount() {
-  return <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>) => ({
-    count: computed(() => Object.keys(core.state.selected.value).length),
-  })
-}
+export const withPresence = defineQueryModule({
+  queryStates: core => ({
+    present: computed(() => Object.keys(core.state.selected.value)),
+  }),
+  queryState: (core, key) => ({
+    isPresent: computed(() => core.state.selected.value[key] !== undefined),
+  }),
+})
+
+useQueryStates(schema).use(withPresence()) // on a group
+useQueryState('q').use(withPresence()) // on a single param
 ```
 
-Return a generic `(core) => api` function rather than one bound to a fixed schema,
-so the module adapts to whatever schema it is applied to. Everything below is what
-`core` gives you to work with; [single-param and dual modules](#single-param-and-dual-modules)
-extend this to `useQueryState`.
+Provide only `queryStates` for a group-only module, only `queryState` for a
+single-only one. Write each projection generically, not bound to a fixed schema, so
+the module adapts to whatever it is composed onto. `core` is the same surface for
+both, and is described below.
+
+The factory reads the facade from how you call it:
+
+- `withPresence(options?)` — adaptive: the surrounding `.use` pins the facade and schema.
+- `withPresence(schema, options)` — grouped, with the schema's keys checked.
+- `withPresence(param, options)` / `withPresence('path', options)` — single-param, bound to that param.
+
+::: tip Bare grouped shorthand
+A group-only projection can also be a plain `(core) => api` function passed straight
+to `useQueryStates(...).use(...)`, without wrapping it in `defineQueryModule`.
+:::
 
 ## The core
 
@@ -157,64 +176,84 @@ not rely on ordering. A throwing handler is isolated and logged: it never aborts
 the others or the emitter. The public signals modules can emit or react to are
 listed in the [Signals](/modules/signals) registry.
 
-## Single-param and dual modules
-
-A single-param module contributes API to `useQueryState`. Its projection receives
-`core` plus the logical `key` of the bound param. `defineQueryModule` packages the
-projections: `queryStates` for the group, `queryState` for the single param, either
-or both.
-
-```ts
-import { defineQueryModule } from '@vuqs/core'
-
-export function withPresence() {
-  return defineQueryModule({
-    // group projection: (core) => api
-    queryStates: core => ({
-      present: computed(() => Object.keys(core.state.selected.value)),
-    }),
-    // single projection: (core, key) => api
-    queryState: (core, key) => ({
-      isPresent: computed(() => core.state.selected.value[key] !== undefined),
-    }),
-  })
-}
-```
-
-Omit `queryStates` for a single-only module, or `queryState` for a grouped-only
-one. A grouped module stays callable, so existing function-only modules keep
-working with `useQueryStates`.
-
-### Value-typed single APIs
+## Value-typed single APIs
 
 When a single-param API depends on the **bound param's value type** (a `ComputedRef`
 of that value, a setter that takes it), a plain projection cannot express it
-soundly. Register the API shape on `QueryStateApiRegistry` under a namespaced URI,
-then build the projection with `defineQueryStateApi`:
+soundly. Register the API shape on `QueryModuleRegistry` under a namespaced name,
+then pass that `name` to `defineQueryModule`:
 
 ```ts
 import type { QueryStateSchema, QueryStateValueAt } from '@vuqs/core'
-import { defineQueryModule, defineQueryStateApi } from '@vuqs/core'
+import { defineQueryModule } from '@vuqs/core'
 import { computed } from 'vue'
 
 declare module '@vuqs/core' {
-  interface QueryStateApiRegistry<TSchema extends QueryStateSchema, TKey extends keyof TSchema & string> {
-    'my-lib:selection': { selection: ComputedRef<QueryStateValueAt<TSchema, TKey> | undefined> }
+  interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
+    'my-lib:selection': {
+      state: { api: { selection: ComputedRef<QueryStateValueAt<TSchema, 'value'> | undefined> } }
+    }
   }
 }
 
-export function withSelection() {
-  return defineQueryModule({
-    queryState: defineQueryStateApi('my-lib:selection', (core, key) => ({
-      selection: computed(() => core.state.selected.value[key]),
-    })),
-  })
-}
+export const withSelection = defineQueryModule({
+  name: 'my-lib:selection',
+  queryState: (core, key) => ({
+    selection: computed(() => core.state.selected.value[key]),
+  }),
+})
 ```
 
-`useQueryState` resolves the registered shape against the concrete schema and key,
-so `ref.selection` is typed as the bound param's value. This is exactly how
+`useQueryState` resolves the registered `state` facet against the param the factory
+binds, so `ref.selection` is typed as the bound param's value. Read the bound value
+with `QueryStateValueAt<TSchema, 'value'>`: inside a `state` facet `TSchema` is the
+single-schema `{ value: … }`, not the composable's schema. This is exactly how
 `withRuntimeDefaults` exposes `selectedValue`/`defaultValue` on a single ref.
+
+## Facade-driven options
+
+Options and contributed API can depend on the facade that composes a module: grouped
+options on `useQueryStates`, single options on `useQueryState`. Register both facets
+under one `name`, giving each its own `options` and `api`, and the factory resolves
+the right shape per call form.
+
+```ts
+import type { QueryStateSchema } from '@vuqs/core'
+import { defineQueryModule } from '@vuqs/core'
+
+interface BaseScopeOptions { label: string }
+interface GroupedScopeOptions<TSchema extends QueryStateSchema> extends BaseScopeOptions {
+  keys: ReadonlyArray<keyof TSchema & string>
+}
+interface SingleScopeOptions extends BaseScopeOptions { include: boolean }
+
+declare module '@vuqs/core' {
+  interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
+    'my-lib:scope': {
+      states: { options: GroupedScopeOptions<TSchema>, api: { label: string } }
+      state: { options: SingleScopeOptions, api: { label: string } }
+    }
+  }
+}
+
+export const withScope = defineQueryModule({
+  name: 'my-lib:scope',
+  queryStates: (_core, options) => ({ label: options.label }),
+  queryState: (_core, _key, options) => ({ label: options.label }),
+})
+```
+
+Composed inline, `.use` pins the facade, so the caller gets the matching option shape
+and autocomplete:
+
+```ts
+useQueryStates(schema).use(withScope({ label: 'x', keys: ['q'] })) // grouped
+useQueryState('q').use(withScope({ label: 'x', include: true })) // single
+```
+
+`withContext` is the canonical example. Its `withContext(schema, options)` and
+`withContext(param, options)` forms build a module outside a `.use` chain, checking
+keys against the given schema or binding to the given param.
 
 ## Lifecycle and cleanup
 
@@ -305,12 +344,20 @@ type DefinedQueryStatesModule<TSchema, TApi> // grouped-only
 type DefinedQueryStateModule<TApi> // single-only
 type DefinedQueryModule<TSchema, TStatesApi, TStateApi> // both
 
-// Registry for value-typed single-param APIs
-interface QueryStateApiRegistry<TSchema, TKey> {} // augment to register a URI
-type QueryStateApiUri = keyof QueryStateApiRegistry<QueryStateSchema, string>
+// Facade-tagged modules, for factories with per-facade options
+type QueryModuleFacade = 'state' | 'states'
+type QueryStatesFacadeModule<TFacade, TSchema, TApi> // grouped
+type QueryStateFacadeModule<TFacade, TApi> // single
+type QueryFacadeModule<TFacade, TSchema, TStatesApi, TStateApi> // adaptive/dual
 
+// Registry for schema-, value-, or facade-dependent options and APIs
+interface QueryModuleRegistry<TSchema, TParam extends string> {} // augment per module name
+type QueryModuleName = keyof QueryModuleRegistry<QueryStateSchema, string>
+
+// Plain form (no name): options/APIs fixed by the projections
 function defineQueryModule(definition: { queryStates?, queryState? }): …
-function defineQueryStateApi(uri, project): DefinedQueryStateApi<Uri>
+// Registry form (with name): options/APIs from the registry entry
+function defineQueryModule(definition: { name, queryStates?, queryState? }): …
 ```
 
 ### The core <Badge type="info" text="@vuqs/core" />

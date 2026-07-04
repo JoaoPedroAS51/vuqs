@@ -85,7 +85,11 @@ type ToQueryRefs<T> = { [K in keyof T]: unknown } // one ref per field; QuerySta
 
 // Module composition; details in /modules/authoring
 type QueryComposable<TSchema, TApi> = TApi & {
-  use: <TAdded>(module: QueryStatesModule<TSchema, TAdded>) => QueryComposable<TSchema, TApi & TAdded>
+  use: {
+    // facade-tagged factory module (pins the facade); then any grouped module
+    <TAdded>(module: QueryStatesFacadeModule<'states', TSchema, TAdded>): QueryComposable<TSchema, TApi & TAdded>
+    <TAdded>(module: QueryStatesModule<TSchema, TAdded>): QueryComposable<TSchema, TApi & TAdded>
+  }
 }
 type QueryStatesModule<TSchema, TAdded> = (core: QueryCore<TSchema>) => TAdded
 type QueryStateModule<TSchema, TAdded> = (core: QueryCore<TSchema>, key: keyof TSchema & string) => TAdded
@@ -96,8 +100,18 @@ interface DefinedQueryStateModule<TAdded> {
 type DefinedQueryModule<TSchema, TQueryStatesApi, TQueryStateApi> = QueryStatesModule<TSchema, TQueryStatesApi> & {
   /* single-param projection consumed by useQueryState */
 }
+
+// Facade-tagged modules, for factories with per-facade options (see /modules/authoring)
+type QueryModuleFacade = 'state' | 'states'
+interface QueryStatesFacadeModule<TFacade, TSchema, TApi> extends QueryStatesModule<TSchema, TApi> { /* + facade tag */ }
+interface QueryStateFacadeModule<TFacade, TApi> extends DefinedQueryStateModule<TApi> { /* + facade tag */ }
+interface QueryFacadeModule<TFacade, TSchema, TStatesApi, TStateApi> { /* adaptive dual + facade tag */ }
+
 type UseQueryStateReturn<T, TApi = object, TValue = T> = QueryStateRef<T> & TApi & {
-  use: <TStateApi>(module: DefinedQueryStateModule<TStateApi>) => UseQueryStateReturn<T, TApi & TStateApi, TValue>
+  use: {
+    <TAdded>(module: QueryStateFacadeModule<'state', TAdded>): UseQueryStateReturn<T, TApi & TAdded, TValue>
+    <TStateApi>(module: DefinedQueryStateModule<TStateApi>): UseQueryStateReturn<T, TApi & TStateApi, TValue>
+  }
 }
 interface QueryCore<TSchema> { /* the faceted core passed to a module */ }
 
@@ -217,7 +231,8 @@ Module-specific types live with each module: [`RuntimeDefaultsStatesApi`](/modul
 [`ContextStatesApi`](/modules/context#api),
 [`ContextStateApi`](/modules/context#api), plus the
 [authoring types](/modules/authoring#authoring-types) (`defineQueryModule`,
-`defineQueryStateApi`, `QueryCore`, `QueryStatesModule`, `QueryStateModule`,
+`QueryCore`, `QueryStatesModule`, `QueryStateModule`,
 `DefinedQueryModule`, `DefinedQueryStateModule`, `DefinedQueryStatesModule`, the
-registry types `QueryStateApiRegistry`/`QueryStateApiUri`/`ApplyQueryStateModuleApi`/`DefinedQueryStateApi`,
+facade-tagged module types `QueryModuleFacade`/`QueryStatesFacadeModule`/`QueryStateFacadeModule`/`QueryFacadeModule`,
+the registry types `QueryModuleRegistry`/`QueryModuleName`,
 `QueryHooks`, `QueryPipeline`, and the `@vuqs/core/shared` helpers).

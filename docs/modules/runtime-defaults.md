@@ -6,11 +6,15 @@ or onto a single param with `useQueryState`.
 
 ## Usage
 
+`withRuntimeDefaults` composes on a group with `useQueryStates` or on a single param
+with `useQueryState`, adding a grouped API to one and a per-param API to the other.
+
+### On a group
+
 ```ts
 import { useQueryStates } from '@vuqs/core'
 import { withRuntimeDefaults } from '@vuqs/core/modules'
 
-// A group:
 const { values, selected, defaults, setDefaults } = useQueryStates(schema)
   .use(withRuntimeDefaults())
 
@@ -18,8 +22,12 @@ setDefaults(await loadUserPreferences()) // runtime defaults, never written to t
 values.status // reads through them: a selection if present, else the runtime default
 ```
 
+### On a single param
+
 ```ts
-// A single param:
+import { codecs, useQueryState } from '@vuqs/core'
+import { withRuntimeDefaults } from '@vuqs/core/modules'
+
 const perPage = useQueryState('perPage', codecs.integer)
   .use(withRuntimeDefaults())
 

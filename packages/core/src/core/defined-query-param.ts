@@ -39,6 +39,16 @@ export interface DefinedQueryParamWithDefault<T> extends DefinedQueryParam<T> {
 }
 
 /**
+ * Tells a {@link DefinedQueryParam} from a schema object at runtime: a param owns
+ * a `paths` array, a schema (a map of params) does not.
+ *
+ * @internal
+ */
+export function isDefinedQueryParam(value: unknown): value is DefinedQueryParam<unknown> {
+  return typeof value === 'object' && value !== null && Array.isArray((value as { paths?: unknown }).paths)
+}
+
+/**
  * Creates a defined param from executable pieces.
  *
  * @internal

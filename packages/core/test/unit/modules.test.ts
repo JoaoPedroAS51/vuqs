@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createApp, effectScope, isRef, nextTick, ref } from 'vue'
 import { installQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
+import { defineQueryModule } from '../../src/core/module'
 import { queryParam } from '../../src/core/query-param'
 import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
@@ -504,5 +505,19 @@ describe('use() collision guard', () => {
     expect(() =>
       build(() => useQueryStates(schema).use(() => ({ clear: () => {} }))),
     ).toThrow(/module key "clear" is already provided/)
+  })
+
+  it('keeps a single-only module non-callable, matching its non-grouped type', () => {
+    const { build } = setup()
+    const singleOnly = defineQueryModule({
+      queryState: (_core, key) => ({ boundKey: key }),
+    })
+
+    // The single facade composes it; the type rejects it on useQueryStates,
+    // and at runtime it is not a callable grouped module.
+    const single = build(() => useQueryState('q').use(singleOnly()))
+
+    expect(single.boundKey).toBe('value')
+    expect(typeof singleOnly()).toBe('object')
   })
 })

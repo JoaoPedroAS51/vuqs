@@ -8,14 +8,14 @@ composes onto a group with `useQueryStates` or onto a single param with
 
 ## Usage
 
-Picture two tabs, Products and Orders, sharing one search box:
+`withContext` composes on a group with `useQueryStates` or on a single param with
+`useQueryState`. Both get the same controls; `preserve` and `only` match the facade.
 
-- `q` (the search term) should **survive** switching tabs.
-- `sort` should **reset**: a product sort does not make sense for orders.
-- `category` exists only on Products; `status` only on Orders. Neither should leak
-  into the other, or survive a pasted stale link.
+### On a group
 
-Hand-rolling this is fiddly. `withContext` declares it:
+Two tabs, Products and Orders, sharing filters: `q` should **survive** the switch,
+`sort` should **reset**, `category` exists only on Products, and `status` only on
+Orders.
 
 ```ts
 import { useQueryStates } from '@vuqs/core'
@@ -30,18 +30,26 @@ const { values, activeContext, switchTo } = useQueryStates(schema)
   }))
 ```
 
-On a single param, `preserve` is a boolean and `only` a list of contexts:
+### On a single param
+
+The same rules for one param: `preserve` is a boolean, `only` a list of contexts.
 
 ```ts
+import { codecs, useQueryState } from '@vuqs/core'
+import { withContext } from '@vuqs/core/modules'
+
 const category = useQueryState('category', codecs.string)
   .use(withContext({ active: tab, only: ['products'] }))
+// dropped from reads and the URL when the active context is not 'products'
 ```
 
 ## API
 
-`withContext(options)`, or `withContext(schema, options)` to type-check the keys
-against a schema (see [Typing `preserve` and `only`](#typing-preserve-and-only)),
-contributes the same controls to whichever composable it is used with:
+`withContext(options)` binds to whichever composable composes it. To build a module
+outside a `.use` chain, pass a schema (`withContext(schema, options)`) or a param
+(`withContext(param, options)`) so the facade is explicit (see
+[Typing `preserve` and `only`](#typing-preserve-and-only)). Every form contributes the
+same controls:
 
 - `activeContext: ComputedRef<TContext>`
   - The current context as a ref, mirroring the `active` option.
@@ -80,8 +88,8 @@ per composable:
     that mapping. Omit it and `switchTo` throws; you can still drive navigation
     yourself with `buildContextQuery`.
 
-Provide at least one of `preserve`/`only`; with neither, every managed param resets
-on a switch.
+Omit both `preserve` and `only` for the base form: every managed param then resets on
+a switch.
 
 ## Signals
 
@@ -131,18 +139,24 @@ const query = buildContextQuery(route.query, 'orders')
 
 ### Typing `preserve` and `only`
 
-Chained off `useQueryStates(schema)`, the keys in `preserve`/`only` are inferred
-from the schema. Pass the schema explicitly when the keys can't be inferred:
+The composable that composes the module picks the option shapes: `useQueryStates` types
+`preserve`/`only` against its schema (grouped), `useQueryState` types them for its one
+param (single). Chained off `useQueryStates(schema)`, the keys are inferred from that
+schema:
 
 ```ts
-// Inferred:
-useQueryStates(schema).use(withContext({ active, preserve: ['q'] }))
-
-// Explicit:
-useQueryStates(schema).use(withContext(schema, { active, preserve: ['q'] }))
+useQueryStates(schema).use(withContext({ active, preserve: ['q'] })) // keys inferred
 ```
 
-Either way, TypeScript rejects a `preserve` or `only` key that is not in the schema.
+To build a module outside a `.use` chain, pass the schema or the param so the facade and
+its option shapes are known:
+
+```ts
+withContext(schema, { active, preserve: ['q'] }) // grouped, keys checked against the schema
+withContext(sort, { active, preserve: true }) // single, for the `sort` param
+```
+
+TypeScript rejects a grouped `preserve` or `only` key that is not in the schema.
 
 ## Example
 
