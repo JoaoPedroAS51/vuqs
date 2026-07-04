@@ -127,6 +127,19 @@ const range = queryParam.object({
 })
 ```
 
+A child may be a bare codec, in which case its key is the query key, so the same
+map reads:
+
+```ts
+const range = queryParam.object({
+  from: codecs.isoDate,
+  to: codecs.isoDate,
+})
+```
+
+Mix bare codecs with defined params when a child needs a distinct key or its own
+modifiers, exactly as in a `useQueryStates` schema.
+
 Now a single param drives two keys:
 
 ```ts

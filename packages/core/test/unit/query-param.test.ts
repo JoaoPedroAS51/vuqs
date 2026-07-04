@@ -187,4 +187,50 @@ describe('queryParam.object', () => {
       map: { lat: '10', lng: '20', z: '12' },
     })
   })
+
+  it('accepts a bare codec child, binding it to the child key', () => {
+    const filter = queryParam.object({ q: codecs.string })
+
+    expect(filter.paths).toEqual(['q'])
+    expect(filter.read({ q: 'hello' })).toEqual({ q: 'hello' })
+    expect(filter.write({ q: 'hello' })).toEqual({ q: 'hello' })
+  })
+
+  it('treats a bare codec and its verbose form as equivalent', () => {
+    const bare = queryParam.object({ q: codecs.string })
+    const verbose = queryParam.object({ q: queryParam('q', codecs.string) })
+
+    expect(bare.paths).toEqual(verbose.paths)
+    expect(bare.read({ q: 'x' })).toEqual(verbose.read({ q: 'x' }))
+    expect(bare.write({ q: 'x' })).toEqual(verbose.write({ q: 'x' }))
+  })
+
+  it('mixes bare codecs and defined params in one child map', () => {
+    const filter = queryParam.object({
+      foo: codecs.string,
+      bar: queryParam('bar', codecs.string),
+    })
+
+    expect(filter.paths).toEqual(['foo', 'bar'])
+    expect(filter.read({ foo: 'a', bar: 'b' })).toEqual({ foo: 'a', bar: 'b' })
+    expect(filter.write({ foo: 'a', bar: 'b' })).toEqual({ foo: 'a', bar: 'b' })
+  })
+
+  it('reads a defaulted codec child back when absent', () => {
+    const filter = queryParam.object({ page: codecs.integer.withDefault(1) })
+
+    expect(filter.read({})).toEqual({ page: 1 })
+    expect(filter.read({ page: '5' })).toEqual({ page: 5 })
+  })
+
+  it('prefixes bare codec children under the child key', () => {
+    const bounds = queryParam.object('bounds', {
+      north: codecs.float,
+      east: codecs.float,
+    })
+
+    expect(bounds.paths).toEqual(['bounds.north', 'bounds.east'])
+    expect(bounds.read({ bounds: { north: '10', east: '20' } })).toEqual({ north: 10, east: 20 })
+    expect(bounds.write({ north: 10, east: 20 })).toEqual({ bounds: { north: '10', east: '20' } })
+  })
 })

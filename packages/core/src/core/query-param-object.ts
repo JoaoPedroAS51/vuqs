@@ -8,11 +8,13 @@ import type {
   QueryParamObjectBuilderFor,
   QueryParamObjectDefault,
 } from './query-param-types'
+import type { NormalizeQueryStateSchema, QueryStateSchemaInput } from './schema'
 import type { ParsedQueryRaw } from './types'
 import { getPath } from './path'
 import { compactQuery, mergeQueries } from './query-object'
 import { createQueryParamBuilder } from './query-param-builder'
 import { isDefinedQueryParam, isQueryParamBuilder, joinPath, prefixQuery, unprefixQuery } from './query-param-utils'
+import { normalizeQueryStateSchema } from './schema'
 
 interface ObjectBuilderOptions<TChildren extends AnyObjectChildren> {
   prefix?: string
@@ -34,14 +36,14 @@ interface ObjectBuilderOptions<TChildren extends AnyObjectChildren> {
  */
 export interface QueryParamObjectFactory {
   /** Builds an object param from a child map. */
-  <TChildren extends AnyObjectChildren>(
+  <TChildren extends QueryStateSchemaInput>(
     children: TChildren,
-  ): QueryParamObjectBuilderFor<TChildren>
+  ): QueryParamObjectBuilderFor<NormalizeQueryStateSchema<TChildren>>
   /** Builds an object param, prefixing every child key with `prefix`. */
-  <TChildren extends AnyObjectChildren>(
+  <TChildren extends QueryStateSchemaInput>(
     prefix: string,
     children: TChildren,
-  ): QueryParamObjectBuilderFor<TChildren>
+  ): QueryParamObjectBuilderFor<NormalizeQueryStateSchema<TChildren>>
   /** Reuses an existing param or object under `prefix`. */
   <TParam extends AnyDefinedQueryParam>(
     prefix: string,
@@ -52,7 +54,7 @@ export interface QueryParamObjectFactory {
 export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
   options: ObjectBuilderOptions<TChildren>,
 ): QueryParamObjectBuilderFor<TChildren> {
-  const children = prefixChildren(options.prefix, options.children)
+  const children = prefixChildren(options.prefix, normalizeQueryStateSchema(options.children) as TChildren)
   const paths = Object.values(children).flatMap(child => child.paths)
   const mergedDefault = buildObjectDefault(children, options.defaultValue)
   // With defaultsWhenPresent, child defaults only materialize the object when the

@@ -45,6 +45,30 @@ describe('queryParam inference', () => {
     }>>()
   })
 
+  it('infers object values from bare codec children', () => {
+    const filter = queryParam.object({
+      q: codecs.string,
+      page: codecs.integer.withDefault(1),
+    })
+
+    expectTypeOf(filter).toMatchTypeOf<DefinedQueryParam<{
+      q?: string
+      page: number
+    }>>()
+  })
+
+  it('infers object values from a mix of codecs and defined params', () => {
+    const filter = queryParam.object({
+      foo: codecs.string,
+      bar: queryParam('bar', codecs.string),
+    })
+
+    expectTypeOf(filter).toMatchTypeOf<DefinedQueryParam<{
+      foo?: string
+      bar?: string
+    }>>()
+  })
+
   it('keeps object defaults partial while narrowing the top-level value', () => {
     const bounds = queryParam.object('bounds', {
       north: queryParam('n', codecs.float).withDefault(1),
