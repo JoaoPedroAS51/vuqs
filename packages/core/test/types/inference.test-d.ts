@@ -27,10 +27,10 @@ describe('codec inference', () => {
 
 describe('queryParam inference', () => {
   it('carries scalar value types', () => {
-    expectTypeOf(queryParam('q')).toMatchTypeOf<DefinedQueryParam<string>>()
-    expectTypeOf(queryParam('q', { defaultValue: '' })).toMatchTypeOf<DefinedQueryParamWithDefault<string>>()
-    expectTypeOf(queryParam('page', codecs.integer)).toMatchTypeOf<DefinedQueryParam<number>>()
-    expectTypeOf(queryParam('page', codecs.integer.withDefault(1))).toMatchTypeOf<DefinedQueryParamWithDefault<number>>()
+    expectTypeOf(queryParam('q')).toExtend<DefinedQueryParam<string>>()
+    expectTypeOf(queryParam('q', { defaultValue: '' })).toExtend<DefinedQueryParamWithDefault<string>>()
+    expectTypeOf(queryParam('page', codecs.integer)).toExtend<DefinedQueryParam<number>>()
+    expectTypeOf(queryParam('page', codecs.integer.withDefault(1))).toExtend<DefinedQueryParamWithDefault<number>>()
   })
 
   it('infers object values from children and child defaults', () => {
@@ -39,7 +39,7 @@ describe('queryParam inference', () => {
       south: queryParam('s', codecs.float),
     })
 
-    expectTypeOf(bounds).toMatchTypeOf<DefinedQueryParam<{
+    expectTypeOf(bounds).toExtend<DefinedQueryParam<{
       north: number
       south?: number
     }>>()
@@ -51,7 +51,7 @@ describe('queryParam inference', () => {
       page: codecs.integer.withDefault(1),
     })
 
-    expectTypeOf(filter).toMatchTypeOf<DefinedQueryParam<{
+    expectTypeOf(filter).toExtend<DefinedQueryParam<{
       q?: string
       page: number
     }>>()
@@ -63,7 +63,7 @@ describe('queryParam inference', () => {
       bar: queryParam('bar', codecs.string),
     })
 
-    expectTypeOf(filter).toMatchTypeOf<DefinedQueryParam<{
+    expectTypeOf(filter).toExtend<DefinedQueryParam<{
       foo?: string
       bar?: string
     }>>()
@@ -95,7 +95,7 @@ describe('queryParam inference', () => {
       southWest: queryParam.object('sw', point),
     })
 
-    expectTypeOf(viewport).toMatchTypeOf<DefinedQueryParam<{
+    expectTypeOf(viewport).toExtend<DefinedQueryParam<{
       northEast?: {
         lat?: number
         lng?: number
@@ -132,7 +132,7 @@ describe('queryParam inference', () => {
       },
     })
 
-    expectTypeOf(center).toMatchTypeOf<DefinedQueryParam<{
+    expectTypeOf(center).toExtend<DefinedQueryParam<{
       point: { lat: number, lng: number }
       zoom: number
     }>>()
@@ -141,8 +141,8 @@ describe('queryParam inference', () => {
 
 describe('scalar queryParam inference', () => {
   it('carries the codec value type (path form)', () => {
-    expectTypeOf(queryParam('currency', codecs.string)).toMatchTypeOf<DefinedQueryParam<string>>()
-    expectTypeOf(queryParam('page', codecs.integer.withDefault(1))).toMatchTypeOf<DefinedQueryParamWithDefault<number>>()
+    expectTypeOf(queryParam('currency', codecs.string)).toExtend<DefinedQueryParam<string>>()
+    expectTypeOf(queryParam('page', codecs.integer.withDefault(1))).toExtend<DefinedQueryParamWithDefault<number>>()
   })
 
   it('does not expose withDefaultsWhenPresent on scalar params', () => {
@@ -166,7 +166,7 @@ describe('scalar queryParam inference', () => {
     const northEast = queryParam.object('ne', point)
 
     expectTypeOf(northEast.withDefaultsWhenPresent).toBeFunction()
-    expectTypeOf(northEast).toMatchTypeOf<DefinedQueryParamWithDefault<{
+    expectTypeOf(northEast).toExtend<DefinedQueryParamWithDefault<{
       lat?: number
       lng?: number
     }>>()
