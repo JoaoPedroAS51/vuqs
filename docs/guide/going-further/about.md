@@ -25,7 +25,7 @@ capabilities around it grow.
 | Requirement | Version | Notes |
 | --- | --- | --- |
 | Vue | `>=3.5` | Built on the current reactivity APIs. |
-| `vue-router` | `4` | Optional peer dependency, used only by the built-in adapter. |
+| `vue-router` | `4 \|\| 5` | Optional peer dependency, used only by the built-in adapter. |
 | Node | `>=22` | For local development. ESM-only, no CommonJS build. |
 
 ## Acknowledgements
