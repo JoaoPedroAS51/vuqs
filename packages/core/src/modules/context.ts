@@ -310,7 +310,7 @@ function createContextControls<TSchema extends QueryStateSchema, TContext extend
 
     const values = kept as QueryStateValues<TSchema>
 
-    return buildQuery(core.schema, currentQuery, core.options.clearOnDefault ? dropDefaults(core.schema, values) : values)
+    return buildQuery(core.schema, currentQuery, dropDefaults(core.schema, values))
   }
 
   function buildContextQuery(currentQuery: ParsedQuery, nextContext: TContext): ParsedQueryRaw {
