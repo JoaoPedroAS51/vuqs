@@ -19,6 +19,7 @@ export default defineNuxtConfig({
 | --- | --- | --- | --- |
 | `autoImports` | `boolean \| { composables?, codecs?, modules? }` | `true` | Register vuqs APIs as [auto-imports](/nuxt/auto-imports). `false` registers none; an object toggles each group. |
 | `adapter` | `boolean \| { defaultOptions? }` | `true` | Provide the [vue-router adapter](/nuxt/adapter) app-wide. `false` disables it so you can provide your own. |
+| `debug` | `boolean \| 'force'` | `false` | Enable [console debug logging](/guide/going-further/debugging#nuxt). `true` is dev-only; `'force'` also logs in production. |
 
 ## Types
 
@@ -26,6 +27,7 @@ export default defineNuxtConfig({
 interface ModuleOptions {
   autoImports?: boolean | AutoImportsOptions // default: true
   adapter?: boolean | AdapterOptions // default: true
+  debug?: boolean | 'force' // default: false; 'force' keeps logging in production
 }
 
 interface AutoImportsOptions {

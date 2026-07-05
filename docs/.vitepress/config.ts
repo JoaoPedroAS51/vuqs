@@ -67,6 +67,7 @@ export default defineConfig({
             { text: 'null vs undefined', link: '/guide/going-further/null-vs-undefined' },
             { text: 'Building URLs', link: '/guide/going-further/serializer' },
             { text: 'Testing', link: '/guide/going-further/testing' },
+            { text: 'Debugging', link: '/guide/going-further/debugging' },
             { text: 'About', link: '/guide/going-further/about' },
           ],
         },
