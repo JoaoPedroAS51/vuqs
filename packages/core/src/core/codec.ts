@@ -95,12 +95,26 @@ export function createCodec<T>(input: CodecInput<T>): Codec<T> {
   return codec
 }
 
+// Numeric enums also expose a reverse mapping (value to key) at runtime, so
+// filter those entries out and keep only the forward members.
+function enumValues(enumObject: Record<string, string | number>): (string | number)[] {
+  const values: (string | number)[] = []
+
+  for (const key of Object.keys(enumObject)) {
+    if (typeof enumObject[enumObject[key] as string] !== 'number') {
+      values.push(enumObject[key])
+    }
+  }
+
+  return values
+}
+
 /**
  * Built-in codecs for common value shapes.
  *
  * @remarks
  * `string`, `integer`, `float`, and `boolean` are ready-made codecs. `arrayOf`,
- * `literal`, and `json` are factories that build a codec for a given shape.
+ * `literal`, `enum`, and `json` are factories that build a codec for a given shape.
  */
 export const codecs = {
   /** Reads a non-empty query string. Empty or whitespace-only values parse as absent. */
@@ -331,6 +345,44 @@ export const codecs = {
         }
 
         return allowed.has(parsed) ? (parsed as T) : undefined
+      },
+      serialize: value => String(value),
+    })
+  },
+
+  /**
+   * Builds a codec for a TypeScript `enum`, accepting any of its members.
+   *
+   * @remarks
+   * Where {@link codecs.literal} takes an explicit array, this reads the accepted
+   * values from the enum object itself. It supports string, numeric, and
+   * heterogeneous enums, and skips the reverse-mapping entries a numeric enum
+   * exposes at runtime, so a numeric member round-trips through its number rather
+   * than its key. Any value outside the enum parses as absent (`undefined`).
+   *
+   * @example
+   * ```ts
+   * enum Status {
+   *   Active = 'active',
+   *   Archived = 'archived',
+   * }
+   *
+   * const status = useQueryState('status', codecs.enum(Status))
+   * //    ^? QueryStateRef<Status | undefined>
+   * ```
+   */
+  enum<const T extends Record<string, string | number>>(enumObject: T): Codec<T[keyof T]> {
+    const byString = new Map<string, T[keyof T]>()
+
+    for (const value of enumValues(enumObject)) {
+      byString.set(String(value), value as T[keyof T])
+    }
+
+    return createCodec<T[keyof T]>({
+      parse: (raw) => {
+        const value = getQueryString(raw)
+
+        return value !== undefined ? byString.get(value) : undefined
       },
       serialize: value => String(value),
     })

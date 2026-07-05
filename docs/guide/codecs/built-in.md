@@ -102,6 +102,43 @@ const perPage = useQueryState('perPage', codecs.numberLiteral([10, 20, 50] as co
 //    ^? QueryStateRef<10 | 20 | 50 | undefined>
 ```
 
+## Enums
+
+Constrains a value to the members of a TypeScript `enum`. Pass the enum itself:
+unlike `literal`, you never restate the values or wrap them in `Object.values`,
+and the value type is inferred from the enum.
+
+```ts
+enum Status {
+  Active = 'active',
+  Archived = 'archived',
+}
+
+const status = useQueryState('status', codecs.enum(Status).withDefault(Status.Active))
+//    ^? QueryStateRef<Status>
+// ?status=archived → Status.Archived
+```
+
+It also accepts numeric and heterogeneous enums. A numeric member round-trips
+through its number, not its name (`Level.High` ⇄ `?level=2`), and anything outside
+the enum parses as absent.
+
+```ts
+enum Level {
+  Low,
+  Medium,
+  High,
+}
+
+useQueryState('level', codecs.enum(Level)) // ?level=2 → Level.High
+```
+
+::: tip Fixed set without an enum
+For an inline set of strings or numbers, reach for
+[`literal`](#string-literal)/[`numberLiteral`](#numeric-literal). A plain
+`as const` object works with `enum` too, narrowing to its value union.
+:::
+
 ## Dates & timestamps
 
 Three date codecs return a `Date`, differing only in their wire format. All
@@ -186,6 +223,7 @@ codecs.string.withDefault('') // QueryStateRef<string>, and '' is dropped from t
 | `boolean` | `boolean` | `?archived=true` |
 | `literal([…])` | string union | `?sort=asc` |
 | `numberLiteral([…])` | number union | `?perPage=20` |
+| `enum(E)` | enum members | `?status=archived` |
 | `isoDateTime` | `Date` | `?d=2026-06-22T10:00:00Z` |
 | `isoDate` | `Date` | `?d=2026-06-22` |
 | `timestamp` | `Date` | `?t=1719014400000` |
