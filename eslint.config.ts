@@ -25,4 +25,8 @@ export default antfu({
   rules: {
     'markdown/no-missing-link-fragments': 'off',
   },
+}, {
+  // Code fences in Markdown are illustrative (partial snippets, type sketches,
+  // `…` placeholders), so lint the prose but not the embedded code.
+  ignores: ['**/*.md/**'],
 })
