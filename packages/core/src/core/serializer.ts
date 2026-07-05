@@ -74,12 +74,12 @@ export interface Serializer<TSchema extends QueryStateSchema, TBase, TOutput> {
  * @example
  * ```ts
  * const serialize = createSerializer(schema)
- * serialize({ q: 'lease' })                       // { q: 'lease' }
+ * serialize({ q: 'phone' })                       // { q: 'phone' }
  * serialize(route.query, { page: 2 })             // patch over the current query
  * serialize(route.query, { currency: null })      // clear a param
  *
  * const toUrl = createSerializer(schema, { stringify: q => qs.stringify(q, { addQueryPrefix: true }) })
- * toUrl({ q: 'lease', page: 2 })                   // '?q=lease&page=2'
+ * toUrl({ q: 'phone', page: 2 })                   // '?q=phone&page=2'
  * ```
  */
 export function createSerializer<TSchema extends QueryStateSchemaInput>(

@@ -135,7 +135,7 @@ export interface UseQueryStatesReturn<TSchema extends QueryStateSchema>
  * })
  *
  * values.q = 'sale'
- * patch({ q: 'lease', sort: null }, { history: 'push' })
+ * patch({ q: 'phone', sort: null }, { history: 'push' })
  * ```
  */
 export function useQueryStates<TSchema extends QueryStateSchemaInput>(

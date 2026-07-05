@@ -195,7 +195,7 @@ import { toQueryRef, useQueryStates } from '@vuqs/core'
 const query = useQueryStates({ q: codecs.string, sort: codecs.string })
 const filters = toQueryRef(query)
 
-filters.value = { q: 'lease', sort: 'desc' } // set q + sort, clear the rest
+filters.value = { q: 'phone', sort: 'desc' } // set q + sort, clear the rest
 filters.value = { ...filters.value, q: 'sale' } // keep the object, change q
 filters.clear()
 ```

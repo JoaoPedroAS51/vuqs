@@ -20,11 +20,11 @@ function makeRouter() {
 describe('createVueRouterAdapter', () => {
   it('reads the current route query', async () => {
     const router = makeRouter()
-    await router.push({ path: '/', query: { q: 'lease' } })
+    await router.push({ path: '/', query: { q: 'phone' } })
 
     const adapter = createVueRouterAdapter({ router })
 
-    expect(toValue(adapter.query)).toEqual({ q: 'lease' })
+    expect(toValue(adapter.query)).toEqual({ q: 'phone' })
   })
 
   it('writes via router.replace by default', async () => {
@@ -74,7 +74,7 @@ describe('createVueRouterAdapter', () => {
 describe('provideVueRouterAdapter', () => {
   it('drives useQueryStates end to end', async () => {
     const router = makeRouter()
-    await router.push({ path: '/', query: { q: 'lease' } })
+    await router.push({ path: '/', query: { q: 'phone' } })
     await router.isReady()
 
     const schema = { q: queryParam('q', codecs.string) }
@@ -97,7 +97,7 @@ describe('provideVueRouterAdapter', () => {
     app.use(router)
     await renderToString(app)
 
-    expect(states!.values.q).toBe('lease')
+    expect(states!.values.q).toBe('phone')
   })
 
   it('writes through the engine to the router', async () => {

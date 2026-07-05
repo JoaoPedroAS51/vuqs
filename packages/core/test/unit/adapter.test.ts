@@ -21,7 +21,7 @@ function mount(parentSetup: () => () => unknown): Promise<string> {
 
 describe('provideQueryAdapter', () => {
   it('reads and writes via the adapter when options are omitted', async () => {
-    const query = ref<ParsedQuery>({ q: 'lease' })
+    const query = ref<ParsedQuery>({ q: 'phone' })
     const navigate = vi.fn((next: ParsedQueryRaw) => {
       query.value = next
     })
@@ -39,7 +39,7 @@ describe('provideQueryAdapter', () => {
       return () => h(Child)
     })
 
-    expect(states!.values.q).toBe('lease')
+    expect(states!.values.q).toBe('phone')
 
     states!.values.q = 'sale'
     await flush()
@@ -87,7 +87,7 @@ describe('provideQueryAdapter', () => {
   })
 
   it('resolves the adapter for useQueryState too', async () => {
-    const query = ref<ParsedQuery>({ q: 'lease' })
+    const query = ref<ParsedQuery>({ q: 'phone' })
     let value: string | undefined
 
     const Child = defineComponent({
@@ -102,11 +102,11 @@ describe('provideQueryAdapter', () => {
       return () => h(Child)
     })
 
-    expect(value).toBe('lease')
+    expect(value).toBe('phone')
   })
 
   it('resolves the adapter for useQueryState with a definition', async () => {
-    const query = ref<ParsedQuery>({ q: 'lease' })
+    const query = ref<ParsedQuery>({ q: 'phone' })
     let value: string | undefined
 
     const Child = defineComponent({
@@ -121,11 +121,11 @@ describe('provideQueryAdapter', () => {
       return () => h(Child)
     })
 
-    expect(value).toBe('lease')
+    expect(value).toBe('phone')
   })
 
   it('resolves an adapter installed at the app level via installQueryAdapter', async () => {
-    const query = ref<ParsedQuery>({ q: 'lease' })
+    const query = ref<ParsedQuery>({ q: 'phone' })
     const navigate = vi.fn((next: ParsedQueryRaw) => {
       query.value = next
     })
@@ -142,7 +142,7 @@ describe('provideQueryAdapter', () => {
     installQueryAdapter(app, { query: () => query.value, navigate })
     await renderToString(app)
 
-    expect(states!.values.q).toBe('lease')
+    expect(states!.values.q).toBe('phone')
 
     states!.values.q = 'sale'
     await flush()

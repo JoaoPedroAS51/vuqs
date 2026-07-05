@@ -117,7 +117,7 @@ describe('shared update queue', () => {
   })
 
   it('reconciles a stale overlay entry from an unmounted engine on the next mount', async () => {
-    const query = ref<ParsedQuery>({ q: 'lease' })
+    const query = ref<ParsedQuery>({ q: 'phone' })
     const apply: Array<() => void> = []
     // Defer the URL update so we can unmount the engine mid-navigation.
     const navigate = vi.fn((next: ParsedQueryRaw) => {
@@ -142,9 +142,9 @@ describe('shared update queue', () => {
     expect(b.value).toBe('sale')
 
     // An external change is adopted, not shadowed by the leftover overlay entry.
-    query.value = { q: 'lease' }
+    query.value = { q: 'phone' }
     await flush()
-    expect(b.value).toBe('lease')
+    expect(b.value).toBe('phone')
   })
 
   it('throttles writes within the window into one navigation', async () => {

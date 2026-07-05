@@ -117,7 +117,7 @@ describe('dropDefaults', () => {
   }
 
   it('drops a value equal to its default', () => {
-    expect(dropDefaults(withDefault, { page: 1, q: 'lease' })).toEqual({ q: 'lease' })
+    expect(dropDefaults(withDefault, { page: 1, q: 'phone' })).toEqual({ q: 'phone' })
   })
 
   it('keeps a value that differs from its default', () => {
@@ -125,7 +125,7 @@ describe('dropDefaults', () => {
   })
 
   it('drops absent fields and keeps fields without a default', () => {
-    expect(dropDefaults(withDefault, { page: undefined, q: 'lease' })).toEqual({ q: 'lease' })
+    expect(dropDefaults(withDefault, { page: undefined, q: 'phone' })).toEqual({ q: 'phone' })
   })
 })
 

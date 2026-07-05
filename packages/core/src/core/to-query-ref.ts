@@ -48,7 +48,7 @@ export interface QueryRef<TSchema extends QueryStateSchema>
  * const query = useQueryStates(schema)
  * const filters = toQueryRef(query)
  *
- * filters.value = { q: 'lease', sort: 'desc' } // sets q + sort, clears the rest
+ * filters.value = { q: 'phone', sort: 'desc' } // sets q + sort, clears the rest
  * filters.value = { ...filters.value, page: 2 } // keeps the object, sets page
  * filters.clear()
  * ```

@@ -34,27 +34,27 @@ const schema = {
 
 describe('useQueryStates', () => {
   it('reads field values from the query', () => {
-    const { run } = setup({ q: 'lease', filters: { sort: 'name' } })
+    const { run } = setup({ q: 'phone', filters: { sort: 'name' } })
     const { values } = run(() => useQueryStates(schema))
 
-    expect(values.q).toBe('lease')
+    expect(values.q).toBe('phone')
     expect(values.sort).toBe('name')
   })
 
   it('accepts codecs directly using the schema key as the query path', async () => {
-    const { query, run } = setup({ q: 'lease', page: '2' })
+    const { query, run } = setup({ q: 'phone', page: '2' })
     const { values } = run(() => useQueryStates({
       q: codecs.string,
       page: codecs.integer.withDefault(1),
     }))
 
-    expect(values.q).toBe('lease')
+    expect(values.q).toBe('phone')
     expect(values.page).toBe(2)
 
     values.page = 3
     await flush()
 
-    expect(query.value).toEqual({ q: 'lease', page: '3' })
+    expect(query.value).toEqual({ q: 'phone', page: '3' })
   })
 
   it('updates the value optimistically before navigation flushes', () => {
@@ -92,7 +92,7 @@ describe('useQueryStates', () => {
   })
 
   it('clears a nullable field by assigning undefined', async () => {
-    const { query, run } = setup({ q: 'lease' })
+    const { query, run } = setup({ q: 'phone' })
     const { values } = run(() => useQueryStates(schema))
 
     values.q = undefined
@@ -115,7 +115,7 @@ describe('useQueryStates', () => {
     })
 
     it('clears a field with null and skips an undefined field', async () => {
-      const { query, run } = setup({ q: 'lease', filters: { sort: 'name' } })
+      const { query, run } = setup({ q: 'phone', filters: { sort: 'name' } })
       const { patch } = run(() => useQueryStates(schema))
 
       patch({ q: null, sort: undefined })
@@ -165,7 +165,7 @@ describe('useQueryStates', () => {
 
   describe('replace', () => {
     it('sets given params and clears the rest in one navigation', async () => {
-      const { query, navigate, run } = setup({ q: 'lease', filters: { sort: 'name' } })
+      const { query, navigate, run } = setup({ q: 'phone', filters: { sort: 'name' } })
       const { replace } = run(() => useQueryStates(schema))
 
       replace({ q: 'sale' })
@@ -176,7 +176,7 @@ describe('useQueryStates', () => {
     })
 
     it('preserves unmanaged params and honors per-call options', async () => {
-      const { query, navigate, run } = setup({ q: 'lease', keep: 'me' })
+      const { query, navigate, run } = setup({ q: 'phone', keep: 'me' })
       const { replace } = run(() => useQueryStates(schema))
 
       replace({ sort: 'name' }, { history: 'push' })
@@ -188,7 +188,7 @@ describe('useQueryStates', () => {
   })
 
   it('clears every field', async () => {
-    const { query, run } = setup({ q: 'lease', filters: { sort: 'name' }, keep: 'me' })
+    const { query, run } = setup({ q: 'phone', filters: { sort: 'name' }, keep: 'me' })
     const { clear } = run(() => useQueryStates(schema))
 
     clear()
@@ -343,10 +343,10 @@ describe('useQueryStates', () => {
 
 describe('useQueryState', () => {
   it('binds a single key as a writable ref', async () => {
-    const { query, run } = setup({ q: 'lease' })
+    const { query, run } = setup({ q: 'phone' })
     const q = run(() => useQueryState('q', codecs.string))
 
-    expect(q.value).toBe('lease')
+    expect(q.value).toBe('phone')
 
     q.value = 'sale'
     await flush()
@@ -362,7 +362,7 @@ describe('useQueryState', () => {
   })
 
   it('clears via set and clear', async () => {
-    const { query, run } = setup({ q: 'lease' })
+    const { query, run } = setup({ q: 'phone' })
     const q = run(() => useQueryState('q', codecs.string))
 
     q.clear()
@@ -383,10 +383,10 @@ describe('useQueryState', () => {
   })
 
   it('accepts a definition', async () => {
-    const { query, run } = setup({ q: 'lease' })
+    const { query, run } = setup({ q: 'phone' })
     const q = run(() => useQueryState(queryParam('q', codecs.string)))
 
-    expect(q.value).toBe('lease')
+    expect(q.value).toBe('phone')
 
     q.value = 'sale'
     await flush()
@@ -395,10 +395,10 @@ describe('useQueryState', () => {
   })
 
   it('binds a string with an implicit codec (no codec arg)', () => {
-    const { run } = setup({ q: 'lease' })
+    const { run } = setup({ q: 'phone' })
     const q = run(() => useQueryState('q'))
 
-    expect(q.value).toBe('lease')
+    expect(q.value).toBe('phone')
   })
 
   it('applies a string defaultValue without a codec', () => {
@@ -409,7 +409,7 @@ describe('useQueryState', () => {
   })
 
   it('preserves ref identity and behavior when composing a single-state module', async () => {
-    const { query, run } = setup({ q: 'lease' })
+    const { query, run } = setup({ q: 'phone' })
     const module = defineQueryModule({
       queryStates: () => ({ grouped: true }),
       queryState: (core, key) => ({
@@ -423,8 +423,8 @@ describe('useQueryState', () => {
 
     expect(used).toBe(q)
     expect(isRef(q)).toBe(true)
-    expect(q.value).toBe('lease')
-    expect(used.selectedValue.value).toBe('lease')
+    expect(q.value).toBe('phone')
+    expect(used.selectedValue.value).toBe('phone')
 
     q.set('sale')
     await flush()

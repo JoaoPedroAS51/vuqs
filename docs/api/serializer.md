@@ -41,14 +41,14 @@ import { createSerializer } from '@vuqs/core'
 import qs from 'qs'
 
 const serialize = createSerializer(schema)
-serialize({ q: 'lease' })                  // { q: 'lease' }
+serialize({ q: 'phone' })                  // { q: 'phone' }
 serialize(route.query, { page: 2 })        // patch over the current query
 serialize(route.query, { currency: null }) // clear a param
 
 const toUrl = createSerializer(schema, {
   stringify: q => qs.stringify(q, { addQueryPrefix: true }),
 })
-toUrl({ q: 'lease', page: 2 })             // '?q=lease&page=2'
+toUrl({ q: 'phone', page: 2 })             // '?q=phone&page=2'
 ```
 
 ## Pure functions <Badge type="info" text="@vuqs/core" />

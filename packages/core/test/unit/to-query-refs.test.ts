@@ -36,10 +36,10 @@ describe('toQueryRefs over the composable', () => {
     expect(q.value).toBe('sale')
     expect(page.value).toBe(1)
 
-    q.value = 'lease'
+    q.value = 'phone'
     await flush()
 
-    expect(query.values.q).toBe('lease')
+    expect(query.values.q).toBe('phone')
   })
 
   it('restores per-field set with per-call options', async () => {
@@ -89,9 +89,9 @@ describe('read-only per-field refs via Vue toRefs', () => {
     expect('set' in qRef).toBe(false)
     expect('clear' in qRef).toBe(false)
 
-    q.values.q = 'lease'
+    q.values.q = 'phone'
     await flush()
-    expect(qRef.value).toBe('lease')
+    expect(qRef.value).toBe('phone')
   })
 })
 

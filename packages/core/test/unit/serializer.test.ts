@@ -13,8 +13,8 @@ describe('createSerializer', () => {
   it('serializes values into a fresh query', () => {
     const serialize = createSerializer(schema)
 
-    expect(serialize({ q: 'lease' })).toEqual({ q: 'lease' })
-    expect(serialize({ q: 'lease', sort: 'name' })).toEqual({ q: 'lease', filters: { sort: 'name' } })
+    expect(serialize({ q: 'phone' })).toEqual({ q: 'phone' })
+    expect(serialize({ q: 'phone', sort: 'name' })).toEqual({ q: 'phone', filters: { sort: 'name' } })
   })
 
   it('merges over a base, keeping untouched managed fields', () => {
@@ -29,7 +29,7 @@ describe('createSerializer', () => {
   it('preserves unmanaged params on the base', () => {
     const serialize = createSerializer(schema)
 
-    expect(serialize({ keep: 'me' }, { q: 'lease' })).toEqual({ keep: 'me', q: 'lease' })
+    expect(serialize({ keep: 'me' }, { q: 'phone' })).toEqual({ keep: 'me', q: 'phone' })
   })
 
   it('clears a field with null', () => {
@@ -63,7 +63,7 @@ describe('createSerializer', () => {
       page: codecs.integer.withDefault(1),
     })
 
-    expect(serialize({ q: 'lease', page: 2 })).toEqual({ q: 'lease', page: '2' })
+    expect(serialize({ q: 'phone', page: 2 })).toEqual({ q: 'phone', page: '2' })
   })
 
   it('keeps a default value when keepOnDefault is set on the param', () => {
@@ -97,7 +97,7 @@ describe('createSerializer', () => {
   it('renders a string with the stringify option', () => {
     const serialize = createSerializer(schema, { stringify: query => JSON.stringify(query) })
 
-    expect(serialize({ q: 'lease' })).toBe('{"q":"lease"}')
+    expect(serialize({ q: 'phone' })).toBe('{"q":"phone"}')
   })
 
   it('accepts a string base with the parse option', () => {

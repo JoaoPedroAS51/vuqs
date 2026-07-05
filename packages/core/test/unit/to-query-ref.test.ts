@@ -53,10 +53,10 @@ describe('toQueryRef', () => {
     const { query, navigate, build } = setup({ keep: 'me', q: 'sale' })
     const ref = build(() => toQueryRef(useQueryStates(schema)))
 
-    ref.set({ q: 'lease' }, { history: 'push' })
+    ref.set({ q: 'phone' }, { history: 'push' })
     await flush()
 
-    expect(query.value).toEqual({ keep: 'me', q: 'lease' })
+    expect(query.value).toEqual({ keep: 'me', q: 'phone' })
     expect(navigate.mock.calls.at(-1)?.[1]).toMatchObject({ history: 'push' })
   })
 
