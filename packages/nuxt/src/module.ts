@@ -62,6 +62,22 @@ export interface ModuleOptions {
    * @default true
    */
   adapter?: boolean | AdapterOptions
+  /**
+   * Enable vuqs console debug logging by pulling in `@vuqs/core/debug` and calling
+   * `enableDebug()` through a plugin. Logs the internals of runtime defaults,
+   * context, and the optimistic overlay lifecycle, alongside warnings.
+   *
+   * @remarks
+   * `true` registers the plugin only in development, so neither the plugin nor its
+   * `@vuqs/core/debug` import reaches the production bundle. Pass `'force'` to keep it
+   * in production for diagnosing a deployed app.
+   *
+   * Debug logging is noisy and adds bundle weight: leave this off (or on `true`) for
+   * production. Set `'force'` deliberately, and turn it back off once done.
+   *
+   * @default false
+   */
+  debug?: boolean | 'force'
 }
 
 declare module '@nuxt/schema' {
@@ -107,6 +123,7 @@ export default defineNuxtModule<ModuleOptions>({
   defaults: {
     autoImports: true,
     adapter: true,
+    debug: false,
   },
   setup(options, nuxt) {
     const { resolve } = createResolver(import.meta.url)
@@ -144,6 +161,13 @@ export default defineNuxtModule<ModuleOptions>({
       })
 
       addPlugin(resolve('./runtime/plugin'))
+    }
+
+    // Decide at build time so `@vuqs/core/debug` only enters the graph when asked.
+    // `true` registers the dev-guarded plugin (stripped from the production build);
+    // `'force'` registers the unguarded variant that also runs in production.
+    if (options.debug && (nuxt.options.dev || options.debug === 'force')) {
+      addPlugin(resolve(options.debug === 'force' ? './runtime/debug.force' : './runtime/debug'))
     }
   },
 })

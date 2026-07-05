@@ -18,6 +18,7 @@ const { default: module } = await import('../../src/module')
 interface NuxtStub {
   _version: string
   options: {
+    dev: boolean
     rootDir: string
     runtimeConfig: { public: Record<string, unknown> }
   }
@@ -25,10 +26,11 @@ interface NuxtStub {
   callHook: ReturnType<typeof vi.fn>
 }
 
-function createNuxt(): NuxtStub {
+function createNuxt(dev = true): NuxtStub {
   return {
     _version: '4.0.0',
     options: {
+      dev,
       rootDir: process.cwd(),
       runtimeConfig: { public: {} },
     },
@@ -37,11 +39,15 @@ function createNuxt(): NuxtStub {
   }
 }
 
-async function run(options: Record<string, unknown>): Promise<NuxtStub> {
-  const nuxt = createNuxt()
+async function run(options: Record<string, unknown>, dev = true): Promise<NuxtStub> {
+  const nuxt = createNuxt(dev)
   // The object returned by defineNuxtModule is the invokable module.
   await (module as unknown as (opts: unknown, nuxt: NuxtStub) => Promise<void>)(options, nuxt)
   return nuxt
+}
+
+function pluginPaths(): string[] {
+  return kit.addPlugin.mock.calls.map(([arg]) => String(arg))
 }
 
 function importedNames(): string[] {
@@ -112,5 +118,39 @@ describe('@vuqs/nuxt module', () => {
 
     expect(kit.addPlugin).not.toHaveBeenCalled()
     expect(nuxt.options.runtimeConfig.public.vuqs).toBeUndefined()
+  })
+
+  it('registers no debug plugin by default', async () => {
+    await run({})
+
+    expect(pluginPaths().some(p => /runtime\/debug(?:\.force)?$/.test(p))).toBe(false)
+  })
+
+  it('registers the dev-guarded debug plugin when debug is true in dev', async () => {
+    await run({ debug: true }, true)
+
+    const debug = pluginPaths().filter(p => /runtime\/debug(?:\.force)?$/.test(p))
+    expect(debug).toHaveLength(1)
+    expect(debug[0]).toMatch(/runtime\/debug$/)
+  })
+
+  it('registers no debug plugin when debug is true outside dev', async () => {
+    await run({ debug: true }, false)
+
+    expect(pluginPaths().some(p => /runtime\/debug(?:\.force)?$/.test(p))).toBe(false)
+  })
+
+  it('registers the force debug plugin outside dev when debug is force', async () => {
+    await run({ debug: 'force' }, false)
+
+    const debug = pluginPaths().filter(p => /runtime\/debug(?:\.force)?$/.test(p))
+    expect(debug).toHaveLength(1)
+    expect(debug[0]).toMatch(/runtime\/debug\.force$/)
+  })
+
+  it('does not add the debug config to runtimeConfig', async () => {
+    const nuxt = await run({ debug: 'force' }, false)
+
+    expect(nuxt.options.runtimeConfig.public.vuqs).not.toHaveProperty('debug')
   })
 })
