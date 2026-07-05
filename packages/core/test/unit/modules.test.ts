@@ -199,12 +199,12 @@ describe('withRuntimeDefaults layered clearing coherence', () => {
     expect(q.values).toEqual({ page: 5 })
   })
 
-  it('applies the same clearing to setValues', async () => {
+  it('applies the same clearing to patch', async () => {
     const { build } = setup()
     const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
     q.setDefaults({ page: 5 })
 
-    q.setValues({ page: 5 })
+    q.patch({ page: 5 })
     await flush()
 
     expect(q.selected).toEqual({})

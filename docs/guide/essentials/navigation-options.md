@@ -1,6 +1,6 @@
 # Navigation & options
 
-Every write (`q.value = …`, `.set`, `.clear`, `setValues`, `clear`) can be tuned
+Every write (`q.value = …`, `.set`, `.clear`, `patch`, `replace`, `clear`) can be tuned
 with options that control how the URL changes and when. The same options can be
 set at four levels, with a clear precedence order.
 

@@ -102,12 +102,12 @@ describe('useQueryStates', () => {
     expect(values.q).toBeUndefined()
   })
 
-  describe('setValues', () => {
+  describe('patch', () => {
     it('sets several fields in a single navigation', async () => {
       const { query, navigate, run } = setup()
-      const { setValues } = run(() => useQueryStates(schema))
+      const { patch } = run(() => useQueryStates(schema))
 
-      setValues({ q: 'sale', sort: 'name' })
+      patch({ q: 'sale', sort: 'name' })
       await flush()
 
       expect(navigate).toHaveBeenCalledTimes(1)
@@ -116,9 +116,9 @@ describe('useQueryStates', () => {
 
     it('clears a field with null and skips an undefined field', async () => {
       const { query, run } = setup({ q: 'lease', filters: { sort: 'name' } })
-      const { setValues } = run(() => useQueryStates(schema))
+      const { patch } = run(() => useQueryStates(schema))
 
-      setValues({ q: null, sort: undefined })
+      patch({ q: null, sort: undefined })
       await flush()
 
       expect(query.value).toEqual({ filters: { sort: 'name' } })
@@ -126,10 +126,10 @@ describe('useQueryStates', () => {
 
     it('ignores keys not in the schema, without crashing a later reconcile', async () => {
       const { query, run } = setup({ tab: 'a' })
-      const { values, setValues } = run(() => useQueryStates(schema))
+      const { values, patch } = run(() => useQueryStates(schema))
 
       // @ts-expect-error a runtime caller may pass a foreign key
-      setValues({ q: 'x', nope: 'y' })
+      patch({ q: 'x', nope: 'y' })
       await flush()
 
       expect(query.value).toEqual({ tab: 'a', q: 'x' })
@@ -144,9 +144,9 @@ describe('useQueryStates', () => {
 
     it('honors per-call navigation options', async () => {
       const { navigate, run } = setup()
-      const { setValues } = run(() => useQueryStates(schema, { history: 'replace' }))
+      const { patch } = run(() => useQueryStates(schema, { history: 'replace' }))
 
-      setValues({ q: 'sale' }, { history: 'push' })
+      patch({ q: 'sale' }, { history: 'push' })
       await flush()
 
       expect(navigate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ history: 'push' }))
@@ -154,12 +154,36 @@ describe('useQueryStates', () => {
 
     it('forwards the scroll option', async () => {
       const { navigate, run } = setup()
-      const { setValues } = run(() => useQueryStates(schema))
+      const { patch } = run(() => useQueryStates(schema))
 
-      setValues({ q: 'sale' }, { scroll: false })
+      patch({ q: 'sale' }, { scroll: false })
       await flush()
 
       expect(navigate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ scroll: false }))
+    })
+  })
+
+  describe('replace', () => {
+    it('sets given params and clears the rest in one navigation', async () => {
+      const { query, navigate, run } = setup({ q: 'lease', filters: { sort: 'name' } })
+      const { replace } = run(() => useQueryStates(schema))
+
+      replace({ q: 'sale' })
+      await flush()
+
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(query.value).toEqual({ q: 'sale' })
+    })
+
+    it('preserves unmanaged params and honors per-call options', async () => {
+      const { query, navigate, run } = setup({ q: 'lease', keep: 'me' })
+      const { replace } = run(() => useQueryStates(schema))
+
+      replace({ sort: 'name' }, { history: 'push' })
+      await flush()
+
+      expect(query.value).toEqual({ filters: { sort: 'name' }, keep: 'me' })
+      expect(navigate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ history: 'push' }))
     })
   })
 

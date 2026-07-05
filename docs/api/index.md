@@ -36,7 +36,7 @@ section.
 
 ```ts
 // Composables
-export { useQueryState, useQueryStates, toQueryRefs }
+export { useQueryState, useQueryStates, toQueryRef, toQueryRefs }
 export { installQueryAdapter, provideQueryAdapter, useQueryAdapter }
 
 // Params & codecs
@@ -78,7 +78,8 @@ export type {
   // Composables
   QueryStateRef, UseQueryStateReturn,
   QueryComposable, QueryStatesValues, QueryStatesActions,
-  UseQueryStatesOptions, UseQueryStatesReturn, ToQueryRefs,
+  UseQueryStatesOptions, UseQueryStatesReturn, QueryRef, ToQueryRefs,
+  QueryBinding, QueryBindingSource,
   // Schema
   QueryStateSchema, QueryStateSchemaInput, NormalizeQueryStateSchema,
   QueryStateValues, QueryStateWriteValues,

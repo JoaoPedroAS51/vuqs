@@ -78,10 +78,11 @@ interface UseQueryStatesOptions extends NavigateOptions {
 }
 
 type QueryStatesValues<TSchema> = { [K in keyof TSchema]: unknown } // the reactive values map type
-interface QueryStatesActions<TSchema> { setValues: unknown; clear: unknown }
+interface QueryStatesActions<TSchema> { patch: unknown; replace: unknown; clear: unknown }
 interface UseQueryStatesReturn<TSchema> extends QueryStatesActions<TSchema> { values: QueryStatesValues<TSchema> }
 
-type ToQueryRefs<T> = { [K in keyof T]: unknown } // one ref per field; QueryStateRef for values, ComputedRef for read-only maps
+type ToQueryRefs<TSchema> = { [K in keyof TSchema]: unknown } // one QueryStateRef per param
+type QueryRef<TSchema> = unknown // a writable ref over the whole value map (snapshot read, replace write)
 
 // Module composition; details in /modules/authoring
 type QueryComposable<TSchema, TApi> = TApi & {

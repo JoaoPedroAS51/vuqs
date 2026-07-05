@@ -82,7 +82,7 @@ Binds a [schema](/guide/essentials/concepts#schema-a-map-of-params) of params to
 reactive value map plus batch writers.
 
 ```ts
-const { values, setValues, clear } = useQueryStates(schema, options?)
+const { values, patch, replace, clear } = useQueryStates(schema, options?)
 ```
 
 **Parameters**
@@ -102,11 +102,15 @@ const { values, setValues, clear } = useQueryStates(schema, options?)
     default reads as non-nullable, otherwise `T | undefined`.
   - Replace, don't mutate: assign a new array or object; in-place mutation does not
     navigate.
-- `setValues(values, options?): void`
-  - Batch write, coalesced into one navigation. Per param: a value sets, `null`
-    clears, `undefined`/absent skips.
+- `patch(values, options?): void`
+  - Partial batch write, coalesced into one navigation. Per param: a value sets,
+    `null` clears, `undefined`/absent skips.
+- `replace(values, options?): void`
+  - Whole-state write, coalesced into one navigation. Sets the given params and
+    clears every param not present. Absence is the clear signal, so it takes no
+    `null`.
 - `clear(options?): void`
-  - Reset every param to its default in one navigation.
+  - Reset every param to its default in one navigation (`replace({})`).
 - `.use(module): QueryComposable<…>`
   - Layer a [module](/modules/) onto the composable, merging its API and widening
     the return type. See the [`.use()` model](/modules/#the-use-model).
@@ -123,40 +127,78 @@ provided (see [`provideQueryAdapter`](#providequeryadapter)).
 ```ts
 import { codecs, useQueryStates } from '@vuqs/core'
 
-const { values, setValues, clear } = useQueryStates({
+const { values, patch, clear } = useQueryStates({
   q: codecs.string.withDefault(''),
   page: codecs.integer.withDefault(1),
 })
 
 values.q = 'laptop' // ?q=laptop
-setValues({ q: 'phone', page: 1 }) // one navigation
+patch({ q: 'phone', page: 1 }) // one navigation
 clear() // reset all
 ```
 
 ## toQueryRefs <Badge type="info" text="@vuqs/core" />
 
-Explodes a value map into one ref per field, the way Pinia's `storeToRefs` explodes
-a store. Use it to recover the per-field `.set`/`.clear` that the grouped `values`
-map drops, or to pass a single field around.
+Explodes the composable into one writable ref per field. Use it to recover the
+per-field `.set`/`.clear` that the grouped `values` map drops, or to pass a single
+field around.
 
 ```ts
-function toQueryRefs<T extends object>(map: T): ToQueryRefs<T>
+function toQueryRefs<TSchema>(query: QueryBindingSource<TSchema>): ToQueryRefs<TSchema>
 ```
 
 **Parameters**
 
-- `map: T`
-  - A value map from [`useQueryStates`](#usequerystates) (`values`) or a module
-    (`selected`/`defaults`).
+- `query: QueryBindingSource<TSchema>`
+  - The [`useQueryStates`](#usequerystates) composable. For read-only per-field refs
+    over a module's `selected`/`defaults` map, use Vue's `toRefs` directly.
 
 **Returns**
 
-- `refs: ToQueryRefs<T>`
-  - One ref per field, keyed by param. The helper detects the source shape on its
-    own.
-  - From the writable `values` map: a [`QueryStateRef`](#usequerystate) per field,
-    with writable `.value` plus `.set`/`.clear`. Assigning `undefined` clears.
-  - From a read-only map (`selected`/`defaults`): a `ComputedRef` per field.
+- `refs: ToQueryRefs<TSchema>`
+  - One [`QueryStateRef`](#usequerystate) per param, with writable `.value` plus
+    `.set`/`.clear`. A param with a default reads as non-nullable, otherwise
+    `T | undefined`. Assigning `undefined` clears.
+
+## toQueryRef <Badge type="info" text="@vuqs/core" />
+
+Binds the whole schema to one writable ref, the singular counterpart to
+[`toQueryRefs`](#toqueryrefs): a plain snapshot on read, an exhaustive replace on
+write. Reach for it when the value *is* the complete state, such as a form model or
+an API request object.
+
+```ts
+function toQueryRef<TSchema>(query: QueryBindingSource<TSchema>): QueryRef<TSchema>
+```
+
+**Parameters**
+
+- `query: QueryBindingSource<TSchema>`
+  - The [`useQueryStates`](#usequerystates) composable.
+
+**Returns**
+
+- `ref: QueryRef<TSchema>`
+  - A writable ref over the whole object, plus `.set(value, options?)` and
+    `.clear(options?)`.
+  - Reading yields a plain snapshot: absent params are omitted, defaulted params
+    always appear. The snapshot keeps a stable reference while its content is
+    unchanged, so a whole-object `v-model` does not churn identity.
+  - Writing **replaces** the state: params not present in the assigned value are
+    cleared. Absence is the clear signal, so it takes no `null`.
+
+**Example**
+
+```ts
+import { toQueryRef, useQueryStates } from '@vuqs/core'
+
+const query = useQueryStates({ q: codecs.string, sort: codecs.string })
+const filters = toQueryRef(query)
+
+filters.value = { q: 'lease', sort: 'desc' } // set q + sort, clear the rest
+filters.value = { ...filters.value, q: 'sale' } // keep the object, change q
+filters.clear()
+```
 
 ## UseQueryStatesOptions <Badge type="info" text="@vuqs/core" />
 

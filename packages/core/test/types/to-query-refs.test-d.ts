@@ -1,11 +1,9 @@
-import type { ComputedRef } from 'vue'
-import type { QueryStateRef } from '../../src/core/use-query-states'
+import type { QueryStateRef } from '../../src/core/use-query-state'
 import { describe, expectTypeOf, it } from 'vitest'
 import { codecs } from '../../src/core/codec'
 import { queryParam } from '../../src/core/query-param'
 import { toQueryRefs } from '../../src/core/to-query-refs'
 import { useQueryStates } from '../../src/core/use-query-states'
-import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
 
 const schema = {
   q: queryParam('q', codecs.string),
@@ -13,9 +11,9 @@ const schema = {
 }
 
 describe('toQueryRefs typing', () => {
-  it('explodes the writable values map into QueryStateRefs', () => {
-    const { values } = useQueryStates(schema)
-    const refs = toQueryRefs(values)
+  it('explodes the composable into QueryStateRefs, narrowing per param', () => {
+    const query = useQueryStates(schema)
+    const refs = toQueryRefs(query)
 
     expectTypeOf(refs.q).toEqualTypeOf<QueryStateRef<string | undefined>>()
     expectTypeOf(refs.page).toEqualTypeOf<QueryStateRef<number>>()
@@ -23,12 +21,9 @@ describe('toQueryRefs typing', () => {
     expectTypeOf(refs.q.clear).toBeFunction()
   })
 
-  it('explodes a read-only map into plain computed refs without set/clear', () => {
-    const q = useQueryStates(schema).use(withRuntimeDefaults())
-    const refs = toQueryRefs(q.selected)
-
-    expectTypeOf(refs.q).toEqualTypeOf<ComputedRef<string | undefined>>()
-    expectTypeOf(refs).not.toHaveProperty('set')
-    expectTypeOf(refs.q).not.toHaveProperty('set')
+  it('rejects a plain value map: read-only maps go through Vue toRefs', () => {
+    const { values } = useQueryStates(schema)
+    // @ts-expect-error values is not a binding source; pass the composable
+    toQueryRefs(values)
   })
 })

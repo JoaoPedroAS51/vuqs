@@ -70,7 +70,7 @@ describe('provideQueryAdapter', () => {
     await flush()
     expect(navigate).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ history: 'push' }))
 
-    states!.setValues({ q: 'b' }, { history: 'replace' })
+    states!.patch({ q: 'b' }, { history: 'replace' })
     await flush()
     expect(navigate).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ history: 'replace' }))
   })

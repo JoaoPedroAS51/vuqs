@@ -7,7 +7,7 @@ writes to land as a single navigation.
 ```ts
 import { codecs, useQueryStates } from '@vuqs/core'
 
-const { values, setValues, clear } = useQueryStates({
+const { values, patch, replace, clear } = useQueryStates({
   q: codecs.string.withDefault(''),
   sort: codecs.literal(['asc', 'desc'] as const).withDefault('asc'),
   page: codecs.integer.withDefault(1),
@@ -25,7 +25,8 @@ or a builder modifier.
 ```ts
 interface UseQueryStatesApi {
   values: { q: string, sort: 'asc' | 'desc', page: number } // reactive, writable
-  setValues: (values: QueryStateWriteValues, options?: NavigateOptions) => void // batch write
+  patch: (values: QueryStateWriteValues, options?: NavigateOptions) => void // partial write
+  replace: (values: QueryStateValues, options?: NavigateOptions) => void // whole-state write
   clear: (options?: NavigateOptions) => void // reset all
 }
 ```
@@ -66,52 +67,84 @@ values.tags.push('new') // ❌ no navigation
 
 The grouped `values` map drops the per-field `.set` and `.clear` that a single
 [`useQueryState`](/guide/essentials/use-query-state) ref carries. To get them back,
-or to pass one field around as a ref, explode `values` with
+or to pass one field around as a ref, explode the composable with
 [`toQueryRefs`](/api/composables#toqueryrefs):
 
 ```ts
 import { toQueryRefs } from '@vuqs/core'
 
-const { q, page } = toQueryRefs(values)
+const query = useQueryStates(schema)
+const { q, page } = toQueryRefs(query)
 
 q.value = 'laptop' // write, like values.q = 'laptop'
 page.set(2, { history: 'push' }) // per-call options, back on a field
 q.clear() // remove ?q
 ```
 
-Each ref routes back through `values`, so it inherits the same clearing rule,
-including any default a [module](/modules/) layers on top. Reaching for one param
-from the start? Use `useQueryState` instead.
+Each ref routes back through the same binding, so it inherits the same clearing
+rule, including any default a [module](/modules/) layers on top. Reaching for one
+param from the start? Use `useQueryState` instead.
 
-### `setValues`: batch write
+### Whole-object ref with `toQueryRef`
 
-Sets several params in one coalesced navigation. Each param follows the
-three-state [write protocol](/guide/going-further/null-vs-undefined):
+When the value *is* the whole state, such as a form model or an API request object,
+[`toQueryRef`](/api/composables#toqueryref) binds the entire schema to a single
+writable ref. Reading gives a plain snapshot (absent params omitted); assigning
+**replaces** the state, clearing any param the assigned object leaves out:
+
+```ts
+import { toQueryRef } from '@vuqs/core'
+
+const query = useQueryStates(schema)
+const filters = toQueryRef(query)
+
+filters.value = { q: 'laptop', sort: 'asc' } // set q + sort, clear page
+filters.value = { ...filters.value, page: 1 } // keep the object, set page
+```
+
+The snapshot keeps a stable reference while its content is unchanged, so binding it
+with `v-model` on the whole object does not loop. Use `toQueryRefs` (plural) for
+per-field refs, `toQueryRef` (singular) for the object as one value.
+
+### `patch`: partial write
+
+Updates some params in one coalesced navigation, leaving the rest untouched. Each
+param follows the three-state [write protocol](/guide/going-further/null-vs-undefined):
 
 - **omit / `undefined`** leaves the param untouched.
 - **`null`** clears the param, reverting to its default.
 - **a value** sets it.
 
 ```ts
-setValues({ q: 'laptop', page: 1 }) // set q and page, leave sort alone
-setValues({ sort: null }) // clear sort
-setValues({ q: 'phone' }, { history: 'push' }) // with per-call options
+patch({ q: 'laptop', page: 1 }) // set q and page, leave sort alone
+patch({ sort: null }) // clear sort
+patch({ q: 'phone' }, { history: 'push' }) // with per-call options
 ```
 
-This is why `setValues` takes `null` to clear: it needs a way to say "clear this
-one" that is distinct from "don't touch this one." Single refs clear via `.clear()`
+This is why `patch` takes `null` to clear: it needs a way to say "clear this one"
+that is distinct from "don't touch this one." Single refs clear via `.clear()`
 or `= undefined` instead, covered in [null vs undefined](/guide/going-further/null-vs-undefined).
+
+### `replace`: whole-state write
+
+Sets the given params and **clears every param not present**, in one navigation.
+Absence is the clear signal, so `replace` takes no `null`. Reach for it when the
+argument *is* the complete state, such as applying a saved view:
+
+```ts
+replace({ q: 'laptop', sort: 'desc' }) // q + sort set, page cleared
+```
 
 ### `clear`: reset everything
 
 ```ts
-clear() // every param back to its default, one navigation
+clear() // every param back to its default, one navigation (replace({}))
 clear({ history: 'push' }) // with options
 ```
 
 ## Coalescing: many writes, one navigation
 
-Assigning several `values.*` in a row, or calling `setValues` with multiple keys,
+Assigning several `values.*` in a row, or calling `patch` with multiple keys,
 produces exactly **one** history entry, because writes within a tick coalesce:
 
 ```ts
@@ -145,7 +178,7 @@ const { values, setDefaults } = useQueryStates(schema)
 import { codecs, useQueryStates } from '@vuqs/core'
 import { computed } from 'vue'
 
-const { values, setValues, clear } = useQueryStates({
+const { values, patch, clear } = useQueryStates({
   q: codecs.string.withDefault(''),
   sort: codecs.literal(['asc', 'desc'] as const).withDefault('asc'),
   page: codecs.integer.withDefault(1),
@@ -155,7 +188,7 @@ const results = computed(() => runSearch(values.q, values.sort, values.page))
 
 function search(term: string) {
   // A new search resets to page 1, in one navigation.
-  setValues({ q: term, page: 1 })
+  patch({ q: term, page: 1 })
 }
 </script>
 
@@ -180,11 +213,11 @@ function search(term: string) {
 | | `useQueryState` | `useQueryStates` |
 | --- | --- | --- |
 | Binds | one key | a group |
-| Returns | a `QueryStateRef` (`.value`, `.set`, `.clear`) | `{ values, setValues, clear }` |
-| Per-param options | ✅ on `.set` / `.clear` | via `setValues` (whole batch) |
+| Returns | a `QueryStateRef` (`.value`, `.set`, `.clear`) | `{ values, patch, replace, clear }` |
+| Per-param options | ✅ on `.set` / `.clear` | via `patch` / `replace` (whole batch) |
 | Multi-param coalescing | — | ✅ |
 | Compose a module | ✅ `.use()` | ✅ `.use()` |
-| A ref to pass around | ✅ | [`toQueryRefs(values)`](/api/composables#toqueryrefs) |
+| A ref to pass around | ✅ | [`toQueryRefs(query)`](/api/composables#toqueryrefs) |
 
 Reach for `useQueryStates` when params move together. Reach for `useQueryState`
 when you want rich control over one param.

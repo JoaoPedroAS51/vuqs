@@ -23,9 +23,9 @@ const PRODUCTS: Product[] = [
 const PAGE_SIZE = 3
 
 // One call binds the whole filter group as a reactive `values` map, plus the
-// batch `setValues`/`clear` writers. Assigning several `values.*` in a row
+// batch `patch`/`replace`/`clear` writers. Assigning several `values.*` in a row
 // coalesces into a single navigation (one microtask).
-const { values, setValues } = useQueryStates({
+const { values, patch } = useQueryStates({
   q: queryParam('q', codecs.string.withDefault('')),
   sort: queryParam('sort', codecs.literal(['asc', 'desc'] as const).withDefault('asc')),
   page: queryParam('page', codecs.index.withDefault(0)),
@@ -54,7 +54,7 @@ const pageInput = computed({
   get: () => currentPage.value + 1,
   set: (next: number) => {
     const clamped = Math.max(0, Math.min((next || 1) - 1, pageCount.value - 1))
-    setValues({ page: clamped }, { history: historyMode.value })
+    patch({ page: clamped }, { history: historyMode.value })
   },
 })
 

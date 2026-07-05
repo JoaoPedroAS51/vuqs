@@ -24,12 +24,12 @@ clear `sort`, leave `page` alone" in a single object. So batch writes use `null`
 to clear and `undefined`/absent to skip:
 
 ```ts
-setValues({ q: 'laptop', sort: null })
-//          set q ──┘      └── clear sort, page untouched
+patch({ q: 'laptop', sort: null })
+//       set q ──┘      └── clear sort, page untouched
 ```
 
-This applies to [`setValues`](/guide/essentials/use-query-states#setvalues) and to
-the [serializer](/guide/going-further/serializer#write-semantics).
+This applies to [`patch`](/guide/essentials/use-query-states#patch-partial-write)
+and to the [serializer](/guide/going-further/serializer#write-semantics).
 
 ## Single params don't use null
 
@@ -48,6 +48,20 @@ color.clear() // clear (the explicit method)
 
 This keeps `.value =` and `.set()` symmetric: both take a value or `undefined`,
 never `null`.
+
+## Whole-state writes clear by absence
+
+A whole-state write is exhaustive: `replace` (from `useQueryStates`) and
+[`toQueryRef`](/api/composables#toqueryref) set every param from the object you give
+them and clear the rest. Absence *is* the clear signal, so they take no `null`:
+
+```ts
+replace({ q: 'sale' }) // set q, clear every other param
+filters.value = { q: 'sale' } // same, through a toQueryRef
+```
+
+`patch` is the partial counterpart: it touches only the keys you name, which is why
+it alone needs `null` to tell "clear this" from "leave it alone".
 
 ## Reads always normalize away null
 
@@ -85,9 +99,12 @@ ref.value = x // set
 ref.value = undefined // clear
 ref.clear() // clear
 
-// Batch (setValues, serializer)
-setValues({ a: x }) // set a
-setValues({ a: null }) // clear a
-setValues({ /* a absent */ }) // leave a untouched
-setValues({ a: undefined }) // leave a untouched (same as absent)
+// Batch, partial (patch, serializer)
+patch({ a: x }) // set a
+patch({ a: null }) // clear a
+patch({ /* a absent */ }) // leave a untouched
+patch({ a: undefined }) // leave a untouched (same as absent)
+
+// Whole-state, exhaustive (replace, toQueryRef): absence clears, no null
+replace({ a: x }) // set a, clear everything else
 ```

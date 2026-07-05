@@ -5,6 +5,7 @@ import type { DefinedQueryStateModule, QueryFacadeModule, QueryStateFacadeModule
 import type { QueryStateSchema } from './schema'
 import type { NavigateOptions } from './types'
 import type { UseQueryStatesOptions } from './use-query-states'
+import { computed } from 'vue'
 import { createQueryBinding } from './binding'
 import { codecs } from './codec'
 import { applyQueryStateModule } from './module'
@@ -208,11 +209,16 @@ function toQueryStateRef<T>(
   options: UseQueryStatesOptions,
 ): UseQueryStateReturn<T | undefined, object, T> {
   const schema = { value: definition } satisfies SingleQueryStateSchema<T>
-  const { engine, refs, core } = createQueryBinding(schema, options)
+  const { binding, core } = createQueryBinding(schema, options)
 
-  const queryRef = Object.assign(refs.value, {
-    set: (value: unknown, perCall?: NavigateOptions) => engine.query.set('value', value, perCall),
-    clear: (perCall?: NavigateOptions) => engine.query.set('value', undefined, perCall),
+  const valueRef = computed({
+    get: () => (binding.read.value as Record<string, unknown>).value,
+    set: value => binding.write('value', value),
+  })
+
+  const queryRef = Object.assign(valueRef, {
+    set: (value: unknown, perCall?: NavigateOptions) => binding.write('value', value, perCall),
+    clear: (perCall?: NavigateOptions) => binding.write('value', undefined, perCall),
   }) as UseQueryStateReturn<T | undefined, object, T>
 
   queryRef.use = ((module: DefinedQueryStateModule<any>) => {

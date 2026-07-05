@@ -1,3 +1,4 @@
+import type { QueryBindingSource } from './binding'
 import type { QueryStatesFacadeModule, QueryStatesModule } from './module'
 import type { QueryCore } from './query-core'
 import type {
@@ -5,24 +6,13 @@ import type {
   QueryStateRefValue,
   QueryStateSchema,
   QueryStateSchemaInput,
+  QueryStateValues,
   QueryStateWriteValues,
 } from './schema'
 import type { NavigateOptions } from './types'
-import { reactive } from 'vue'
-import { createQueryBinding } from './binding'
+import { createQueryBinding, toReactiveQuery } from './binding'
 import { applyQueryStatesModule } from './module'
 import { normalizeQueryStateSchema } from './schema'
-
-export type {
-  DefinedQueryModule,
-  DefinedQueryStateModule,
-  DefinedQueryStatesModule,
-  QueryStateModule,
-  QueryStatesModule,
-} from './module'
-export type { QueryCore } from './query-core'
-export type { NavigateOptions, QueryStateNavigate } from './types'
-export type { QueryStateRef, UseQueryStateReturn } from './use-query-state'
 
 /**
  * Behavior options for {@link useQueryStates} and {@link useQueryState}.
@@ -78,44 +68,31 @@ export type QueryStatesValues<TSchema extends QueryStateSchema> = {
  */
 export interface QueryStatesActions<TSchema extends QueryStateSchema> {
   /**
-   * Sets several params at once, coalesced into one navigation. Omit a param (or
+   * Partially updates params, coalesced into one navigation. Omit a param (or
    * pass `undefined`) to leave it untouched, `null` to clear it, or a value to
    * set it.
    */
-  setValues: (values: QueryStateWriteValues<TSchema>, options?: NavigateOptions) => void
+  patch: (values: QueryStateWriteValues<TSchema>, options?: NavigateOptions) => void
+  /**
+   * Replaces the whole state: sets the given params and clears every param not
+   * present, coalesced into one navigation. Absence is the clear signal, so this
+   * writer takes no `null`.
+   */
+  replace: (values: QueryStateValues<TSchema>, options?: NavigateOptions) => void
   /** Clears every param, optionally overriding the navigation options. */
   clear: (options?: NavigateOptions) => void
 }
 
 /**
- * A non-enumerable marker attached to the writable `values` map carrying its
- * option-aware batch writer, so {@link toQueryRefs} can restore per-field
- * `.set`/`.clear`. Hidden from iteration, spread, and `v-model`.
- *
- * @internal
- */
-export const WRITER = Symbol('vuqs.writer')
-
-/**
- * The writable value map plus the hidden {@link WRITER} brand. The brand is an
- * optional symbol key, so it stays invisible to normal use but lets
- * {@link toQueryRefs} tell a writable map from a readonly one.
- *
- * @typeParam TSchema - The schema bound to the URL.
- */
-export type WritableQueryValues<TSchema extends QueryStateSchema> = QueryStatesValues<TSchema> & {
-  readonly [WRITER]?: (values: QueryStateWriteValues<TSchema>, options?: NavigateOptions) => void
-}
-
-/**
  * The shape returned by {@link useQueryStates}: a reactive `values` map plus the
- * `setValues` and `clear` batch writers.
+ * `patch`, `replace`, and `clear` batch writers.
  *
  * @typeParam TSchema - The schema bound to the URL.
  */
-export interface UseQueryStatesReturn<TSchema extends QueryStateSchema> extends QueryStatesActions<TSchema> {
+export interface UseQueryStatesReturn<TSchema extends QueryStateSchema>
+  extends QueryStatesActions<TSchema>, QueryBindingSource<TSchema> {
   /** The reactive, writable value map, one entry per param. */
-  values: WritableQueryValues<TSchema>
+  values: QueryStatesValues<TSchema>
 }
 
 /**
@@ -131,9 +108,10 @@ export interface UseQueryStatesReturn<TSchema extends QueryStateSchema> extends 
  *
  * `values` is reactive: `values.page` reads, `values.page = x` writes with the
  * default options, and `values.page = undefined` clears a nullable param. Use
- * `setValues` for batch writes (with `null` to clear) and per-call options, and
- * `clear` to reset every param. For rich single-param control (a ref to pass
- * around, per-call options on one param), reach for {@link useQueryState}.
+ * `patch` for partial batch writes (with `null` to clear) and per-call options,
+ * `replace` to set the whole state at once (absent params clear), and `clear` to
+ * reset every param. For rich single-param control (a ref to pass around, per-call
+ * options on one param), reach for {@link useQueryState}.
  *
  * Replace, do not mutate: assigning `values.tags = [...]` navigates, but mutating
  * the array in place (`values.tags.push(...)`) does not.
@@ -151,13 +129,13 @@ export interface UseQueryStatesReturn<TSchema extends QueryStateSchema> extends 
  * // Provide the adapter once (e.g. in your app root):
  * provideQueryAdapter(createVueRouterAdapter())
  *
- * const { values, setValues, clear } = useQueryStates({
+ * const { values, patch, clear } = useQueryStates({
  *   q: queryParam('q', codecs.string),
  *   sort: queryParam('filters.sort', codecs.string),
  * })
  *
  * values.q = 'sale'
- * setValues({ q: 'lease', sort: null }, { history: 'push' })
+ * patch({ q: 'lease', sort: null }, { history: 'push' })
  * ```
  */
 export function useQueryStates<TSchema extends QueryStateSchemaInput>(
@@ -165,13 +143,13 @@ export function useQueryStates<TSchema extends QueryStateSchemaInput>(
   options: UseQueryStatesOptions = {},
 ): QueryComposable<NormalizeQueryStateSchema<TSchema>, UseQueryStatesReturn<NormalizeQueryStateSchema<TSchema>>> {
   const normalizedSchema = normalizeQueryStateSchema(schema)
-  const { engine, refs, core } = createQueryBinding(normalizedSchema, options)
+  const { binding, core } = createQueryBinding(normalizedSchema, options)
 
   type TNormalizedSchema = NormalizeQueryStateSchema<TSchema>
 
-  const values = reactive(refs) as WritableQueryValues<TNormalizedSchema>
+  const values = toReactiveQuery(binding)
 
-  function setValues(next: QueryStateWriteValues<TNormalizedSchema>, perCall?: NavigateOptions): void {
+  function patch(next: QueryStateWriteValues<TNormalizedSchema>, perCall?: NavigateOptions): void {
     for (const key of Object.keys(next) as Array<keyof TNormalizedSchema & string>) {
       if (!Object.hasOwn(normalizedSchema, key)) {
         continue
@@ -183,22 +161,26 @@ export function useQueryStates<TSchema extends QueryStateSchemaInput>(
         continue
       }
 
-      engine.query.set(key, value === null ? undefined : value, perCall)
+      binding.write(key, value === null ? undefined : value, perCall)
+    }
+  }
+
+  function replace(next: QueryStateValues<TNormalizedSchema>, perCall?: NavigateOptions): void {
+    for (const key of binding.keys) {
+      binding.write(key, (next as Record<string, unknown>)[key], perCall)
     }
   }
 
   function clear(perCall?: NavigateOptions): void {
-    for (const key of Object.keys(normalizedSchema) as Array<keyof TNormalizedSchema & string>) {
-      engine.query.set(key, undefined, perCall)
-    }
+    replace({}, perCall)
   }
-
-  Object.defineProperty(values, WRITER, { value: setValues, enumerable: false })
 
   const composable = {
     values,
-    setValues,
+    patch,
+    replace,
     clear,
+    binding,
   } as QueryComposable<TNormalizedSchema, UseQueryStatesReturn<TNormalizedSchema>>
 
   composable.use = (<TAdded>(module: QueryStatesModule<TNormalizedSchema, TAdded>) => {

@@ -1,6 +1,6 @@
 import type { NavigateOptions, ParsedQuery, ParsedQueryRaw } from '../../src/core/types'
 import { describe, expect, it, vi } from 'vitest'
-import { createApp, effectScope, ref } from 'vue'
+import { createApp, effectScope, ref, toRefs } from 'vue'
 import { installQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
 import { queryParam } from '../../src/core/query-param'
@@ -27,11 +27,11 @@ const schema = {
   page: queryParam('page', codecs.integer.withDefault(1)),
 }
 
-describe('toQueryRefs over the writable values map', () => {
+describe('toQueryRefs over the composable', () => {
   it('reads and writes each field through its ref', async () => {
     const { build } = setup({ q: 'sale' })
-    const { values } = build(() => useQueryStates(schema))
-    const { q, page } = toQueryRefs(values)
+    const query = build(() => useQueryStates(schema))
+    const { q, page } = toQueryRefs(query)
 
     expect(q.value).toBe('sale')
     expect(page.value).toBe(1)
@@ -39,51 +39,51 @@ describe('toQueryRefs over the writable values map', () => {
     q.value = 'lease'
     await flush()
 
-    expect(values.q).toBe('lease')
+    expect(query.values.q).toBe('lease')
   })
 
   it('restores per-field set with per-call options', async () => {
     const { build, navigate } = setup()
-    const { values } = build(() => useQueryStates(schema))
-    const { q } = toQueryRefs(values)
+    const query = build(() => useQueryStates(schema))
+    const { q } = toQueryRefs(query)
 
     q.set('newest', { history: 'push' })
     await flush()
 
-    expect(values.q).toBe('newest')
+    expect(query.values.q).toBe('newest')
     expect(navigate.mock.calls.at(-1)?.[1]).toMatchObject({ history: 'push' })
   })
 
   it('clears a field with clear() and with .value = undefined', async () => {
     const { build } = setup({ q: 'sale' })
-    const { values } = build(() => useQueryStates(schema))
-    const { q } = toQueryRefs(values)
+    const query = build(() => useQueryStates(schema))
+    const { q } = toQueryRefs(query)
 
     q.clear()
     await flush()
-    expect(values.q).toBeUndefined()
+    expect(query.values.q).toBeUndefined()
 
     q.value = 'again'
     await flush()
     q.value = undefined
     await flush()
-    expect(values.q).toBeUndefined()
+    expect(query.values.q).toBeUndefined()
   })
 
-  it('does not expose the writer brand as a field', () => {
+  it('exposes exactly one ref per param', () => {
     const { build } = setup()
-    const { values } = build(() => useQueryStates(schema))
+    const query = build(() => useQueryStates(schema))
 
-    expect(Object.getOwnPropertySymbols(toQueryRefs(values))).toHaveLength(0)
-    expect(Object.keys(toQueryRefs(values))).toEqual(['q', 'page'])
+    expect(Object.getOwnPropertySymbols(toQueryRefs(query))).toHaveLength(0)
+    expect(Object.keys(toQueryRefs(query))).toEqual(['q', 'page'])
   })
 })
 
-describe('toQueryRefs over a read-only map', () => {
+describe('read-only per-field refs via Vue toRefs', () => {
   it('reads each field and tracks updates without a writer', async () => {
     const { build } = setup({ q: 'sale' })
     const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
-    const { q: qRef } = toQueryRefs(q.selected)
+    const qRef = toRefs(q.selected).q!
 
     expect(qRef.value).toBe('sale')
     expect('set' in qRef).toBe(false)
@@ -101,7 +101,7 @@ describe('toQueryRefs coherence with withRuntimeDefaults', () => {
     const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
     q.setDefaults({ page: 5 })
 
-    const { page } = toQueryRefs(q.values)
+    const { page } = toQueryRefs(q)
 
     page.value = 1 // codec default, not the effective default (5)
     await flush()

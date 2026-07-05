@@ -1,79 +1,65 @@
-import type { ComputedRef } from 'vue'
+import type { QueryBindingSource } from './binding'
+import type { QueryStateRefValue, QueryStateSchema } from './schema'
 import type { NavigateOptions } from './types'
 import type { QueryStateRef } from './use-query-state'
 import { computed } from 'vue'
-import { WRITER } from './use-query-states'
 
 /**
- * The per-field refs produced by {@link toQueryRefs}.
+ * The per-field refs produced by {@link toQueryRefs}: one {@link QueryStateRef}
+ * per schema param.
  *
  * @remarks
- * The writable `values` map carries the hidden {@link WRITER} brand, so it
- * explodes into a {@link QueryStateRef} per field: writable, with `.set`/
- * `.clear`. A read-only map (`selected`/`defaults`) has no brand, so it explodes
- * into a read-only ref per field.
+ * Each ref carries the param's own value type, so a defaulted param drops
+ * `undefined` while a bare codec keeps it, matching the composable's `values`.
  *
- * @typeParam T - The map being exploded into refs.
+ * @typeParam TSchema - The schema the binding exposes.
  */
-export type ToQueryRefs<T> = typeof WRITER extends keyof T
-  ? { [K in Exclude<keyof T, typeof WRITER>]: QueryStateRef<T[K]> }
-  : { [K in keyof T]-?: ComputedRef<T[K]> }
+export type ToQueryRefs<TSchema extends QueryStateSchema> = {
+  [Key in keyof TSchema]: QueryStateRef<QueryStateRefValue<TSchema[Key]>>
+}
 
 /**
- * Explodes a query value map into one ref per field, the way Pinia's
- * `storeToRefs` explodes a store.
+ * Explodes a query binding into one writable ref per param.
  *
  * @remarks
- * Pass the writable `values` map and each ref is a {@link QueryStateRef}: a
- * writable ref whose `.value` reads and writes, plus `.set(value, options)` and
- * `.clear(options)` for per-call navigation options. Pass a read-only map
- * (`selected`/`defaults`) and each ref is read-only.
+ * Each ref is a {@link QueryStateRef}: a writable ref whose `.value` reads and
+ * writes, plus `.set(value, options)` and `.clear(options)` for per-call
+ * navigation options. Assigning `undefined`, like `.clear()`, removes the param.
  *
- * The helper carries no behavior of its own: writes route back through the map,
- * so a ref off the effective `values` clears against the effective default
- * exactly as `values.x = undefined` would. Assigning `undefined` to a writable
- * ref, like `.clear()`, removes the param.
+ * Pass the {@link useQueryStates} composable. For read-only per-field refs over a
+ * module's `selected`/`defaults` map, use Vue's `toRefs` directly.
  *
- * @typeParam T - The map being exploded.
- * @param map - A query value map from {@link useQueryStates} or a module.
- * @returns One ref per field; writable for `values`, read-only otherwise.
+ * @typeParam TSchema - The schema the binding exposes.
+ * @param query - The {@link useQueryStates} composable to explode.
+ * @returns One writable {@link QueryStateRef} per param.
  *
  * @example
  * ```ts
- * const { values } = useQueryStates(schema)
- * const { q, sort } = toQueryRefs(values)
+ * const query = useQueryStates(schema)
+ * const { q, sort } = toQueryRefs(query)
  *
  * q.value = 'sale'
  * sort.set('newest', { history: 'push' })
  * q.clear()
  * ```
  */
-export function toQueryRefs<T extends object>(map: T): ToQueryRefs<T> {
-  const writer = (map as Record<PropertyKey, unknown>)[WRITER] as
-    | ((values: Record<string, unknown>, options?: NavigateOptions) => void)
-    | undefined
-
+export function toQueryRefs<TSchema extends QueryStateSchema>(
+  query: QueryBindingSource<TSchema>,
+): ToQueryRefs<TSchema> {
+  const { binding } = query
   const result: Record<string, unknown> = {}
 
-  for (const key of Object.keys(map)) {
-    if (writer === undefined) {
-      result[key] = computed(() => (map as Record<string, unknown>)[key])
-      continue
-    }
-
+  for (const key of binding.keys) {
     const fieldRef = computed({
-      get: () => (map as Record<string, unknown>)[key],
-      set: (value) => {
-        (map as Record<string, unknown>)[key] = value
-      },
+      get: () => (binding.read.value as Record<string, unknown>)[key],
+      set: value => binding.write(key, value),
     })
 
     result[key] = Object.assign(fieldRef, {
-      set: (value: unknown, options?: NavigateOptions) =>
-        writer({ [key]: value === undefined ? null : value }, options),
-      clear: (options?: NavigateOptions) => writer({ [key]: null }, options),
+      set: (value: unknown, options?: NavigateOptions) => binding.write(key, value, options),
+      clear: (options?: NavigateOptions) => binding.write(key, undefined, options),
     })
   }
 
-  return result as ToQueryRefs<T>
+  return result as ToQueryRefs<TSchema>
 }

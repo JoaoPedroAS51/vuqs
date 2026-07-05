@@ -1,5 +1,6 @@
 export { installQueryAdapter, provideQueryAdapter, useQueryAdapter } from './core/adapter'
 export type { QueryAdapter, QueryAdapterDefaultOptions } from './core/adapter'
+export type { QueryBinding, QueryBindingSource } from './core/binding'
 export { codecs, createCodec } from './core/codec'
 export type { Codec, CodecInput, CodecWithDefault } from './core/codec'
 export type {
@@ -40,16 +41,16 @@ export { assertUniquePaths, buildQuery, defineQuerySchema, dropDefaults, getMana
 export type { NormalizeQueryStateSchema, QueryStateRefValue, QueryStateSchema, QueryStateSchemaInput, QueryStateValueAt, QueryStateValueOf, QueryStateValues, QueryStateWriteValues } from './core/schema'
 export { createSerializer } from './core/serializer'
 export type { CreateSerializerOptions, Serializer, SerializerParse, SerializerStringify } from './core/serializer'
+export { toQueryRef } from './core/to-query-ref'
+export type { QueryRef } from './core/to-query-ref'
 export { toQueryRefs } from './core/to-query-refs'
 export type { ToQueryRefs } from './core/to-query-refs'
-export type { ParsedQuery, ParsedQueryRaw, ParsedQueryValue } from './core/types'
+export type { NavigateOptions, ParsedQuery, ParsedQueryRaw, ParsedQueryValue, QueryStateNavigate } from './core/types'
 export { useQueryState } from './core/use-query-state'
 export type { QueryStateRef, UseQueryStateReturn } from './core/use-query-state'
 export { useQueryStates } from './core/use-query-states'
 export type {
-  NavigateOptions,
   QueryComposable,
-  QueryStateNavigate,
   QueryStatesActions,
   QueryStatesValues,
   UseQueryStatesOptions,

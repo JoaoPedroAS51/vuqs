@@ -278,8 +278,8 @@ already provided.
 [vuqs] module key "selected" is already provided by an earlier module
 ```
 
-Avoid the base API names (`values`, `setValues`, `clear`, `use`) and the keys of
-any module you expect to compose with.
+Avoid the base API names (`values`, `patch`, `replace`, `clear`, `use`, `binding`)
+and the keys of any module you expect to compose with.
 
 ## Full example
 
