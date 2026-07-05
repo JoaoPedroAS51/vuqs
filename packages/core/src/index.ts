@@ -3,6 +3,8 @@ export type { QueryAdapter, QueryAdapterDefaultOptions } from './core/adapter'
 export type { QueryBinding, QueryBindingSource } from './core/binding'
 export { codecs, createCodec } from './core/codec'
 export type { Codec, CodecInput, CodecWithDefault } from './core/codec'
+export { createDebugLogger } from './core/debug/logger'
+export type { DebugLogger } from './core/debug/logger'
 export type {
   DefinedQueryParam,
   DefinedQueryParamWithDefault,

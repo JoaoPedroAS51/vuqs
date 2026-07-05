@@ -1,3 +1,5 @@
+import { debug } from './debug/sink'
+
 /**
  * The notification event map, augmented by modules.
  *
@@ -63,6 +65,7 @@ export function createQueryHooks(): QueryHookBus {
     }
 
     handlers.add(handler as HookHandler)
+    debug('hooks:subscribe', String(event))
 
     return () => {
       registry.get(event)?.delete(handler as HookHandler)
@@ -70,6 +73,7 @@ export function createQueryHooks(): QueryHookBus {
   }
 
   function emit<Event extends keyof QueryHooks>(event: Event, ...args: HookArgs<Event>): void {
+    debug('hooks:emit', String(event), [...args])
     const handlers = registry.get(event)
 
     if (!handlers) {

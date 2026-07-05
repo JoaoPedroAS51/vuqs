@@ -2,6 +2,7 @@ import type { ShallowRef } from 'vue'
 import type { QueryAdapter } from '../adapter'
 import type { NavigateOptions, ParsedQueryValue } from '../types'
 import { shallowRef, toValue } from 'vue'
+import { debug } from '../debug/sink'
 import { deletePath, pruneEmptyAncestors, setPath } from '../path'
 import { cloneQuery } from '../query-object'
 
@@ -38,6 +39,8 @@ function mergeOptions(base: NavigateOptions, next: NavigateOptions): NavigateOpt
     result.scroll = result.scroll === true || next.scroll === true ? true : next.scroll
   }
 
+  debug('gtq:coalesce', { ...result })
+
   return result
 }
 
@@ -72,6 +75,7 @@ export class ThrottledQueue {
   push(deltas: Overlay, options: NavigateOptions, adapter: UpdateQueueAdapterContext, throttleMs: number): void {
     this.currentAdapter = adapter
     this.overlay.value = { ...this.overlay.value, ...deltas }
+    debug('gtq:enqueue', { ...deltas }, { ...this.overlay.value })
     this.options = mergeOptions(this.options, options)
     this.scheduleFlush(throttleMs)
   }
@@ -91,19 +95,21 @@ export class ThrottledQueue {
       return
     }
 
-    let changed = false
+    const dropped: string[] = []
     const next = { ...this.overlay.value }
 
     for (const path of paths) {
       if (path in next) {
         delete next[path]
-        changed = true
+        dropped.push(path)
       }
     }
 
-    if (changed) {
+    if (dropped.length > 0) {
       this.overlay.value = next
     }
+
+    debug('gtq:settle', dropped)
   }
 
   /** Clears the overlay and pending navigation; used for test and SSR isolation. */
@@ -114,6 +120,7 @@ export class ThrottledQueue {
     this.currentAdapter = undefined
     // Invalidate any flush already scheduled, so it cannot fire against a later push.
     this.generation++
+    debug('gtq:reset')
   }
 
   private scheduleFlush(timeMs: number): void {
@@ -122,6 +129,7 @@ export class ThrottledQueue {
     }
 
     this.scheduled = true
+    debug('gtq:schedule', timeMs)
 
     const generation = this.generation
     const run = (): void => {
@@ -144,12 +152,14 @@ export class ThrottledQueue {
     const adapter = this.currentAdapter
 
     if (adapter === undefined) {
+      debug('gtq:flush-skip', 'no adapter')
       return
     }
 
     const paths = Object.keys(this.overlay.value)
 
     if (paths.length === 0) {
+      debug('gtq:flush-skip', 'no paths')
       return
     }
 
@@ -170,6 +180,7 @@ export class ThrottledQueue {
     const options = this.options
     this.options = {}
 
+    debug('gtq:flush', paths.length, cloneQuery(next), { ...options })
     void adapter.navigate(next, options)
   }
 }

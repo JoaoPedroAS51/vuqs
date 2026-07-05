@@ -5,6 +5,7 @@ import type {
   QueryStateWriteValues,
 } from './schema'
 import type { ParsedQuery, ParsedQueryRaw } from './types'
+import { debug } from './debug/sink'
 import { deletePath, pruneEmptyAncestors } from './path'
 import { cloneQuery, compactQuery, mergeQueries } from './query-object'
 import { normalizeQueryStateSchema } from './schema'
@@ -154,11 +155,14 @@ export function createSerializer<TSchema extends QueryStateSchemaInput>(
       const shouldClearOnDefault = clearOnDefault ?? definition.clearOnDefault ?? true
 
       if (shouldClearOnDefault && definition.defaultValue !== undefined && definition.eq(value, definition.defaultValue)) {
+        debug('serializer:clear-on-default', key)
         continue
       }
 
       query = mergeQueries(query, compactQuery(definition.write(value)))
     }
+
+    debug('serializer:build', cloneQuery(query))
 
     return stringify ? stringify(query) : query
   }

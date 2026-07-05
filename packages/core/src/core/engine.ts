@@ -5,6 +5,7 @@ import type { QueryStateSchema, QueryStateValues } from './schema'
 import type { NavigateOptions, ParsedQuery } from './types'
 import { computed, shallowRef, toValue, watch } from 'vue'
 import { definedOnly } from '../shared'
+import { debug } from './debug/sink'
 import { structuralEq } from './equality'
 import { deletePath, getPath, pruneEmptyAncestors, setPath } from './path'
 import { createQueryPipeline } from './pipeline'
@@ -24,6 +25,12 @@ import { getManagedKeys, parseQueryStates, serializeQueryStates } from './schema
  * @typeParam TSchema - The schema whose params the engine tracks.
  */
 export interface QueryStateEngineOptions<TSchema extends QueryStateSchema> extends NavigateOptions {
+  /**
+   * Per-binding correlation id, prefixed on this engine's debug logs.
+   *
+   * @internal
+   */
+  id: string
   /** The tracked params, used for per-param equality, defaults, and keys. */
   schema: TSchema
   /** The query source and navigate function, resolved from the provided adapter. */
@@ -137,6 +144,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
   options: QueryStateEngineOptions<TSchema>,
 ): QueryStateEngine<TSchema> {
   const {
+    id,
     schema,
     adapter,
     history,
@@ -146,6 +154,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     adapterClearOnDefault,
   } = options
   const keys = Object.keys(schema) as Array<keyof TSchema & string>
+  const keysString = keys.join(',')
   const managedPaths = getManagedKeys(schema)
 
   const pipeline = createQueryPipeline()
@@ -267,6 +276,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
       }
     }
 
+    debug('engine:reconcile', id, keysString, reflected)
     globalThrottleQueue.settle(reflected)
   }, { immediate: true })
 
@@ -280,6 +290,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
       const defaultValue = mergedDefaults.value[key]
 
       if (defaultValue !== undefined && definition.eq(value, defaultValue)) {
+        debug('engine:clear-on-default', id, keysString, key)
         map = {}
       }
     }
@@ -302,12 +313,16 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
   }
 
   function setValue(key: keyof TSchema & string, value: unknown, perCall?: NavigateOptions): void {
+    const resolvedOptions: NavigateOptions = {
+      history: perCall?.history ?? history,
+      scroll: perCall?.scroll ?? scroll,
+    }
+
+    debug('binding:set', id, keysString, key, value, resolvedOptions)
+
     globalThrottleQueue.push(
       serializeParam(key, value),
-      {
-        history: perCall?.history ?? history,
-        scroll: perCall?.scroll ?? scroll,
-      },
+      resolvedOptions,
       adapter,
       throttleMs,
     )

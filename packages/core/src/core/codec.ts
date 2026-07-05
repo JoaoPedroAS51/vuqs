@@ -1,4 +1,5 @@
 import type { ParsedQueryValue } from './types'
+import { warn } from './debug/sink'
 import { structuralEq } from './equality'
 import { getQueryString } from './path'
 
@@ -346,6 +347,10 @@ export const codecs = {
    * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse | `JSON.parse`}
    */
   json<T>(options: { validate?: (value: unknown) => T } = {}): Codec<T> {
+    // Dedupe per value so a persistent malformed value cannot warn on every
+    // recompute: `parse` runs inside the engine's reactive computeds.
+    let lastWarnedValue: string | undefined
+
     return createCodec<T>({
       parse: (raw) => {
         const value = getQueryString(raw)
@@ -357,9 +362,16 @@ export const codecs = {
         try {
           const parsed = JSON.parse(value) as unknown
 
+          lastWarnedValue = value
+
           return options.validate ? options.validate(parsed) : (parsed as T)
         }
-        catch {
+        catch (error) {
+          if (value !== lastWarnedValue) {
+            lastWarnedValue = value
+            warn('codec:json-error', value, error)
+          }
+
           return undefined
         }
       },

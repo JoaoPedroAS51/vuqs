@@ -1,5 +1,6 @@
 import type { ParsedQueryRaw } from './types'
 import { shallowRef } from 'vue'
+import { debug } from './debug/sink'
 
 /** A param-keyed value map flowing through the pipeline. */
 export type QueryValues = Record<string, unknown>
@@ -87,6 +88,8 @@ export function createQueryPipeline(): QueryPipelineBus {
   ): () => void {
     const stages = (Array.isArray(stage) ? stage : [stage]) as QueryPipelineStage[]
     const entry: Tap = { transform: transform as Tap['transform'], enforce: options?.enforce ?? 'default' }
+
+    debug('pipeline:tap', [...stages], entry.enforce)
 
     // Insert keeping each stage ordered by enforce band; the stable sort keeps
     // registration order within a band, so `run` can iterate without re-sorting.

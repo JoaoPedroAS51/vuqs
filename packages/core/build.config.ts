@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { defineBuildConfig } from 'unbuild'
 
@@ -11,8 +11,26 @@ import { defineBuildConfig } from 'unbuild'
 // resolve through, so the registry entries merge downstream.
 const CHUNK_AUGMENTATION = /declare module (["'])(?:\.\.?\/)+shared\/core\.[^"']+\1/g
 
+// A format string that lives only in the debug catalog (`core/debug/messages.ts`).
+// The catalog must reach the bundle only through the opt-in `@vuqs/core/debug` entry;
+// finding this sentinel in any other bundle means a core module value-imported the
+// catalog instead of type-only. The source catalog is checked to still contain it, so
+// renaming the message fails the build rather than silently disarming the guard.
+const CATALOG_SENTINEL = '[vuqs gtq] Scheduling flush in'
+
+function collectMjs(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = join(dir, entry.name)
+
+    if (entry.isDirectory())
+      return collectMjs(full)
+
+    return entry.name.endsWith('.mjs') ? [full] : []
+  })
+}
+
 export default defineBuildConfig({
-  entries: ['src/index', 'src/adapters/vue-router', 'src/adapters/testing', 'src/modules/index', 'src/shared/index', 'src/testing'],
+  entries: ['src/index', 'src/debug', 'src/adapters/vue-router', 'src/adapters/testing', 'src/modules/index', 'src/shared/index', 'src/testing'],
   declaration: true,
   externals: ['vue', 'vue-router'],
   rollup: {
@@ -46,6 +64,24 @@ export default defineBuildConfig({
       // ships unmergeable types again. Fail loudly instead.
       if (retargeted === 0)
         throw new Error('[build] expected to retarget the QueryModuleRegistry augmentation to @vuqs/core, but found none — did rollup-dts change its chunk naming?')
+
+      // The debug catalog must ship only through the opt-in `@vuqs/core/debug` entry.
+      // A stray value import of `core/debug/messages` from any core module would pull
+      // the format strings into another bundle; catch that here rather than by eye.
+      const catalogSource = join(ctx.options.outDir, '..', 'src', 'core', 'debug', 'messages.ts')
+
+      if (!readFileSync(catalogSource, 'utf8').includes(CATALOG_SENTINEL))
+        throw new Error(`[build] the catalog-isolation sentinel ${JSON.stringify(CATALOG_SENTINEL)} is no longer in core/debug/messages.ts — update CATALOG_SENTINEL in build.config.ts`)
+
+      const debugEntry = join(ctx.options.outDir, 'debug.mjs')
+
+      for (const file of collectMjs(ctx.options.outDir)) {
+        if (file === debugEntry)
+          continue
+
+        if (readFileSync(file, 'utf8').includes(CATALOG_SENTINEL))
+          throw new Error(`[build] the debug message catalog leaked into ${file} — a core module value-imported core/debug/messages instead of type-only`)
+      }
     },
   },
 })

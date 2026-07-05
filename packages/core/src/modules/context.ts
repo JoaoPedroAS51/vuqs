@@ -3,6 +3,7 @@ import type { QueryCore } from '../core/query-core'
 import type { QueryStateSchema, QueryStateValues } from '../core/schema'
 import type { NavigateOptions, ParsedQuery, ParsedQueryRaw } from '../core/types'
 import { computed, onScopeDispose, toValue, watch } from 'vue'
+import { debug } from '../core/debug/sink'
 import { defineQueryModule } from '../core/module'
 import { buildQuery, dropDefaults, parseQueryStates } from '../core/schema'
 import { pickBy } from '../shared'
@@ -198,6 +199,7 @@ function createContextControls<TSchema extends QueryStateSchema, TContext extend
   key?: keyof TSchema & string,
 ): ContextControls<TContext> {
   const active = computed(() => toValue(options.active))
+  const contextKeys = key === undefined ? Object.keys(core.schema) as Array<keyof TSchema & string> : [key]
 
   const untap = core.pipeline.tap(['read', 'write'], pickBy(paramKey => options.isValidIn(paramKey, active.value)))
   onScopeDispose(untap)
@@ -205,9 +207,8 @@ function createContextControls<TSchema extends QueryStateSchema, TContext extend
   function build(currentQuery: ParsedQuery, nextContext: TContext): ParsedQueryRaw {
     const parsed = parseQueryStates(core.schema, currentQuery) as Record<string, unknown>
     const kept: Record<string, unknown> = {}
-    const keys = key === undefined ? Object.keys(core.schema) as Array<keyof TSchema & string> : [key]
 
-    for (const paramKey of keys) {
+    for (const paramKey of contextKeys) {
       if (
         options.isPreserved(paramKey)
         && parsed[paramKey] !== undefined
@@ -222,7 +223,19 @@ function createContextControls<TSchema extends QueryStateSchema, TContext extend
     return buildQuery(core.schema, currentQuery, dropDefaults(core.schema, values))
   }
 
+  function keptContextKeys(currentQuery: ParsedQuery, nextContext: TContext): string[] {
+    const parsed = parseQueryStates(core.schema, currentQuery) as Record<string, unknown>
+
+    return contextKeys.filter(paramKey =>
+      options.isPreserved(paramKey)
+      && parsed[paramKey] !== undefined
+      && options.isValidIn(paramKey, nextContext),
+    )
+  }
+
   function buildContextQuery(currentQuery: ParsedQuery, nextContext: TContext): ParsedQueryRaw {
+    const kept = keptContextKeys(currentQuery, nextContext)
+    debug('ctx:build', kept, contextKeys.filter(paramKey => !kept.includes(paramKey)))
     return core.pipeline.run('navigate', build(currentQuery, nextContext))
   }
 
@@ -231,10 +244,17 @@ function createContextControls<TSchema extends QueryStateSchema, TContext extend
       throw new Error('[vuqs] withContext: provide a `navigate` option to use switchTo()')
     }
 
+    debug('ctx:switch', target)
     options.navigate(target, buildContextQuery(core.query.current(), target), navigateOptions)
   }
 
   watch(active, (nextContext) => {
+    const valid: string[] = []
+    const invalid: string[] = []
+    for (const paramKey of contextKeys) {
+      (options.isValidIn(paramKey, nextContext) ? valid : invalid).push(paramKey)
+    }
+    debug('ctx:change', nextContext, valid, invalid)
     core.hooks.emit('context:change', nextContext)
   })
 

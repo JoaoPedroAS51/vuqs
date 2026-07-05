@@ -1,5 +1,6 @@
 import type { Codec } from './codec'
 import type { ParsedQuery, ParsedQueryRaw } from './types'
+import { warn } from './debug/sink'
 import { structuralClone, structuralEq } from './equality'
 import { collectLeafPaths, getPath, setPath } from './path'
 
@@ -92,9 +93,28 @@ export function codecParamInput<T>(path: string, codec: Codec<T>): {
   eq: (a: T, b: T) => boolean
   defaultValue?: T
 } {
+  // Dedupe per path so a persistent bad value cannot warn on every recompute:
+  // the `read` runs inside a reactive computed. Refreshed when `raw` changes.
+  let lastWarnedRaw: unknown
+
   return {
     paths: [path],
-    read: query => codec.parse(getPath(query, path)),
+    read: (query) => {
+      const raw = getPath(query, path)
+      const parsed = codec.parse(raw)
+
+      if (raw !== undefined && raw !== null && parsed === undefined) {
+        if (raw !== lastWarnedRaw) {
+          lastWarnedRaw = raw
+          warn('engine:parse-miss', path, raw)
+        }
+      }
+      else {
+        lastWarnedRaw = raw
+      }
+
+      return parsed
+    },
     write: value => setPath({}, path, codec.serialize(value)),
     eq: codec.eq,
     defaultValue: codec.defaultValue,

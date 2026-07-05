@@ -3,6 +3,7 @@ import type { QueryAdapter, QueryAdapterDefaultOptions } from '../core/adapter'
 import type { ParsedQuery } from '../core/types'
 import { useRouter } from 'vue-router'
 import { provideQueryAdapter } from '../core/adapter'
+import { debug } from '../core/debug/sink'
 
 /**
  * Options for the `vue-router` adapter factories.
@@ -41,11 +42,17 @@ export function createVueRouterAdapter(options: VueRouterAdapterOptions = {}): Q
       // `scroll` has no per-call equivalent in vue-router (it is `scrollBehavior`), so it is ignored.
       // Carry the current hash forward: a location object without `hash` resets it to `''`.
       const location = { query: query as LocationQueryRaw, hash: router.currentRoute.value.hash }
+      const historyMode = navigateOptions.history === 'push' ? 'push' : 'replace'
+
+      debug('adapter:navigate', 'vue-router', historyMode, { ...query })
+
       const result = navigateOptions.history === 'push' ? router.push(location) : router.replace(location)
 
       // Fire-and-forget: navigation guard errors surface via `router.onError`,
       // so swallow here rather than leaking an unhandled rejection.
-      return result.then(() => {}).catch(() => {})
+      return result.then(() => {}).catch((error) => {
+        debug('adapter:error', 'vue-router', error)
+      })
     },
     defaultOptions: options.defaultOptions,
   }

@@ -6,9 +6,12 @@ import type { NavigateOptions } from './types'
 import type { QueryStatesValues, UseQueryStatesOptions } from './use-query-states'
 import { computed, reactive } from 'vue'
 import { useQueryAdapter } from './adapter'
+import { debug } from './debug/sink'
 import { createQueryStateEngine } from './engine'
 import { createQueryHooks } from './hooks'
-import { assertUniquePaths } from './schema'
+import { assertUniquePaths, getManagedKeys } from './schema'
+
+let bindingCounter = 0
 
 /**
  * The single root the reactive lenses derive from: a schema-typed whole-object
@@ -94,7 +97,10 @@ export function createQueryBinding<TSchema extends QueryStateSchema>(
     adapterDefaults?.clearOnDefault,
   )
 
+  const id = (bindingCounter++).toString(36)
+
   const engine = createQueryStateEngine({
+    id,
     schema: resolvedSchema,
     adapter: { query: querySource, navigate },
     history: options.history ?? adapterDefaults?.history,
@@ -119,6 +125,8 @@ export function createQueryBinding<TSchema extends QueryStateSchema>(
     hooks: createQueryHooks(),
     query: engine.query,
   }
+
+  debug('binding:created', id, binding.keys.join(','), getManagedKeys(resolvedSchema))
 
   return { engine, binding, core }
 }

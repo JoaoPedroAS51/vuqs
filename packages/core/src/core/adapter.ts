@@ -1,6 +1,7 @@
 import type { App, InjectionKey, MaybeRefOrGetter } from 'vue'
 import type { NavigateOptions, ParsedQuery, QueryStateNavigate } from './types'
 import { hasInjectionContext, inject, provide } from 'vue'
+import { debug } from './debug/sink'
 
 /**
  * Default navigation and write options carried by a {@link QueryAdapter}.
@@ -80,8 +81,15 @@ export function installQueryAdapter(app: App, adapter: QueryAdapter): void {
  */
 export function useQueryAdapter(): QueryAdapter | undefined {
   if (!hasInjectionContext()) {
+    debug('adapter:missing')
     return undefined
   }
 
-  return inject(QUERY_ADAPTER_KEY, undefined)
+  const adapter = inject(QUERY_ADAPTER_KEY, undefined)
+
+  if (adapter === undefined) {
+    debug('adapter:missing')
+  }
+
+  return adapter
 }

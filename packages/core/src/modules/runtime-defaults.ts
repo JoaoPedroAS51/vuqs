@@ -2,6 +2,7 @@ import type { ComputedRef, Ref } from 'vue'
 import type { QueryCore } from '../core/query-core'
 import type { QueryStateSchema, QueryStateValueAt, QueryStateValues } from '../core/schema'
 import { computed, onScopeDispose, ref } from 'vue'
+import { debug } from '../core/debug/sink'
 import { defineQueryModule } from '../core/module'
 import { toReadonlyState } from '../shared'
 
@@ -98,9 +99,11 @@ function createRuntimeDefaultsStatesApi<TSchema extends QueryStateSchema>(core: 
     selected: toReadonlyState(core.state.selected),
     defaults: toReadonlyState(core.defaults.resolved),
     setDefaults: (values) => {
+      debug('rd:set', { ...values })
       provided.value = { ...values }
     },
     clearDefaults: () => {
+      debug('rd:clear')
       provided.value = {}
     },
   }
@@ -130,10 +133,13 @@ function useRuntimeDefaultsLayer<TSchema extends QueryStateSchema>(
   const provided = ref<QueryStateValues<TSchema>>({}) as Ref<QueryStateValues<TSchema>>
 
   const stopLayer = core.defaults.register(provided)
-  const stopReset = core.hooks.on('context:change', () => {
+  debug('rd:register', 'registered')
+  const stopReset = core.hooks.on('context:change', (context) => {
+    debug('rd:reset', context)
     provided.value = {}
   })
   onScopeDispose(() => {
+    debug('rd:register', 'disposed')
     stopLayer()
     stopReset()
   })

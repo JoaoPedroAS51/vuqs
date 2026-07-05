@@ -19,11 +19,17 @@
     "type-safe",
     "composable"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/debug.mjs"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs"
+    },
+    "./debug": {
+      "types": "./dist/debug.d.ts",
+      "import": "./dist/debug.mjs"
     },
     "./adapters/vue-router": {
       "types": "./dist/adapters/vue-router.d.ts",
