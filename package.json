@@ -10,24 +10,25 @@
     "pnpm": ">=11 <12"
   },
   "scripts": {
-    "build": "pnpm --filter './packages/*' build",
-    "dev": "pnpm --filter './packages/*' dev",
-    "test": "pnpm --filter './packages/*' test",
-    "test:run": "pnpm --filter './packages/*' test:run",
-    "test:coverage": "pnpm --filter './packages/*' test:coverage",
-    "test:types": "pnpm --filter './packages/*' test:types",
-    "typecheck": "pnpm --recursive typecheck",
+    "build": "turbo run build --filter='./packages/*'",
+    "dev": "turbo run dev --filter='./packages/*'",
+    "test": "turbo run test --filter='./packages/*'",
+    "test:run": "turbo run test:run --filter='./packages/*'",
+    "test:coverage": "turbo run test:coverage --filter='./packages/*'",
+    "test:types": "turbo run test:types --filter='./packages/*'",
+    "typecheck": "turbo run typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "playground": "pnpm --filter @vuqs/core build && pnpm --filter @vuqs/playground dev",
-    "playground:build": "pnpm --filter @vuqs/core build && pnpm --filter @vuqs/playground build",
-    "docs:dev": "pnpm --filter @vuqs/core build && pnpm --filter @vuqs/docs dev",
-    "docs:build": "pnpm --filter @vuqs/core build && pnpm --filter @vuqs/docs build"
+    "playground": "turbo run build --filter=@vuqs/playground^... && pnpm --filter @vuqs/playground dev",
+    "playground:build": "turbo run build --filter=@vuqs/playground...",
+    "docs:dev": "turbo run build --filter=@vuqs/core && pnpm --filter @vuqs/docs dev",
+    "docs:build": "turbo run build --filter=@vuqs/core && pnpm --filter @vuqs/docs build"
   },
   "devDependencies": {
     "@antfu/eslint-config": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",
+    "turbo": "catalog:",
     "typescript": "catalog:"
   }
 }

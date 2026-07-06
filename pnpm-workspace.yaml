@@ -22,6 +22,7 @@ catalog:
   defu: ^6.1.7
   eslint: ^10.5.0
   nuxt: ^4.4.8
+  turbo: ^2.10.3
   typescript: ^6.0.3
   unbuild: ^3.6.1
   vite: ^8.1.0
