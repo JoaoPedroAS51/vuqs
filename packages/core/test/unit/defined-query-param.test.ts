@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { codecs } from '../../src/core/codec'
+import { setDebugSink } from '../../src/core/debug/sink'
 import { createDefinedQueryParam } from '../../src/core/defined-query-param'
+import { queryParam } from '../../src/core/query-param'
 
 describe('defined query param write guard', () => {
   it('throws when write outputs outside the declared paths', () => {
@@ -35,5 +38,26 @@ describe('defined query param write guard', () => {
     mode = 'leak'
 
     expect(() => field.write('a')).toThrowError(/not in the declared paths/)
+  })
+})
+
+describe('parse-miss warning dedupe', () => {
+  it('warns once for a persistently malformed raw value', () => {
+    const events: Array<[string, unknown[]]> = []
+    setDebugSink((code, args) => events.push([code, args]))
+
+    const count = queryParam('count', codecs.integer)
+    count.read({ count: 'abc' })
+    count.read({ count: 'abc' }) // same bad value again, deduped
+    count.read({ count: 'def' }) // a different bad value warns again
+
+    const parseMisses = events.filter(([code]) => code === 'engine:parse-miss')
+
+    expect(parseMisses).toEqual([
+      ['engine:parse-miss', ['count', 'abc']],
+      ['engine:parse-miss', ['count', 'def']],
+    ])
+
+    setDebugSink(null)
   })
 })

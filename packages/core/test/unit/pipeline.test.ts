@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { computed } from 'vue'
 import { createQueryPipeline } from '../../src/core/pipeline'
-import { omitBy, pickBy } from '../../src/shared'
+import { definedOnly, omitBy, pickBy } from '../../src/shared'
 
 describe('createQueryPipeline', () => {
   it('returns the value unchanged when a stage has no taps', () => {
@@ -78,6 +78,16 @@ describe('createQueryPipeline', () => {
     expect(pipeline.run('read', { a: 1, secret: 2 })).toEqual({ a: 1, secret: 2 })
     expect(pipeline.run('write', { a: 1, secret: 2 })).toEqual({ a: 1, secret: 2 })
   })
+
+  it('is idempotent: calling untap again is a no-op', () => {
+    const pipeline = createQueryPipeline()
+    const untap = pipeline.tap('read', pickBy(key => key !== 'secret'))
+
+    untap()
+    untap()
+
+    expect(pipeline.run('read', { a: 1, secret: 2 })).toEqual({ a: 1, secret: 2 })
+  })
 })
 
 describe('pickBy / omitBy', () => {
@@ -87,6 +97,10 @@ describe('pickBy / omitBy', () => {
 
   it('omitBy drops the matching keys', () => {
     expect(omitBy(key => key.startsWith('a'))({ a1: 1, a2: 2, b: 3 })).toEqual({ b: 3 })
+  })
+
+  it('definedOnly drops undefined-valued keys', () => {
+    expect(definedOnly({ a: 1, b: undefined, c: 0 })).toEqual({ a: 1, c: 0 })
   })
 
   it('compose order-independently (set intersection)', () => {

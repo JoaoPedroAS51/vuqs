@@ -54,11 +54,8 @@ export function getPath(query: ParsedQuery, path: string): ParsedQueryValue {
  */
 export function setPath(target: ParsedQueryRaw, path: string, value: ParsedQueryValue): ParsedQueryRaw {
   const segments = path.split('.')
-  const finalSegment = segments.at(-1)
-
-  if (finalSegment === undefined) {
-    return target
-  }
+  // `path.split('.')` always yields at least one segment, so the final one is defined.
+  const finalSegment = segments.at(-1)!
 
   if (segments.some(segment => UNSAFE_PATH_SEGMENTS.has(segment))) {
     return target
@@ -93,11 +90,8 @@ export function setPath(target: ParsedQueryRaw, path: string, value: ParsedQuery
  */
 export function deletePath(target: ParsedQueryRaw, path: string): void {
   const segments = path.split('.')
-  const finalSegment = segments.at(-1)
-
-  if (finalSegment === undefined) {
-    return
-  }
+  // `path.split('.')` always yields at least one segment, so the final one is defined.
+  const finalSegment = segments.at(-1)!
 
   let current: ParsedQueryRaw = target
 

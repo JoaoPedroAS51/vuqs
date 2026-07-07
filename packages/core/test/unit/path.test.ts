@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deletePath, getPath, getQueryString, getQueryStringArray, setPath } from '../../src/core/path'
+import { collectLeafPaths, deletePath, getPath, getQueryString, getQueryStringArray, setPath } from '../../src/core/path'
 
 describe('getPath', () => {
   it('reads a nested value', () => {
@@ -96,5 +96,19 @@ describe('getQueryStringArray', () => {
 
   it('returns an empty array for absent values', () => {
     expect(getQueryStringArray(undefined)).toEqual([])
+  })
+})
+
+describe('collectLeafPaths', () => {
+  it('returns the leaf dot-paths of a nested object', () => {
+    expect(collectLeafPaths({ filters: { sort: 'name' }, page: '2' })).toEqual(['filters.sort', 'page'])
+  })
+
+  it('treats an array as a leaf, not traversing into it', () => {
+    expect(collectLeafPaths({ tags: ['a', 'b'] })).toEqual(['tags'])
+  })
+
+  it('returns no paths for a bare scalar with no prefix', () => {
+    expect(collectLeafPaths('name')).toEqual([])
   })
 })

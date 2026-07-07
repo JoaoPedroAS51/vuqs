@@ -50,6 +50,15 @@ describe('testSerializeThenParse', () => {
     )
   })
 
+  it('formats an object input/parsed value as JSON in the error message', () => {
+    const lossy = createCodec<{ n: number }>({
+      parse: raw => (raw === null || raw === undefined ? undefined : { n: Number(raw) + 1 }),
+      serialize: value => String(value.n),
+    })
+
+    expect(() => testSerializeThenParse(lossy, { n: 1 })).toThrowError(/"n":2/)
+  })
+
   it('throws for NaN (integer codec rejects NaN serialized form)', () => {
     expect(() => testSerializeThenParse(codecs.integer, Number.NaN)).toThrowError(
       '[vuqs] testSerializeThenParse: parsed value is undefined',
@@ -154,6 +163,21 @@ describe('isCodecBijective', () => {
 
   it('returns true for a withDefault codec', () => {
     expect(isCodecBijective(codecs.integer.withDefault(0), '42', 42)).toBe(true)
+  })
+
+  it('throws when parse(serialized) does not match input, independent of the round-trip checks', () => {
+    // An asymmetric `eq` (a genuine contract violation: `eq` must be an
+    // equivalence relation) can pass both round-trip checks while still
+    // disagreeing with `input` in the direction isCodecBijective itself checks.
+    const asymmetric = createCodec<number>({
+      parse: raw => (raw === '5' ? 6 : Number(raw)),
+      serialize: value => String(value === 6 ? 5 : value),
+      eq: (a, b) => a <= b,
+    })
+
+    expect(() => isCodecBijective(asymmetric, '5', 5)).toThrowError(
+      '[vuqs] codec.parse does not match expected input value',
+    )
   })
 
   it('returns true for a json codec with a plain object', () => {

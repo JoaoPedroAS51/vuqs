@@ -1,26 +1,13 @@
-import type { NavigateOptions, ParsedQuery, ParsedQueryRaw } from '../../src/core/types'
-import { describe, expect, it, vi } from 'vitest'
-import { createApp, effectScope, ref, toRefs } from 'vue'
-import { installQueryAdapter } from '../../src/core/adapter'
+import { describe, expect, it } from 'vitest'
+import { toRefs } from 'vue'
 import { codecs } from '../../src/core/codec'
 import { queryParam } from '../../src/core/query-param'
 import { toQueryRefs } from '../../src/core/to-query-refs'
 import { useQueryStates } from '../../src/core/use-query-states'
 import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
+import { withTestQuery as setup } from '../helpers/adapter'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
-
-function setup(initial: ParsedQuery = {}) {
-  const query = ref<ParsedQuery>(initial)
-  const navigate = vi.fn((next: ParsedQueryRaw, _options?: NavigateOptions) => {
-    query.value = next
-  })
-  const app = createApp({})
-  installQueryAdapter(app, { query, navigate })
-  const build = <T>(factory: () => T): T => app.runWithContext(() => effectScope().run(factory)) as T
-
-  return { query, navigate, build }
-}
 
 const schema = {
   q: queryParam('q', codecs.string),

@@ -1,31 +1,14 @@
 import type { DefinedQueryModule } from '../../src/core/module'
-import type { ParsedQuery } from '../../src/core/types'
 import { describe, expect, it, vi } from 'vitest'
-import { computed, createApp, isRef, onScopeDispose } from 'vue'
-import { createTestingAdapter } from '../../src/adapters/testing'
-import { installQueryAdapter } from '../../src/core/adapter'
+import { computed, isRef, onScopeDispose } from 'vue'
 import { codecs } from '../../src/core/codec'
 import { defineQueryModule } from '../../src/core/module'
 import { queryParam } from '../../src/core/query-param'
 import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
+import { withTestQuery as setup } from '../helpers/adapter'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
-
-// Provides the adapter through app-level inject, so composables resolve
-// `query`/`navigate` the way they do in a real app. `run` wraps composable
-// creation in the adapter's injection context. `hasMemory` mirrors a real
-// adapter, writing each navigation back to the query a `navigate` spy wraps.
-function setup(initial: ParsedQuery = {}) {
-  const adapter = createTestingAdapter({ searchParams: initial, hasMemory: true })
-  const { query } = adapter
-  const navigate = vi.fn(adapter.navigate)
-  const app = createApp({})
-  installQueryAdapter(app, { query, navigate })
-  const run = <T>(create: () => T): T => app.runWithContext(create)
-
-  return { query, navigate, run }
-}
 
 const schema = {
   q: queryParam('q', codecs.string),
@@ -160,6 +143,18 @@ describe('useQueryStates', () => {
       await flush()
 
       expect(navigate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ scroll: false }))
+    })
+
+    it('coalesces conflicting scroll options: true wins over false', async () => {
+      const { navigate, run } = setup()
+      const { patch } = run(() => useQueryStates(schema))
+
+      patch({ q: 'sale' }, { scroll: false })
+      patch({ sort: 'name' }, { scroll: true })
+      await flush()
+
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(navigate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ scroll: true }))
     })
   })
 

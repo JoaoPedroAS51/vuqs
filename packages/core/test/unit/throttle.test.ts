@@ -3,24 +3,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { createApp, effectScope, ref } from 'vue'
 import { installQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
-import { resetQueues } from '../../src/core/queues/throttle'
+import { globalThrottleQueue, resetQueues } from '../../src/core/queues/throttle'
 import { useQueryState } from '../../src/core/use-query-state'
+import { withTestQuery as setup } from '../helpers/adapter'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
-
-// A single adapter shared by several engines — the real-app shape where two
-// components bind the same URL. `navigate` writes back synchronously by default.
-function setup(initial: ParsedQuery = {}) {
-  const query = ref<ParsedQuery>(initial)
-  const navigate = vi.fn((next: ParsedQueryRaw) => {
-    query.value = next
-  })
-  const app = createApp({})
-  installQueryAdapter(app, { query, navigate })
-  const run = <T>(create: () => T): T => app.runWithContext(create)
-
-  return { query, navigate, run }
-}
 
 // Models a real router whose query only updates after the navigation resolves,
 // the condition under which per-engine commits used to race and clobber.
@@ -186,6 +173,47 @@ describe('shared update queue', () => {
       expect(first.navigate).not.toHaveBeenCalled()
       expect(second.navigate).toHaveBeenCalledTimes(1)
       expect(second.query.value).toEqual({ q: 'b' })
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+describe('throttledQueue.settle', () => {
+  it('is a no-op for paths not present in the overlay', () => {
+    resetQueues()
+    const query = ref<ParsedQuery>({})
+    const navigate = vi.fn((next: ParsedQueryRaw) => {
+      query.value = next
+    })
+
+    globalThrottleQueue.push({ q: 'x' }, {}, { query, navigate }, 0)
+    const before = globalThrottleQueue.overlay.value
+
+    globalThrottleQueue.settle(['never-pushed'])
+
+    expect(globalThrottleQueue.overlay.value).toBe(before)
+  })
+
+  it('skips a scheduled flush that settle already drained the overlay for', async () => {
+    vi.useFakeTimers()
+
+    try {
+      resetQueues()
+      const query = ref<ParsedQuery>({})
+      const navigate = vi.fn((next: ParsedQueryRaw) => {
+        query.value = next
+      })
+
+      globalThrottleQueue.push({ q: 'x' }, {}, { query, navigate }, 50)
+      // Some other source (e.g. a different engine's reconcile) already
+      // reflects 'q', draining the overlay before the scheduled flush fires.
+      globalThrottleQueue.settle(['q'])
+
+      await vi.advanceTimersByTimeAsync(50)
+
+      expect(navigate).not.toHaveBeenCalled()
     }
     finally {
       vi.useRealTimers()

@@ -104,6 +104,10 @@ describe('codecs.timestamp', () => {
     expect(codecs.timestamp.parse(undefined)).toBeUndefined()
   })
 
+  it('rejects an in-range-format integer that falls outside the Date range', () => {
+    expect(codecs.timestamp.parse('99999999999999999999')).toBeUndefined()
+  })
+
   it('serializes a Date into milliseconds', () => {
     expect(codecs.timestamp.serialize(new Date(1000))).toBe('1000')
   })
@@ -163,6 +167,10 @@ describe('codecs.isoDate', () => {
   it('rejects partial date strings that would not round-trip', () => {
     expect(codecs.isoDate.parse('2026-06')).toBeUndefined()
     expect(codecs.isoDate.parse('2026')).toBeUndefined()
+  })
+
+  it('rejects a calendar date that matches the format but does not exist', () => {
+    expect(codecs.isoDate.parse('2026-13-45')).toBeUndefined()
   })
 
   it('serializes a Date into a date-only string', () => {
@@ -297,6 +305,15 @@ describe('codecs.arrayOf', () => {
     expect(numbers.parse(['x'])).toBeUndefined()
   })
 
+  it('treats a scalar raw value as a single-item array', () => {
+    expect(numbers.parse('5')).toEqual([5])
+  })
+
+  it('treats an absent raw value as no items', () => {
+    expect(numbers.parse(undefined)).toBeUndefined()
+    expect(numbers.parse(null)).toBeUndefined()
+  })
+
   it('serializes each item', () => {
     expect(numbers.serialize([1, 2])).toEqual(['1', '2'])
   })
@@ -342,6 +359,10 @@ describe('codecs.json', () => {
 
   it('parses invalid json as undefined', () => {
     expect(json.parse('{')).toBeUndefined()
+  })
+
+  it('parses an absent raw value as undefined', () => {
+    expect(json.parse(undefined)).toBeUndefined()
   })
 
   it('treats validator failures as absent', () => {

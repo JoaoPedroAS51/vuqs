@@ -1,4 +1,4 @@
-import type { ParsedQuery, ParsedQueryRaw } from '../../src/core/types'
+import type { ParsedQuery } from '../../src/core/types'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createApp, effectScope, ref } from 'vue'
 import { createTestingAdapter } from '../../src/adapters/testing'
@@ -11,6 +11,7 @@ import { useQueryStates } from '../../src/core/use-query-states'
 import { disableDebug, enableDebug } from '../../src/debug'
 import { withContext } from '../../src/modules/context'
 import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
+import { withTestQuery } from '../helpers/adapter'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
 
@@ -251,20 +252,9 @@ describe('opt-in entry (@vuqs/core/debug)', () => {
 })
 
 describe('lifecycle tracing', () => {
-  function setup(initial: ParsedQuery = {}) {
-    const adapter = createTestingAdapter({ searchParams: initial, hasMemory: true })
-    const { query } = adapter
-    const navigate = vi.fn(adapter.navigate)
-    const app = createApp({})
-    installQueryAdapter(app, { query, navigate })
-    const run = <T>(create: () => T): T => app.runWithContext(create)
-
-    return { query, run }
-  }
-
   it('traces the write → coalesce → navigate → reconcile lifecycle', async () => {
     const codes = captureCodes()
-    const { run } = setup({ q: 'a' })
+    const { run } = withTestQuery({ q: 'a' })
     const { values } = run(() => useQueryStates({ q: codecs.string }))
 
     values.q = 'b'
@@ -277,22 +267,9 @@ describe('lifecycle tracing', () => {
 })
 
 describe('module tracing', () => {
-  function setup(initial: ParsedQuery = {}) {
-    const query = ref<ParsedQuery>(initial)
-    const navigate = vi.fn((next: ParsedQueryRaw) => {
-      query.value = next
-    })
-    const app = createApp({})
-    installQueryAdapter(app, { query, navigate })
-    const build = <T>(factory: () => T): T =>
-      app.runWithContext(() => effectScope().run(factory)) as T
-
-    return { build }
-  }
-
   it('traces a context change resetting runtime defaults', async () => {
     const tab = ref('products')
-    const { build } = setup({ q: 'phone' })
+    const { build } = withTestQuery({ q: 'phone' })
     const schema = {
       q: codecs.string,
       category: codecs.string,

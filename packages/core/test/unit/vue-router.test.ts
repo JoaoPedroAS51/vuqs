@@ -62,6 +62,16 @@ describe('createVueRouterAdapter', () => {
     expect(router.currentRoute.value.query).toEqual({ q: 'sale' })
   })
 
+  it('swallows a navigation error instead of leaking an unhandled rejection', async () => {
+    const router = makeRouter()
+    await router.push('/')
+    vi.spyOn(router, 'replace').mockRejectedValueOnce(new Error('navigation cancelled'))
+
+    const adapter = createVueRouterAdapter({ router })
+
+    await expect(adapter.navigate({ q: 'sale' }, {})).resolves.toBeUndefined()
+  })
+
   it('carries defaultOptions', () => {
     const router = makeRouter()
 

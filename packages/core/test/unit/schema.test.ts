@@ -1,13 +1,26 @@
 import { describe, expect, it } from 'vitest'
 import { codecs } from '../../src/core/codec'
 import { queryParam } from '../../src/core/query-param'
-import { buildQuery, dropDefaults, getManagedKeys, omitManagedKeys, parseQueryStates, serializeQueryStates } from '../../src/core/schema'
+import { buildQuery, defineQuerySchema, dropDefaults, getManagedKeys, omitManagedKeys, parseQueryStates, serializeQueryStates } from '../../src/core/schema'
 
 const schema = {
   currency: queryParam('currency', codecs.string),
   sort: queryParam('filters.sort', codecs.string),
   statuses: queryParam('filters.statuses', codecs.arrayOf(codecs.string)),
 }
+
+describe('defineQuerySchema', () => {
+  it('normalizes codec-shorthand entries and passes defined params through', () => {
+    const filters = defineQuerySchema({
+      q: codecs.string,
+      status: queryParam('status', codecs.literal(['open', 'closed'] as const)),
+    })
+
+    expect(filters.q.paths).toEqual(['q'])
+    expect(filters.q.read({ q: 'phone' })).toBe('phone')
+    expect(filters.status.read({ status: 'open' })).toBe('open')
+  })
+})
 
 describe('parseQueryStates', () => {
   it('parses present fields and omits absent ones', () => {

@@ -11,6 +11,14 @@ describe('queryParam', () => {
     expect(page.write(2)).toEqual({ page: '2' })
   })
 
+  it('defaults to a plain string param when given no codec or options', () => {
+    const q = queryParam('q')
+
+    expect(q.defaultValue).toBeUndefined()
+    expect(q.read({ q: 'phone' })).toBe('phone')
+    expect(q.write('phone')).toEqual({ q: 'phone' })
+  })
+
   it('supports string shorthand defaults', () => {
     const q = queryParam('q', { defaultValue: 'all' })
 
@@ -232,5 +240,94 @@ describe('queryParam.object', () => {
     expect(bounds.paths).toEqual(['bounds.north', 'bounds.east'])
     expect(bounds.read({ bounds: { north: '10', east: '20' } })).toEqual({ north: 10, east: 20 })
     expect(bounds.write({ north: 10, east: 20 })).toEqual({ bounds: { north: '10', east: '20' } })
+  })
+
+  it('overrides equality on an object param', () => {
+    const bounds = queryParam.object('bounds', {
+      north: queryParam('n', codecs.float),
+    }).withEquality((a, b) => Math.round(a.north ?? 0) === Math.round(b.north ?? 0))
+
+    expect(bounds.eq({ north: 1.1 }, { north: 1.4 })).toBe(true)
+    expect(bounds.eq({ north: 1.1 }, { north: 2.4 })).toBe(false)
+  })
+
+  it('keeps a default-valued object param in the URL when keepOnDefault is set', () => {
+    const bounds = queryParam.object('bounds', {
+      north: queryParam('n', codecs.float).withDefault(1),
+    }).keepOnDefault()
+
+    expect(bounds.clearOnDefault).toBe(false)
+  })
+
+  it('reads as absent when the present keys all fail to parse and there is no default', () => {
+    const filter = queryParam.object({
+      count: queryParam('count', codecs.integer),
+    })
+
+    expect(filter.read({ count: 'not-a-number' })).toBeUndefined()
+  })
+
+  it('falls back to the object-level default for an individual absent child', () => {
+    const filter = queryParam.object({
+      a: queryParam('a', codecs.string),
+      b: queryParam('b', codecs.string),
+    }).withDefault({ a: 'fallback-a' })
+
+    expect(filter.read({ b: 'x' })).toEqual({ a: 'fallback-a', b: 'x' })
+  })
+
+  it('omits a child from the written query when its value is absent', () => {
+    const filter = queryParam.object({
+      a: queryParam('a', codecs.string),
+      b: queryParam('b', codecs.string),
+    })
+
+    expect(filter.write({ a: undefined as unknown as string, b: 'x' })).toEqual({ b: 'x' })
+  })
+
+  it('throws when a prefix is given without children', () => {
+    expect(() => (queryParam.object as (prefix: string) => unknown)('bounds')).toThrowError(
+      '[vuqs] queryParam.object(prefix, children) requires children.',
+    )
+  })
+
+  it('delegates withDefault through a prefixed param', () => {
+    const point = queryParam.object({
+      lat: queryParam('lat', codecs.float),
+      lng: queryParam('lng', codecs.float),
+    })
+    const northEast = queryParam.object('ne', point).withDefault({ lat: 5 })
+
+    expect(northEast.defaultValue).toEqual({ lat: 5 })
+    expect(northEast.paths).toEqual(['ne.lat', 'ne.lng'])
+  })
+
+  it('delegates withEquality through a prefixed param', () => {
+    const point = queryParam.object({
+      lat: queryParam('lat', codecs.float),
+    })
+    const northEast = queryParam.object('ne', point).withEquality((a, b) => a.lat === b.lat)
+
+    expect(northEast.eq({ lat: 1 }, { lat: 1 })).toBe(true)
+    expect(northEast.eq({ lat: 1 }, { lat: 2 })).toBe(false)
+  })
+
+  it('delegates keepOnDefault through a prefixed param', () => {
+    const point = queryParam.object({
+      lat: queryParam('lat', codecs.float).withDefault(0),
+    })
+    const northEast = queryParam.object('ne', point).keepOnDefault()
+
+    expect(northEast.clearOnDefault).toBe(false)
+  })
+
+  it('delegates withDefaultsWhenPresent through a prefixed param', () => {
+    const point = queryParam.object({
+      lat: queryParam('lat', codecs.float).withDefault(0),
+    })
+    const northEast = queryParam.object('ne', point).withDefaultsWhenPresent()
+
+    expect(northEast.read({})).toBeUndefined()
+    expect(northEast.read({ ne: { lat: '1' } })).toEqual({ lat: 1 })
   })
 })

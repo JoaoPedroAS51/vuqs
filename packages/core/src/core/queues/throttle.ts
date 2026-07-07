@@ -149,12 +149,10 @@ export class ThrottledQueue {
   private flush(): void {
     this.scheduled = false
 
-    const adapter = this.currentAdapter
-
-    if (adapter === undefined) {
-      debug('gtq:flush-skip', 'no adapter')
-      return
-    }
+    // A flush is only ever scheduled from push(), which sets currentAdapter first,
+    // and the generation guard in scheduleFlush() invalidates any flush left over
+    // from before a reset(), so currentAdapter is always set by the time we get here.
+    const adapter = this.currentAdapter!
 
     const paths = Object.keys(this.overlay.value)
 
