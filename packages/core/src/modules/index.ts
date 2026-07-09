@@ -1,3 +1,5 @@
+export { withActiveParams } from './active-params'
+export type { ActiveParamsOptions, ActiveParamsStateApi, ActiveParamsStatesApi } from './active-params'
 export { withContext } from './context'
 export type {
   ContextBaseOptions,

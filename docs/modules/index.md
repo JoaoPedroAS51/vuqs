@@ -59,6 +59,7 @@ line entirely.
 | --- | --- |
 | [`withRuntimeDefaults`](/modules/runtime-defaults) | runtime defaults layered under `values`, plus `selected` / `defaults` |
 | [`withContext`](/modules/context) | context-aware param validity, and reset/preserve on a context change |
+| [`withActiveParams`](/modules/active-params) | active keys, count, aggregate flag, and per-param checks against resolved defaults |
 
 The set is open-ended: new modules slot in here without changing the ones above.
 

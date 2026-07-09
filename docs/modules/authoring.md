@@ -28,6 +28,12 @@ useQueryStates(schema).use(withPresence()) // on a group
 useQueryState('q').use(withPresence()) // on a single param
 ```
 
+::: info Teaching example
+`withPresence` is an authoring example, not a published module. It reports
+explicit URL presence. [`withActiveParams`](/modules/active-params) is the
+published module for selections that differ from their resolved defaults.
+:::
+
 Provide only `queryStates` for a group-only module, only `queryState` for a
 single-only one. Write each projection generically, not bound to a fixed schema, so
 the module adapts to whatever it is composed onto. `core` is the same surface for

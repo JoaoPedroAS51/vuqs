@@ -78,6 +78,7 @@ describe('@vuqs/nuxt module', () => {
     const names = importedNames()
     expect(names).toContain('withRuntimeDefaults')
     expect(names).toContain('withContext')
+    expect(names).toContain('withActiveParams')
   })
 
   it('omits the modules when that group is disabled', async () => {
@@ -87,6 +88,7 @@ describe('@vuqs/nuxt module', () => {
     expect(names).toContain('useQueryState')
     expect(names).not.toContain('withRuntimeDefaults')
     expect(names).not.toContain('withContext')
+    expect(names).not.toContain('withActiveParams')
   })
 
   it('omits codecs when that group is disabled', async () => {

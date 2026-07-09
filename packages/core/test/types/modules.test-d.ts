@@ -8,6 +8,7 @@ import { defineQueryModule } from '../../src/core/module'
 import { queryParam } from '../../src/core/query-param'
 import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
+import { withActiveParams } from '../../src/modules/active-params'
 import { withContext } from '../../src/modules/context'
 import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
 
@@ -29,6 +30,38 @@ const schema = {
   q: queryParam('q', codecs.string),
   category: queryParam('category', codecs.literal(['cpu', 'gpu'] as const)),
 }
+
+describe('withActiveParams inference', () => {
+  it('adds schema-keyed activity APIs to useQueryStates', () => {
+    const q = useQueryStates(schema).use(withActiveParams({ exclude: ['category'] }))
+
+    expectTypeOf(q.activeKeys.value).toEqualTypeOf<readonly ('q' | 'category')[]>()
+    expectTypeOf(q.activeCount.value).toEqualTypeOf<number>()
+    expectTypeOf(q.hasActive.value).toEqualTypeOf<boolean>()
+    expectTypeOf(q.isActive('q')).toEqualTypeOf<boolean>()
+
+    // @ts-expect-error isActive only accepts schema keys
+    q.isActive('nope')
+    // @ts-expect-error exclude only accepts schema keys
+    useQueryStates(schema).use(withActiveParams({ exclude: ['nope'] }))
+  })
+
+  it('supports the schema-targeted grouped form', () => {
+    useQueryStates(schema).use(withActiveParams(schema, { exclude: ['q'] }))
+
+    // @ts-expect-error exclude only accepts keys from the targeted schema
+    withActiveParams(schema, { exclude: ['nope'] })
+  })
+
+  it('adds a computed isActive flag to useQueryState', () => {
+    const q = useQueryState('q').use(withActiveParams())
+
+    expectTypeOf(q.isActive.value).toEqualTypeOf<boolean>()
+
+    // @ts-expect-error exclude is a grouped-only option
+    useQueryState('q').use(withActiveParams({ exclude: ['q'] }))
+  })
+})
 
 describe('module composition', () => {
   it('accumulates each module API on the composable', () => {

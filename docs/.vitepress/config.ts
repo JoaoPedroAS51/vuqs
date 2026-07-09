@@ -87,6 +87,7 @@ export default defineConfig({
           items: [
             { text: 'withRuntimeDefaults', link: '/modules/runtime-defaults' },
             { text: 'withContext', link: '/modules/context' },
+            { text: 'withActiveParams', link: '/modules/active-params' },
           ],
         },
       ],
