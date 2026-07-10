@@ -5,10 +5,10 @@ import { useQueryStates } from '../../src/core/use-query-states'
 import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
 import { withTestQuery } from '../helpers/adapter'
 
-// An absent or invalid top-level param must behave as "no selection": its default
-// is resolved by the engine's default layer, not leaked into `selected`. A present
-// object is the documented exception: it fills its own children's when-present
-// defaults, which are part of a present object's selection (see the object tests).
+// An absent or invalid value must behave as "no selection", at every level: its
+// default is resolved by the engine's default layer, never leaked into `selected`.
+// `selected` is a pure URL selection (including a present object's children);
+// `values` is the selection composed over the resolved (layered) default.
 describe('selection vs default resolution', () => {
   const schema = { page: queryParam('page', codecs.integer.withDefault(1)) }
 
@@ -82,17 +82,19 @@ describe('selection through transforms, prefixes, and objects', () => {
     expect(q.selected).toEqual({})
   })
 
-  it('fills a present object\'s invalid child from its when-present default', () => {
-    const inner = queryParam.object('range', { from: queryParam('f', codecs.integer.withDefault(0)) })
-    const q = withTestQuery({ range: { f: 'bad' } })
-      .build(() => useQueryStates({ range: inner }).use(withRuntimeDefaults()))
+  it('omits a present object\'s missing child that has no default', () => {
+    const pair = queryParam.object('pair', {
+      a: queryParam('a', codecs.string),
+      b: queryParam('b', codecs.string),
+    })
+    const q = withTestQuery({ pair: { a: 'x' } })
+      .build(() => useQueryStates({ pair }).use(withRuntimeDefaults()))
 
-    // The object is present (a path holds a raw value), so its invalid child
-    // resolves to the child's when-present default: a present object materializes.
-    expect(q.selected).toEqual({ range: { from: 0 } })
+    expect(q.selected).toEqual({ pair: { a: 'x' } })
+    expect(q.values.pair).toEqual({ a: 'x' }) // `b` has no default, so it stays out
   })
 
-  it('keeps child-when-present defaults in the selection of a present object', () => {
+  it('keeps a present object\'s selection pure; child defaults resolve in values', () => {
     const range = queryParam
       .object('range', {
         from: queryParam('from', codecs.string.withDefault('A')),
@@ -103,7 +105,17 @@ describe('selection through transforms, prefixes, and objects', () => {
     const q = withTestQuery({ range: { from: 'x' } })
       .build(() => useQueryStates({ range }).use(withRuntimeDefaults()))
 
-    expect(q.selected).toEqual({ range: { from: 'x', to: 'B' } })
+    expect(q.selected).toEqual({ range: { from: 'x' } }) // pure selection (DP1b)
+    expect(q.values.range).toEqual({ from: 'x', to: 'B' }) // child when-present default in values
+  })
+
+  it('omits a present object with only an invalid child from selection, resolves in values', () => {
+    const inner = queryParam.object('range', { from: queryParam('f', codecs.integer.withDefault(0)) })
+    const q = withTestQuery({ range: { f: 'bad' } })
+      .build(() => useQueryStates({ range: inner }).use(withRuntimeDefaults()))
+
+    expect(q.selected).toEqual({}) // invalid child → no valid selection
+    expect(q.values.range).toEqual({ from: 0 }) // resolves to the child default
   })
 
   it('omits an absent withDefaultsWhenPresent object from selection and values', () => {
@@ -133,5 +145,78 @@ describe('selection through transforms, prefixes, and objects', () => {
 
     expect(q.selected).toEqual({})
     expect(q.values.range).toEqual({ from: 'A' })
+  })
+})
+
+// The fix: a runtime default reaches a missing/invalid child of a partially-present
+// object, and a partial runtime layer keeps sibling codec defaults.
+describe('runtime defaults over object children', () => {
+  const range = queryParam.object('range', {
+    from: queryParam('from', codecs.integer.withDefault(0)),
+    to: queryParam('to', codecs.integer.withDefault(0)),
+  })
+
+  function mount(initial: Parameters<typeof withTestQuery>[0]) {
+    const { build } = withTestQuery(initial)
+    return build(() => useQueryStates({ range }).use(withRuntimeDefaults()))
+  }
+
+  it('lets a runtime default fill a missing child of a present object', () => {
+    const q = mount({ range: { to: '5' } })
+    q.setDefaults({ range: { from: 99, to: 99 } })
+
+    expect(q.selected).toEqual({ range: { to: 5 } }) // pure
+    expect(q.values.range).toEqual({ from: 99, to: 5 }) // runtime `from` wins the gap
+  })
+
+  it('falls back to the codec child default when no runtime default is set', () => {
+    const q = mount({ range: { to: '5' } })
+
+    expect(q.values.range).toEqual({ from: 0, to: 5 })
+  })
+
+  it('lets a runtime default override a child gap of a withDefaultsWhenPresent object', () => {
+    const whenPresent = queryParam
+      .object('range', {
+        from: queryParam('from', codecs.integer.withDefault(0)),
+        to: queryParam('to', codecs.integer.withDefault(0)),
+      })
+      .withDefaultsWhenPresent()
+    const { build } = withTestQuery({ range: { to: '5' } })
+    const q = build(() => useQueryStates({ range: whenPresent }).use(withRuntimeDefaults()))
+    q.setDefaults({ range: { from: 99, to: 99 } })
+
+    expect(q.values.range).toEqual({ from: 99, to: 5 })
+  })
+
+  it('does not materialize an absent withDefaultsWhenPresent object, even with a runtime default', () => {
+    const whenPresent = queryParam
+      .object('range', {
+        from: queryParam('from', codecs.integer.withDefault(0)),
+        to: queryParam('to', codecs.integer.withDefault(0)),
+      })
+      .withDefaultsWhenPresent()
+    const { build } = withTestQuery({})
+    const q = build(() => useQueryStates({ range: whenPresent }).use(withRuntimeDefaults()))
+    q.setDefaults({ range: { from: 99, to: 99 } })
+
+    // A runtime default is a layer, not the object's own default: it applies only
+    // when the object is present, so an absent whenPresent object stays absent.
+    expect(q.values.range).toBeUndefined()
+  })
+})
+
+describe('default mutation safety', () => {
+  it('clones an absent object default so a mutation cannot corrupt the shared default', () => {
+    const range = queryParam
+      .object('range', { from: queryParam('from', codecs.integer), to: queryParam('to', codecs.integer) })
+      .withDefault({ from: 1, to: 2 })
+
+    const q1 = withTestQuery({}).build(() => useQueryStates({ range }))
+    const first = q1.values.range as { from: number, to: number }
+    first.from = 999 // mutate the value read from an absent-defaulted object
+
+    const q2 = withTestQuery({}).build(() => useQueryStates({ range }))
+    expect(q2.values.range).toEqual({ from: 1, to: 2 }) // the shared default is intact
   })
 })

@@ -31,9 +31,10 @@ interface CodecInput<T> {
 ```ts
 interface DefinedQueryParam<T> {
   readonly paths: readonly string[]
-  read: (query: ParsedQuery) => T | undefined
+  read: (query: ParsedQuery) => T | undefined // pure selection: undefined when absent or invalid
   write: (value: T) => ParsedQueryRaw
   eq: (a: T, b: T) => boolean
+  resolve?: (selection: T, defaults: T | undefined) => T // composite only: composes a present selection over its default
   readonly defaultValue?: T
   readonly clearOnDefault?: boolean
 }

@@ -18,20 +18,35 @@ export interface DefinedQueryParam<T> {
   /** The query keys this param owns. */
   readonly paths: readonly string[]
   /**
-   * Reads the param's URL selection: the decoded value, or `undefined` when it has
-   * none. A scalar reads `undefined` for an absent or invalid value; a present
-   * object still fills its children's when-present defaults, and its own top-level
-   * default is resolved by the engine's default layer.
+   * Reads the param's URL selection: the decoded value, or `undefined` when the
+   * value is absent or invalid. A pure selection, with no default of any kind: a
+   * present object returns only its URL-present children. Defaults are resolved by
+   * {@link DefinedQueryParam.resolve} in the engine's default layer.
    */
   read: (query: ParsedQuery) => T | undefined
   /** Writes the param's value into a fresh query object covering only `paths`. */
   write: (value: T) => ParsedQueryRaw
   /** Compares two values to detect when one equals the default. */
   eq: (a: T, b: T) => boolean
+  /**
+   * Composes a **present** selection over its resolved default. Only composite
+   * params define it: an object deep-merges per child (`selection` child, else the
+   * `defaults` child, else its own child default), so a layered default (for example
+   * a runtime default) reaches a missing child of a present object. Absence and
+   * scalars are resolved by the engine directly (`selection ?? default`).
+   */
+  resolve?: (selection: T, defaults: T | undefined) => T
   /** The param's default value, if the codec or builder declared one. */
   readonly defaultValue?: T
   /** Param-level `clearOnDefault` override. */
   readonly clearOnDefault?: boolean
+  /**
+   * When set, the param resolves to a value only while it is present in the URL: an
+   * absent param stays absent even if a default layer (codec or runtime) would
+   * otherwise materialize it. Set by `withDefaultsWhenPresent()` without an
+   * object-level default.
+   */
+  readonly presenceGated?: boolean
 }
 
 /**
@@ -70,8 +85,10 @@ export function createDefinedQueryParam<T>(
     read: (query: ParsedQuery) => T | undefined
     write: (value: T) => ParsedQueryRaw
     eq?: (a: T, b: T) => boolean
+    resolve?: (selection: T, defaults: T | undefined) => T
     defaultValue?: T
     clearOnDefault?: boolean
+    presenceGated?: boolean
   },
 ): DefinedQueryParam<T> {
   const write = guardWrite(input.paths, input.write)
@@ -81,8 +98,10 @@ export function createDefinedQueryParam<T>(
     read: input.read,
     write,
     eq: input.eq ?? structuralEq,
+    resolve: input.resolve,
     defaultValue: input.defaultValue,
     clearOnDefault: input.clearOnDefault,
+    presenceGated: input.presenceGated,
   }
 }
 

@@ -58,15 +58,19 @@ export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
   const children = prefixChildren(options.prefix, normalizeQueryStateSchema(options.children) as TChildren)
   const paths = Object.values(children).flatMap(child => child.paths)
   const mergedDefault = buildObjectDefault(children, options.defaultValue)
-  // With defaultsWhenPresent, child defaults only materialize the object when the
-  // URL contains it or an object-level default exists, so an absent object stays
-  // absent instead of resolving to its child defaults.
-  const defaultValue = options.defaultsWhenPresent && options.defaultValue === undefined
-    ? undefined
-    : mergedDefault
+  // With defaultsWhenPresent and no object-level default, the object is presence
+  // gated: it materializes only while present in the URL, so an absent object stays
+  // absent even under a default layer (codec or a registered runtime default),
+  // instead of resolving to its child defaults.
+  const presenceGated = Boolean(options.defaultsWhenPresent) && options.defaultValue === undefined
+  const defaultValue = presenceGated ? undefined : mergedDefault
+
+  const childKeys = Object.keys(children) as Array<keyof ObjectValue<TChildren>>
 
   const builder = createQueryParamBuilder<ObjectValue<TChildren>, QueryParamObjectDefault<ObjectValue<TChildren>>>({
     paths,
+    // A pure selection: only the URL-present children, no default fill. Defaults
+    // resolve in `resolve`, in the engine's default layer.
     read(query) {
       const hasUrlPresence = paths.some(path => getPath(query, path) !== undefined)
 
@@ -77,24 +81,11 @@ export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
       const value: Record<string, unknown> = {}
       let hasValue = false
 
-      // Children read a pure selection (`undefined` when absent or invalid). When
-      // the object is present, a missing child resolves to its when-present default
-      // from `mergedDefault` (child defaults over the object-level default), cloned
-      // so a mutation cannot corrupt the shared default. The object's own top-level
-      // default stays in the engine's default layer.
-      for (const key of Object.keys(children) as Array<keyof ObjectValue<TChildren>>) {
+      for (const key of childKeys) {
         const childValue = children[key].read(query)
 
         if (childValue !== undefined) {
           value[key] = childValue
-          hasValue = true
-          continue
-        }
-
-        const fallback = mergedDefault?.[key]
-
-        if (fallback !== undefined) {
-          value[key] = structuralClone(fallback)
           hasValue = true
         }
       }
@@ -115,8 +106,33 @@ export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
       return compactQuery(query)
     },
     eq: options.eq,
+    // Composes a present object over its resolved default: each child takes its
+    // selection, else the layered default (a runtime default reaches the gap), else
+    // the object's own static child/object-level default, cloned so a mutation cannot
+    // corrupt the shared default. Absence is handled by the engine.
+    resolve(selection, defaults) {
+      const value: Record<string, unknown> = {}
+
+      for (const key of childKeys) {
+        const childSelection = selection[key]
+
+        if (childSelection !== undefined) {
+          value[key] = childSelection
+          continue
+        }
+
+        const fallback = (defaults as Record<string, unknown> | undefined)?.[key as string] ?? mergedDefault?.[key]
+
+        if (fallback !== undefined) {
+          value[key] = structuralClone(fallback)
+        }
+      }
+
+      return value as ObjectValue<TChildren>
+    },
     defaultValue: defaultValue as ObjectValue<TChildren> | undefined,
     clearOnDefault: options.clearOnDefault,
+    presenceGated,
   })
 
   return {
@@ -161,8 +177,12 @@ export function createPrefixedQueryParam<TParam extends AnyDefinedQueryParam>(
       return prefixQuery(param.write(value), prefix)
     },
     eq: param.eq,
+    // A prefix only rewrites paths, not the value; delegate value-space composition
+    // to the wrapped param.
+    resolve: param.resolve,
     defaultValue: param.defaultValue,
     clearOnDefault: param.clearOnDefault,
+    presenceGated: param.presenceGated,
   })
 
   if (!isQueryParamBuilder(param)) {

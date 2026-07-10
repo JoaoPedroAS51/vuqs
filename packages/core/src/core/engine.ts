@@ -6,7 +6,7 @@ import type { NavigateOptions, ParsedQuery } from './types'
 import { computed, shallowRef, toValue, watch } from 'vue'
 import { definedOnly } from '../shared'
 import { debug } from './debug/sink'
-import { structuralEq } from './equality'
+import { structuralClone, structuralEq } from './equality'
 import { deletePath, getPath, pruneEmptyAncestors, setPath } from './path'
 import { createQueryPipeline } from './pipeline'
 import { cloneQuery } from './query-object'
@@ -242,9 +242,37 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     () => definedOnly(pipeline.run('read', { ...rawSelection.value })) as QueryStateValues<TSchema>,
   )
 
-  const values = computed<QueryStateValues<TSchema>>(
-    () => pipeline.run('read', { ...mergedDefaults.value, ...rawSelection.value }) as QueryStateValues<TSchema>,
-  )
+  // The effective read: each param's selection composed over its resolved default.
+  // An absent param takes the default; a present composite param composes per child
+  // through `resolve`, so a runtime default reaches a missing child of a present
+  // object instead of the selection shadowing the whole default entry.
+  const values = computed<QueryStateValues<TSchema>>(() => {
+    const selection = rawSelection.value
+    const defaults = mergedDefaults.value
+    const resolved: Record<string, unknown> = {}
+
+    for (const key of keys) {
+      const definition = schema[key]
+      const selectedValue = selection[key]
+      const value = selectedValue !== undefined
+        // Present: a composite composes per child over its default; a scalar is the
+        // selection itself.
+        ? definition.resolve
+          ? definition.resolve(selectedValue, defaults[key])
+          : selectedValue
+        // Absent: the resolved default, unless the param is presence gated (it stays
+        // absent). Cloned so a consumer mutation cannot corrupt the shared default.
+        : definition.presenceGated
+          ? undefined
+          : structuralClone(defaults[key])
+
+      if (value !== undefined) {
+        resolved[key] = value
+      }
+    }
+
+    return pipeline.run('read', resolved) as QueryStateValues<TSchema>
+  })
 
   // Committed model: drop a pending delta once the URL reflects it. Idempotent and
   // raw-compared, so any engine can reconcile any of its managed paths.

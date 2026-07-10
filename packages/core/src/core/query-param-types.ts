@@ -80,7 +80,15 @@ export interface QueryParamBuilder<T, TDefaultInput = T> extends DefinedQueryPar
   withEquality: (eq: (a: T, b: T) => boolean) => QueryParamBuilder<T, TDefaultInput>
   /** Keeps a default-valued write in the URL: param-level `clearOnDefault: false`. */
   keepOnDefault: () => QueryParamBuilder<T, TDefaultInput>
-  /** Maps the param to a different public shape, deriving its default and equality from the source unless overridden. */
+  /**
+   * Maps the param to a different public shape, deriving its default and equality
+   * from the source unless overridden.
+   *
+   * @remarks
+   * A transformed composite resolves its inner child defaults statically: a
+   * later-registered runtime default cannot reach a missing child of a transformed
+   * value, unlike a plain object param.
+   */
   transform: <TOutput>(transformer: QueryParamTransform<T, TOutput>) => QueryParamBuilder<TOutput>
 }
 
@@ -102,7 +110,15 @@ export interface QueryParamBuilderWithDefault<T, TDefaultInput = T>
   withEquality: (eq: (a: T, b: T) => boolean) => QueryParamBuilderWithDefault<T, TDefaultInput>
   /** Keeps a default-valued write in the URL: param-level `clearOnDefault: false`. */
   keepOnDefault: () => QueryParamBuilderWithDefault<T, TDefaultInput>
-  /** Maps the param to a different public shape, deriving its default and equality from the source unless overridden. */
+  /**
+   * Maps the param to a different public shape, deriving its default and equality
+   * from the source unless overridden.
+   *
+   * @remarks
+   * A transformed composite resolves its inner child defaults statically: a
+   * later-registered runtime default cannot reach a missing child of a transformed
+   * value, unlike a plain object param.
+   */
   transform: <TOutput>(transformer: QueryParamTransform<T, TOutput>) => QueryParamBuilder<TOutput>
 }
 
@@ -209,6 +225,8 @@ export interface QueryParamBuilderOptions<T> {
   read: (query: ParsedQuery) => T | undefined
   write: (value: T) => ParsedQueryRaw
   eq?: (a: T, b: T) => boolean
+  resolve?: (selection: T, defaults: T | undefined) => T
   defaultValue?: T
   clearOnDefault?: boolean
+  presenceGated?: boolean
 }

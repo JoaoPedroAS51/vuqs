@@ -15,8 +15,10 @@ export function createQueryParamBuilder<T, TDefaultInput = T>(
     read: options.read,
     write: options.write,
     eq: options.eq,
+    resolve: options.resolve,
     defaultValue: options.defaultValue,
     clearOnDefault: options.clearOnDefault,
+    presenceGated: options.presenceGated,
   })
 
   const builder = {
@@ -45,12 +47,20 @@ export function createQueryParamBuilder<T, TDefaultInput = T>(
       return createQueryParamBuilder<TOutput>({
         paths: options.paths,
         read(query) {
-          // Read the raw input (undefined when absent), so the transformed
-          // param's own default resolves in the single default layer instead of
-          // being shadowed by the input's default.
-          const value = options.read(query)
+          // Read the raw input selection (undefined when absent), so the transformed
+          // param's own default resolves in the engine's default layer. A present
+          // composite input still resolves its child defaults statically here (the
+          // runtime layer is not in scope through a transform), so `transform.read`
+          // sees a filled value.
+          const selection = options.read(query)
 
-          return value === undefined ? undefined : transformer.read(value)
+          if (selection === undefined) {
+            return undefined
+          }
+
+          const resolved = options.resolve ? options.resolve(selection, options.defaultValue) : selection
+
+          return transformer.read(resolved)
         },
         write(value) {
           return options.write(transformer.write(value))

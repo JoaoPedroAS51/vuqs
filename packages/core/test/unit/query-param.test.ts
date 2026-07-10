@@ -75,33 +75,21 @@ describe('queryParam.object', () => {
 
     expect(bounds.paths).toEqual(['bounds.n', 'bounds.e'])
     expect(bounds.read({})).toBeUndefined()
-    expect(bounds.read({ bounds: { e: '20' } })).toEqual({ north: 1, east: 20 })
+    expect(bounds.read({ bounds: { e: '20' } })).toEqual({ east: 20 }) // pure selection; the default fills in `values`
     expect(bounds.write({ north: 2, east: 20 })).toEqual({ bounds: { n: '2', e: '20' } })
   })
 
-  it('applies child defaults only on presence when requested', () => {
+  it('reads a withDefaultsWhenPresent object as a pure selection', () => {
     const bounds = queryParam.object('bounds', {
       north: queryParam('n', codecs.float).withDefault(1),
       east: queryParam('e', codecs.float),
     }).withDefaultsWhenPresent()
 
     expect(bounds.read({})).toBeUndefined()
-    expect(bounds.read({ bounds: { e: '20' } })).toEqual({ north: 1, east: 20 })
+    expect(bounds.read({ bounds: { e: '20' } })).toEqual({ east: 20 })
   })
 
-  it('returns a fresh object on each read, not the shared when-present default', () => {
-    const bounds = queryParam.object('bounds', {
-      north: queryParam('n', codecs.float).withDefault(1),
-      east: queryParam('e', codecs.float),
-    })
-
-    const first = bounds.read({ bounds: { e: '20' } }) as { north: number, east: number }
-    first.north = 999
-
-    expect(bounds.read({ bounds: { e: '20' } })).toEqual({ north: 1, east: 20 })
-  })
-
-  it('supports partial object defaults below child defaults, filled when present', () => {
+  it('reports its merged default (child defaults over the object-level default)', () => {
     const bounds = queryParam.object('bounds', {
       north: queryParam('n', codecs.float).withDefault(1),
       south: queryParam('s', codecs.float),
@@ -109,8 +97,7 @@ describe('queryParam.object', () => {
     }).withDefault({ north: 0, east: 20 })
 
     expect(bounds.defaultValue).toEqual({ north: 1, east: 20 })
-    expect(bounds.read({})).toBeUndefined()
-    expect(bounds.read({ bounds: { s: '5' } })).toEqual({ north: 1, south: 5, east: 20 })
+    expect(bounds.read({ bounds: { s: '5' } })).toEqual({ south: 5 }) // pure selection
   })
 
   it('prefixes an existing object definition', () => {
@@ -158,7 +145,7 @@ describe('queryParam.object', () => {
 
     expect(northEast.defaultValue).toEqual({ lat: 5 })
     expect(northEast.read({})).toBeUndefined()
-    expect(northEast.read({ ne: { lng: '20' } })).toEqual({ lat: 5, lng: 20 })
+    expect(northEast.read({ ne: { lng: '20' } })).toEqual({ lng: 20 }) // pure selection
   })
 
   it('transforms a child object into a public value', () => {
@@ -273,7 +260,7 @@ describe('queryParam.object', () => {
       b: queryParam('b', codecs.string),
     }).withDefault({ a: 'fallback-a' })
 
-    expect(filter.read({ b: 'x' })).toEqual({ a: 'fallback-a', b: 'x' })
+    expect(filter.read({ b: 'x' })).toEqual({ b: 'x' }) // pure selection
   })
 
   it('omits a child from the written query when its value is absent', () => {
