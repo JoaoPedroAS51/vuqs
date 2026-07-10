@@ -63,8 +63,9 @@ query-reading logic.
 function parseQueryStates<TSchema>(schema: TSchema, query: ParsedQuery): QueryStateValues<TSchema>
 ```
 
-Parses every param out of a query. Absent params are omitted (not set to
-`undefined`).
+Parses each param's selection out of a query. Absent or invalid params are
+omitted (not set to `undefined` or their default); defaults resolve in the engine,
+not here.
 
 ### serializeQueryStates
 

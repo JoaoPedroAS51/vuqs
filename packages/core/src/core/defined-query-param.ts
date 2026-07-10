@@ -1,7 +1,7 @@
 import type { Codec } from './codec'
 import type { ParsedQuery, ParsedQueryRaw } from './types'
 import { warn } from './debug/sink'
-import { structuralClone, structuralEq } from './equality'
+import { structuralEq } from './equality'
 import { collectLeafPaths, getPath, setPath } from './path'
 
 /**
@@ -17,7 +17,12 @@ import { collectLeafPaths, getPath, setPath } from './path'
 export interface DefinedQueryParam<T> {
   /** The query keys this param owns. */
   readonly paths: readonly string[]
-  /** Reads the param's value from the parsed query, or `undefined` when absent. */
+  /**
+   * Reads the param's URL selection: the decoded value, or `undefined` when it has
+   * none. A scalar reads `undefined` for an absent or invalid value; a present
+   * object still fills its children's when-present defaults, and its own top-level
+   * default is resolved by the engine's default layer.
+   */
   read: (query: ParsedQuery) => T | undefined
   /** Writes the param's value into a fresh query object covering only `paths`. */
   write: (value: T) => ParsedQueryRaw
@@ -32,11 +37,16 @@ export interface DefinedQueryParam<T> {
 /**
  * A {@link DefinedQueryParam} whose definition declares a default.
  *
+ * @remarks
+ * The default drives non-nullable reads at the composable boundary (a defaulted
+ * `useQueryState` ref, a defaulted grouped value), but `read` stays a selection:
+ * it returns `undefined` for an absent or invalid value. The default is resolved
+ * by the engine's default layer, not by `read`.
+ *
  * @typeParam T - The decoded value type of the param.
  */
 export interface DefinedQueryParamWithDefault<T> extends DefinedQueryParam<T> {
   readonly defaultValue: T
-  read: (query: ParsedQuery) => T
 }
 
 /**
@@ -65,11 +75,10 @@ export function createDefinedQueryParam<T>(
   },
 ): DefinedQueryParam<T> {
   const write = guardWrite(input.paths, input.write)
-  const read = withDefaultFallback(input.read, input.defaultValue)
 
   return {
     paths: input.paths,
-    read,
+    read: input.read,
     write,
     eq: input.eq ?? structuralEq,
     defaultValue: input.defaultValue,
@@ -81,8 +90,8 @@ export function createDefinedQueryParam<T>(
  * The raw executable pieces of a codec bound to a single dot-path.
  *
  * @remarks
- * `read` stays raw (`undefined` when absent), so both the plain param and the
- * builder resolve the codec default through the single default layer.
+ * `read` is a selection: `undefined` when the value is absent or invalid. The
+ * default is resolved by the engine's default layer, not here.
  *
  * @internal
  */
@@ -128,35 +137,6 @@ export function codecParamInput<T>(path: string, codec: Codec<T>): {
  */
 export function defineCodecQueryParam<T>(path: string, codec: Codec<T>): DefinedQueryParam<T> {
   return createDefinedQueryParam(codecParamInput(path, codec))
-}
-
-/**
- * Wraps a raw read so an absent value resolves to the declared default.
- *
- * @remarks
- * This is the single place a default is applied: the wrapped `read` stays raw
- * (`undefined` when absent), and the default layers on top here. It upholds the
- * {@link DefinedQueryParamWithDefault} contract that a defaulted param never
- * reads back `undefined`, whether the default comes from the codec or a builder
- * modifier. The default is cloned per read so a consumer that mutates the
- * returned value cannot corrupt the shared default, matching how a value decoded
- * from the URL is always a fresh object.
- *
- * @internal
- */
-function withDefaultFallback<T>(
-  read: (query: ParsedQuery) => T | undefined,
-  defaultValue: T | undefined,
-): (query: ParsedQuery) => T | undefined {
-  if (defaultValue === undefined) {
-    return read
-  }
-
-  return (query) => {
-    const value = read(query)
-
-    return value === undefined ? structuralClone(defaultValue) : value
-  }
 }
 
 /**

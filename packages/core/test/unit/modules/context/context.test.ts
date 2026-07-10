@@ -132,7 +132,7 @@ describe('withContext buildContextQuery', () => {
   })
 
   it('keeps a preserved default-valued field when clearOnDefault is false', () => {
-    const { query, build } = setup({ q: 'foo' })
+    const { query, build } = setup({ q: 'foo', page: '1' })
     const tab = ref<'products' | 'orders'>('products')
     const q = build(() =>
       useQueryStates(schema, { clearOnDefault: false }).use(
@@ -143,6 +143,29 @@ describe('withContext buildContextQuery', () => {
     const next = q.buildContextQuery(query.value, 'orders')
 
     expect(next).toEqual({ q: 'foo', page: '1' })
+  })
+
+  it('does not materialize an absent or invalid default-valued field, even with clearOnDefault false', () => {
+    const tab = ref<'products' | 'orders'>('products')
+
+    // Absent: a pure selection has nothing to preserve, so a context switch must
+    // not synthesize `page`'s default into the URL.
+    const absent = setup({ q: 'foo' })
+    const qa = absent.build(() =>
+      useQueryStates(schema, { clearOnDefault: false }).use(
+        withContext({ active: tab, preserve: ['q', 'page'] }),
+      ),
+    )
+    expect(qa.buildContextQuery(absent.query.value, 'orders')).toEqual({ q: 'foo' })
+
+    // Invalid: same, and the stale invalid value is dropped from the target.
+    const invalid = setup({ q: 'foo', page: 'bad' })
+    const qi = invalid.build(() =>
+      useQueryStates(schema, { clearOnDefault: false }).use(
+        withContext({ active: tab, preserve: ['q', 'page'] }),
+      ),
+    )
+    expect(qi.buildContextQuery(invalid.query.value, 'orders')).toEqual({ q: 'foo' })
   })
 
   it('applies the navigate pipeline stage', () => {

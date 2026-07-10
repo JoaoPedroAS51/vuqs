@@ -10,6 +10,7 @@ import type {
 } from './query-param-types'
 import type { NormalizeQueryStateSchema, QueryStateSchemaInput } from './schema'
 import type { ParsedQueryRaw } from './types'
+import { structuralClone } from './equality'
 import { getPath } from './path'
 import { compactQuery, mergeQueries } from './query-object'
 import { createQueryParamBuilder } from './query-param-builder'
@@ -76,9 +77,13 @@ export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
       const value: Record<string, unknown> = {}
       let hasValue = false
 
-      for (const key of Object.keys(children)) {
-        const child = children[key]
-        const childValue = child.read(query)
+      // Children read a pure selection (`undefined` when absent or invalid). When
+      // the object is present, a missing child resolves to its when-present default
+      // from `mergedDefault` (child defaults over the object-level default), cloned
+      // so a mutation cannot corrupt the shared default. The object's own top-level
+      // default stays in the engine's default layer.
+      for (const key of Object.keys(children) as Array<keyof ObjectValue<TChildren>>) {
+        const childValue = children[key].read(query)
 
         if (childValue !== undefined) {
           value[key] = childValue
@@ -86,10 +91,10 @@ export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
           continue
         }
 
-        const objectDefault = options.defaultValue?.[key as keyof ObjectValue<TChildren>]
+        const fallback = mergedDefault?.[key]
 
-        if (objectDefault !== undefined) {
-          value[key] = objectDefault
+        if (fallback !== undefined) {
+          value[key] = structuralClone(fallback)
           hasValue = true
         }
       }

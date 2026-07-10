@@ -159,13 +159,14 @@ export type QueryStateWriteValues<TSchema extends QueryStateSchema> = {
  * Parses every param in a schema out of a parsed query object.
  *
  * @remarks
- * A param whose value is absent is omitted from the result rather than set to
- * `undefined`.
+ * Reads each param's selection: a param whose value is absent or invalid is
+ * omitted from the result rather than set to `undefined` or its default. Defaults
+ * are resolved by the engine's default layer, not here.
  *
  * @typeParam TSchema - The schema describing the params to parse.
  * @param schema - The param definitions to parse with.
  * @param query - The parsed query object to read from.
- * @returns A value map holding only the params present in `query`.
+ * @returns A value map holding only the params validly present in `query`.
  */
 export function parseQueryStates<TSchema extends QueryStateSchema>(
   schema: TSchema,

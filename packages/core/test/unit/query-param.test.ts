@@ -34,27 +34,25 @@ describe('queryParam', () => {
     expect(date.eq(new Date('2026-01-01'), new Date('2026-01-01'))).toBe(true)
   })
 
-  it('reads back the builder default when the param is absent', () => {
+  it('reads a pure selection, omitting an absent defaulted param', () => {
     const page = queryParam('page', codecs.integer).withDefault(2)
 
-    expect(page.read({})).toBe(2)
+    expect(page.defaultValue).toBe(2)
+    expect(page.read({})).toBeUndefined()
     expect(page.read({ page: '5' })).toBe(5)
   })
 
-  it('does not share a Date default across reads', () => {
-    const date = queryParam('date', codecs.isoDate).withDefault(new Date('2026-01-01'))
+  it('reads an invalid value as absent, not as its default', () => {
+    const page = queryParam('page', codecs.integer).withDefault(2)
 
-    const first = date.read({}) as Date
-    first.setFullYear(1999)
-
-    expect(date.read({})).toEqual(new Date('2026-01-01'))
+    expect(page.read({ page: 'bad' })).toBeUndefined()
   })
 
   it('overrides the codec default with the builder default', () => {
     const page = queryParam('page', codecs.integer.withDefault(1)).withDefault(2)
 
     expect(page.defaultValue).toBe(2)
-    expect(page.read({})).toBe(2)
+    expect(page.read({ page: '5' })).toBe(5)
   })
 
   it('applies a withDefault override placed after transform', () => {
@@ -63,7 +61,7 @@ describe('queryParam', () => {
       .withDefault('#99')
 
     expect(t.defaultValue).toBe('#99')
-    expect(t.read({})).toBe('#99')
+    expect(t.read({})).toBeUndefined()
     expect(t.read({ n: '7' })).toBe('#7')
   })
 })
@@ -76,7 +74,7 @@ describe('queryParam.object', () => {
     })
 
     expect(bounds.paths).toEqual(['bounds.n', 'bounds.e'])
-    expect(bounds.read({})).toEqual({ north: 1 })
+    expect(bounds.read({})).toBeUndefined()
     expect(bounds.read({ bounds: { e: '20' } })).toEqual({ north: 1, east: 20 })
     expect(bounds.write({ north: 2, east: 20 })).toEqual({ bounds: { n: '2', e: '20' } })
   })
@@ -91,18 +89,19 @@ describe('queryParam.object', () => {
     expect(bounds.read({ bounds: { e: '20' } })).toEqual({ north: 1, east: 20 })
   })
 
-  it('does not share the default object across reads', () => {
+  it('returns a fresh object on each read, not the shared when-present default', () => {
     const bounds = queryParam.object('bounds', {
       north: queryParam('n', codecs.float).withDefault(1),
+      east: queryParam('e', codecs.float),
     })
 
-    const first = bounds.read({}) as { north: number }
+    const first = bounds.read({ bounds: { e: '20' } }) as { north: number, east: number }
     first.north = 999
 
-    expect(bounds.read({})).toEqual({ north: 1 })
+    expect(bounds.read({ bounds: { e: '20' } })).toEqual({ north: 1, east: 20 })
   })
 
-  it('supports partial object defaults below child defaults', () => {
+  it('supports partial object defaults below child defaults, filled when present', () => {
     const bounds = queryParam.object('bounds', {
       north: queryParam('n', codecs.float).withDefault(1),
       south: queryParam('s', codecs.float),
@@ -110,7 +109,8 @@ describe('queryParam.object', () => {
     }).withDefault({ north: 0, east: 20 })
 
     expect(bounds.defaultValue).toEqual({ north: 1, east: 20 })
-    expect(bounds.read({})).toEqual({ north: 1, east: 20 })
+    expect(bounds.read({})).toBeUndefined()
+    expect(bounds.read({ bounds: { s: '5' } })).toEqual({ north: 1, south: 5, east: 20 })
   })
 
   it('prefixes an existing object definition', () => {
@@ -157,7 +157,7 @@ describe('queryParam.object', () => {
     const northEast = queryParam.object('ne', point)
 
     expect(northEast.defaultValue).toEqual({ lat: 5 })
-    expect(northEast.read({})).toEqual({ lat: 5 })
+    expect(northEast.read({})).toBeUndefined()
     expect(northEast.read({ ne: { lng: '20' } })).toEqual({ lat: 5, lng: 20 })
   })
 
@@ -224,10 +224,10 @@ describe('queryParam.object', () => {
     expect(filter.write({ foo: 'a', bar: 'b' })).toEqual({ foo: 'a', bar: 'b' })
   })
 
-  it('reads a defaulted codec child back when absent', () => {
+  it('reads a defaulted codec child as a selection, absent object omitted', () => {
     const filter = queryParam.object({ page: codecs.integer.withDefault(1) })
 
-    expect(filter.read({})).toEqual({ page: 1 })
+    expect(filter.read({})).toBeUndefined()
     expect(filter.read({ page: '5' })).toEqual({ page: 5 })
   })
 

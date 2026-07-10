@@ -16,7 +16,7 @@ interface Codec<T> {
 
 interface CodecWithDefault<T> extends Codec<T> {
   readonly defaultValue: T
-  // parse stays raw (T | undefined); the param resolves the default
+  // parse stays a selection (T | undefined); the engine's default layer resolves the default
 }
 
 interface CodecInput<T> {

@@ -229,24 +229,14 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     return next
   })
 
-  // The explicit selection BEFORE the read pipeline: params whose path is present
-  // in the URL (or overlay) and that parse to a defined value. The parser injects
-  // codec defaults for absent params, so presence is checked against the paths,
-  // not the parsed value. Defined-only, so layering it over the defaults never
-  // clobbers one with `undefined`.
-  const rawSelection = computed<Record<string, unknown>>(() => {
-    const query = optimisticQuery.value
-    const parsed = parseQueryStates(schema, query) as Record<string, unknown>
-    const selection: Record<string, unknown> = {}
-
-    for (const key of keys) {
-      if (parsed[key] !== undefined && schema[key].paths.some(path => getPath(query, path) !== undefined)) {
-        selection[key] = parsed[key]
-      }
-    }
-
-    return selection
-  })
+  // The explicit selection BEFORE the read pipeline: each param's decoded URL
+  // value, with absent or invalid params omitted (`read` is a selection, so it
+  // returns `undefined` for both). Defined-only, so layering it over the defaults
+  // never clobbers one with `undefined`, and an invalid value never masquerades as
+  // its default.
+  const rawSelection = computed<Record<string, unknown>>(
+    () => parseQueryStates(schema, optimisticQuery.value) as Record<string, unknown>,
+  )
 
   const selected = computed<QueryStateValues<TSchema>>(
     () => definedOnly(pipeline.run('read', { ...rawSelection.value })) as QueryStateValues<TSchema>,
