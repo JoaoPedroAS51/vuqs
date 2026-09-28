@@ -121,9 +121,7 @@ A single-param module adds a per-param API (here `setDefault`, `clearDefault`,
 ::: warning `.set()` and `.clear()` are not reachable in templates
 `QueryStateRef<T>` extends `WritableComputedRef<T>`, so Vue **auto-unwraps** a
 top-level ref in the template
-to its bare value. The added `.set` and `.clear` methods (and `.value`) are
-dropped, so `@click="q.clear()"` fails to type-check with *"Property 'clear' does
-not exist on type 'string'"*.
+to its bare value.
 
 Call the methods from a function in `<script setup>` instead, where `q` is still
 the real ref:
@@ -143,8 +141,6 @@ function clear() {
   <button @click="clear()">Clear</button>
 </template>
 ```
-
-`v-model="q"` still works because assignment writes `.value` for you.
 :::
 
 ## Adapting a codec value to an input
