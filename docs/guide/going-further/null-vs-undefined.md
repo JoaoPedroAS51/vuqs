@@ -2,73 +2,52 @@
 
 vuqs assigns different write semantics to `null` and `undefined`.
 
-## The rule
+## Partial writes
 
-- **Reads are never `null`.** A param reads back `T` or `undefined`, never `null`.
-- **`null` is a write-only clear command,** and only in *batch* or *standalone*
-  writes where a third "leave it alone" state is needed.
-
-## Why two sentinels
-
-A **batch** write needs to express three different intentions per param:
+`patch` and the [serializer](/guide/going-further/serializer#write-semantics) use a
+three-state input:
 
 | Intent | Sentinel |
 | --- | --- |
 | Set this param | a value |
 | Clear this param | `null` |
-| Don't touch this param | omit it / `undefined` |
-
-If `undefined` meant *both* "clear" and "skip," you could not write "set `q`,
-clear `sort`, leave `page` alone" in a single object. So batch writes use `null`
-to clear and `undefined`/absent to skip:
+| Skip this param | omit it / `undefined` |
 
 ```ts
-patch({ q: 'laptop', sort: null })
-//       set q ──┘      └── clear sort, page untouched
+patch({ q: 'laptop', sort: null }) // set q, clear sort, skip page
 ```
 
-This applies to [`patch`](/guide/essentials/use-query-states#patch-partial-write)
-and to the [serializer](/guide/going-further/serializer#write-semantics).
+## Single-param writes
 
-## Single params don't use null
-
-A **single** param has no "leave it alone" state: every write is *this* param. So
-`useQueryState`'s ref clears via `undefined` or `.clear()`, and **does not** accept
-`null`:
+`useQueryState` does not use `null`. Assign `undefined` to a nullable ref, or call
+`.clear()` for any single param:
 
 ```ts
 const color = useQueryState('color', codecs.literal(['red', 'blue'] as const))
 
 color.value = 'red' // set
 color.value = undefined // clear
-color.clear() // clear (the explicit method)
-// color.value = null  // ✗ not allowed: there's no third state here
+color.clear() // clear
+// color.value = null // type error
 ```
-
-This keeps `.value =` and `.set()` symmetric: both take a value or `undefined`,
-never `null`.
 
 ## Whole-state writes clear by absence or undefined
 
-A whole-state write is exhaustive: `replace` (from `useQueryStates`) and
-[`toQueryRef`](/api/composables#toqueryref) set every param from the object you give
-them and clear the rest. Both absence and an explicitly `undefined` property are
-clear signals, so these writers take no `null`:
+`replace` and [`toQueryRef`](/api/composables#toqueryref) assignments are
+exhaustive. Params omitted or set to `undefined` are cleared. These writers do not
+accept `null`:
 
 ```ts
 replace({ q: 'sale' }) // set q, clear every other param
 replace({ q: 'sale', page: undefined }) // set q, clear page and every omitted param
-filters.value = { q: 'sale' } // same, through a toQueryRef
-filters.value = { q: 'sale', page: undefined } // explicit undefined also clears
+filters.value = { q: 'sale' } // set q, clear every other param
+filters.value = { q: 'sale', page: undefined } // set q, clear page and every omitted param
 ```
 
-`patch` is the partial counterpart: it touches only the keys you name, which is why
-it alone needs `null` to tell "clear this" from "leave it alone".
+## Query parsing
 
-## Reads always normalize away null
-
-A raw query value can be `null` (for example `?flag` with no `=`). Codecs
-normalize that to `undefined`, so reads remain `T | undefined`:
+A parsed query can contain `null`, for example from `?flag` with no `=`. Codecs
+normalize it to `undefined`, so reads return `T | undefined`:
 
 ```ts
 const flag = useQueryState('flag', codecs.boolean)
@@ -77,19 +56,13 @@ const flag = useQueryState('flag', codecs.boolean)
 // ?flag=true → true
 ```
 
-## Why null survives where undefined doesn't
+## JSON persistence
 
-`null` remains distinguishable across the boundaries where `undefined` is lost:
+`QueryStateWriteValues` treats an omitted key and explicit `undefined` as the same
+skip instruction. JSON also removes properties whose value is `undefined`, while
+preserving `null`. A clear instruction therefore survives JSON serialization.
 
-- **TypeScript erases** the difference between an explicitly-`undefined` key and an
-  absent one at the type level.
-- **JSON round-trips drop `undefined` keys** entirely, which matters when state
-  crosses a JSON boundary, such as store persistence.
-
-`null` is type-distinct *and* survives a JSON round-trip, so a serialized "clear
-this param" instruction stays intact.
-
-## Cheat sheet
+## Write reference
 
 ```ts
 // Single param (useQueryState)
@@ -101,7 +74,7 @@ ref.clear() // clear
 patch({ a: x }) // set a
 patch({ a: null }) // clear a
 patch({ /* a absent */ }) // leave a untouched
-patch({ a: undefined }) // leave a untouched (same as absent)
+patch({ a: undefined }) // leave a untouched
 
 // Whole-state, exhaustive (replace, toQueryRef): absence/undefined clears, no null
 replace({ a: x }) // set a, clear everything else
