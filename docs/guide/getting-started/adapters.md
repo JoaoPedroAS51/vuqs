@@ -106,6 +106,64 @@ Flat, top-level keys work without this. Repeated-key arrays (`?tags=a&tags=b`)
 and nesting both rely on it.
 :::
 
+## Browser History API
+
+Use the browser adapter in a Vue app without a router. Create it in the browser
+and install it on the app:
+
+```ts
+import { installQueryAdapter } from '@vuqs/core'
+import { createBrowserHistoryAdapter } from '@vuqs/core/adapters/browser-history'
+import { createApp } from 'vue'
+import App from './App.vue'
+
+const app = createApp(App)
+const adapter = createBrowserHistoryAdapter({
+  defaultOptions: { history: 'replace' },
+})
+
+installQueryAdapter(app, adapter)
+app.onUnmount(adapter.dispose)
+app.mount('#app')
+```
+
+The adapter reads `window.location.search` and writes with `history.replaceState`,
+or `history.pushState` when `history` is `'push'`. Writes preserve the pathname,
+hash, and existing `history.state`. Scroll stays in place unless `scroll` is `true`,
+which scrolls to the top.
+
+Objects use dotted keys (`filters.sort=name`). Arrays of scalar values use repeated
+keys (`tag=a&tag=b`). Numbers and booleans read back as strings, which codecs decode.
+Nullish values and empty arrays or objects are omitted. Arrays containing objects
+or other arrays are unsupported and throw before navigation.
+
+The reactive query updates after each adapter write and on `popstate` for back and
+forward navigation. External `pushState` and `replaceState` calls need a refresh:
+
+```ts
+window.history.replaceState(window.history.state, '', '?q=external')
+adapter.refresh()
+```
+
+Call `dispose()` when the adapter is no longer needed. It removes the listener and
+cancels pending writes. Later `navigate()` and `refresh()` calls throw.
+
+To provide from a component, call `provideBrowserHistoryAdapter()` in `setup`.
+It disposes the adapter when the component's scope stops:
+
+```vue
+<script setup lang="ts">
+import { provideBrowserHistoryAdapter } from '@vuqs/core/adapters/browser-history'
+
+provideBrowserHistoryAdapter()
+</script>
+```
+
+::: warning Browser only
+Importing this subpath on the server is safe. Creating either adapter requires
+`window` and throws on the server. Use an adapter with a server query source for SSR.
+:::
+
 ## Bring your own adapter
 
 An adapter is a plain object, so any source of a query and a way to navigate

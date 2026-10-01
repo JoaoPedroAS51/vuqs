@@ -47,6 +47,10 @@
       "types": "./dist/adapters/testing.d.ts",
       "import": "./dist/adapters/testing.mjs"
     },
+    "./adapters/browser-history": {
+      "types": "./dist/adapters/browser-history.d.ts",
+      "import": "./dist/adapters/browser-history.mjs"
+    },
     "./testing": {
       "types": "./dist/testing.d.ts",
       "import": "./dist/testing.mjs"

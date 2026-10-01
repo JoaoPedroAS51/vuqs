@@ -30,7 +30,7 @@ function collectMjs(dir: string): string[] {
 }
 
 export default defineBuildConfig({
-  entries: ['src/index', 'src/debug', 'src/debug/console', 'src/debug-protocol', 'src/adapters/vue-router', 'src/adapters/testing', 'src/modules/index', 'src/shared/index', 'src/testing'],
+  entries: ['src/index', 'src/debug', 'src/debug/console', 'src/debug-protocol', 'src/adapters/vue-router', 'src/adapters/testing', 'src/adapters/browser-history', 'src/modules/index', 'src/shared/index', 'src/testing'],
   declaration: true,
   externals: ['vue', 'vue-router'],
   rollup: {
