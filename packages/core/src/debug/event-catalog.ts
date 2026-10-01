@@ -168,7 +168,7 @@ export const DEBUG_EVENT_CATALOG = defineDebugEventCatalog({
     summary: 'conditional',
     summaryNote: 'Completes one aggregated vuqs write, or reports paths changed outside vuqs.',
     summaryExample: '[vuqs] Updated "color" in the URL.',
-    emittedWhen: 'The adapter query commits a managed write or changes externally.',
+    emittedWhen: 'The adapter confirms a managed navigation or the query changes externally.',
     payload: ['query', 'paths', 'pendingPathCount', 'source'],
     formatTrace: (data, raw) => data.source === 'write'
       ? `Observed a committed vuqs URL change for ${formatDebugLabelList(data.paths, 3, raw.paths)}.`

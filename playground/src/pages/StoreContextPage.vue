@@ -28,7 +28,7 @@ const q = useQueryStates(schema)
     only: { category: ['products'], status: ['orders'] },
     navigate: (next, query, options) => {
       tab.value = next
-      adapter.navigate(query, { history: 'replace', ...options })
+      void Promise.resolve(adapter.navigate(query, { history: 'replace', ...options })).catch(error => console.error(error))
     },
   }))
 

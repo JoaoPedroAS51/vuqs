@@ -11,7 +11,7 @@ The contract every adapter satisfies.
 ```ts
 interface QueryAdapter {
   query: MaybeRefOrGetter<ParsedQuery>
-  navigate: (query: ParsedQueryRaw, options: NavigateOptions) => void | Promise<void>
+  navigate: QueryStateNavigate
   defaultOptions?: QueryAdapterDefaultOptions
 }
 ```
@@ -21,10 +21,9 @@ interface QueryAdapter {
 - `query: MaybeRefOrGetter<ParsedQuery>`
   - The current parsed query, as a ref, getter, or plain value.
 - `navigate: (query, options) => void | Promise<void>`
-  - Stringify the next query and apply it, pushing or replacing per
-    `options.history`. May be sync or async. A returned promise must settle after
-    the navigation commits or fails; vuqs uses it to serialize writes so an older
-    async commit cannot overtake a newer one.
+  - Apply the next query synchronously, or return a promise for asynchronous
+    navigation. When the operation completes, `query` exposes the final state,
+    including normalization and redirects. Throw or reject on failure or cancellation.
 - `defaultOptions?: QueryAdapterDefaultOptions`
   - App-wide defaults at the bottom of the
     [precedence chain](/guide/essentials/navigation-options#precedence).
@@ -32,6 +31,10 @@ interface QueryAdapter {
 Adapter object identity defines a runtime boundary. Bindings using the same adapter
 share one optimistic overlay, write queue, and transaction-start registry. Bindings
 using different adapter objects are isolated, even when their query paths overlap.
+
+The queue removes only the versions belonging to a completed attempt. A later
+write to the same path remains pending, even when it has the same value. A rejected
+promise or a synchronous error rolls back the attempt's current versions.
 
 ## QueryAdapterDefaultOptions <Badge type="info" text="@vuqs/core" />
 
@@ -75,6 +78,8 @@ function createVueRouterAdapter(options?: VueRouterAdapterOptions): QueryAdapter
     [`provideQueryAdapter`](/api/composables#providequeryadapter). It reads
     `router.currentRoute.value.query` and writes with `router.replace`, switching to
     `router.push` when `history` is `'push'`.
+  - `navigate` resolves for successful and duplicate navigations. Router errors,
+    aborted navigations, and cancelled navigations reject its promise.
 
 ```ts
 import { createVueRouterAdapter } from '@vuqs/core/adapters/vue-router'

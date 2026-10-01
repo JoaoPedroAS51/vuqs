@@ -1,8 +1,9 @@
-import type { EffectScope, ShallowRef } from 'vue'
+import type { EffectScope, Ref, ShallowRef } from 'vue'
 import type { QueryAdapter } from '../adapter'
 import type { DebugChannel, DebugEmissionContext } from '../debug/bus'
+import type { QueryReadLayer } from '../query-read-layer'
 import type { NavigateOptions, ParsedQuery, ParsedQueryValue } from '../types'
-import { effectScope, shallowRef, toValue, triggerRef, watch } from 'vue'
+import { computed, effectScope, shallowRef, toValue, triggerRef, watch } from 'vue'
 import { debugChannelForAdapter, emitDebug, emitWarn, isDebugArmed } from '../debug/bus'
 import { normalizeForHistory } from '../debug/normalize'
 import { registerSnapshotSource } from '../debug/snapshot'
@@ -10,6 +11,7 @@ import { structuralEq } from '../equality'
 import { runManagedNavigation } from '../managed-navigation'
 import { collectLeafPaths, deletePath, getPath, pruneEmptyAncestors, setPath } from '../path'
 import { cloneQuery } from '../query-object'
+import { getQueryReadLayer } from '../query-read-layer'
 
 /**
  * One pending write for a single query path: a raw value to set, or `null` to
@@ -21,8 +23,8 @@ export type OverlayDelta = ParsedQueryValue | null
  * The optimistic overlay: raw pending writes keyed by query path.
  *
  * @remarks
- * A path present here overrides the live URL until a navigation commits and the
- * URL catches up. Values are raw (already serialized), so the overlay is the one
+ * A path present here overrides the committed query until its navigation attempt
+ * completes. Values are raw (already serialized), so the overlay is the one
  * namespace every engine shares regardless of its schema or codecs.
  */
 export type Overlay = Record<string, OverlayDelta>
@@ -60,10 +62,17 @@ interface AttemptedDelta {
   readonly version: number
 }
 
-interface ExpectedCommit {
-  readonly attempt: ReadonlyMap<string, AttemptedDelta>
+interface CommitObservation {
+  readonly query: ParsedQuery
+  readonly paths: readonly string[]
+  readonly pendingPathCount: number
+}
+
+interface NavigationAttempt {
+  readonly writes: ReadonlyMap<string, AttemptedDelta>
+  readonly generation: number
   readonly context?: DebugEmissionContext
-  observed: boolean
+  observation?: CommitObservation
 }
 
 /**
@@ -73,21 +82,25 @@ interface ExpectedCommit {
  * One instance backs one adapter identity. Writes from any engine merge into
  * {@link ThrottledQueue.overlay | overlay}: one canonical object
  * behind a `shallowRef`, notified atomically after each transaction without copying
- * all previously pending paths. One adapter-scoped observer owns settlement and external
- * commit visibility, independent of any binding lifecycle. Flushes serialize async
- * navigations, so an older router commit cannot complete after and overwrite a
- * newer batch.
+ * all previously pending paths. Navigation completion owns write settlement;
+ * one adapter-scoped observer tracks external query changes independently of
+ * binding lifetimes. Flushes serialize navigations, so an older router commit
+ * cannot complete after and overwrite a newer batch.
  */
 export class ThrottledQueue {
   /** The single optimistic overlay shared by every engine using this adapter. */
   readonly overlay: ShallowRef<Overlay> = shallowRef<Overlay>(Object.create(null) as Overlay)
 
+  /** Completed read-layer values with pending writes applied above them. @internal */
+  readonly readOverlay: Readonly<Ref<Readonly<Overlay>>>
+
   private readonly debug: DebugChannel
+  private readonly readLayer: QueryReadLayer | undefined
   private options: NavigateOptions = {}
   private scheduled = false
   private navigationPending = false
   private flushAfterNavigation = false
-  private expectedCommit: ExpectedCommit | undefined
+  private activeAttempt: NavigationAttempt | undefined
   private generation = 0
   private overlaySize = 0
   private nextOverlayVersion = 1
@@ -96,12 +109,17 @@ export class ThrottledQueue {
   private bindingOwners = 0
   private nextDebugBatchId = 1
   private debugBatch: DebugBatch | undefined
-  // Debug-only ownership survives the flush until the URL reflects each path. It is
+  // Debug-only ownership survives the flush until each pending write settles. It is
   // populated only while observed, preserving the disarmed path's zero-retention goal.
   private readonly overlayDebugOwners = new Map<string, OverlayDebugOwner>()
 
   constructor(private readonly adapter: QueryAdapter) {
     this.debug = debugChannelForAdapter(adapter)
+    const readLayer = getQueryReadLayer(adapter)
+    this.readLayer = readLayer
+    this.readOverlay = readLayer === undefined
+      ? this.overlay
+      : computed(() => Object.assign(Object.create(null) as Overlay, toValue(readLayer.values), this.overlay.value))
 
     // One queue lives for the whole channel, so its snapshot source needs no disposer:
     // it is collected with the channel when the adapter identity is.
@@ -215,14 +233,13 @@ export class ThrottledQueue {
   }
 
   /**
-   * Drops paths from the overlay once the URL reflects them.
+   * Removes the pending writes at the given query paths.
    *
    * @remarks
-   * Called by the queue's adapter-scoped observer after a navigation commits, so the
-   * committed model holds: an entry is kept until the URL catches up, then removed so
-   * the URL becomes the source of truth again.
+   * Completed navigation attempts remove their current versions. External query
+   * changes may also remove pending values they reflect exactly.
    *
-   * @param paths - The query paths the URL has caught up to.
+   * @param paths - The query paths whose pending writes should be removed.
    */
   settle(paths: string[]): void {
     if (paths.length === 0) {
@@ -275,8 +292,15 @@ export class ThrottledQueue {
     this.stopAdapterObserverIfIdle()
   }
 
-  /** Clears the overlay and pending navigation; used for test and SSR isolation. */
+  /**
+   * Clears pending writes, registered read layers, and scheduled flushes.
+   *
+   * @remarks
+   * An in-flight navigation keeps its serialization slot until its promise ends.
+   * Its outcome does not settle or roll back writes made after the reset.
+   */
   reset(): void {
+    this.readLayer?.reset()
     const paths = Object.keys(this.overlay.value)
     for (const path of paths) {
       delete this.overlay.value[path]
@@ -290,7 +314,10 @@ export class ThrottledQueue {
     this.options = {}
     this.scheduled = false
     this.flushAfterNavigation = false
-    this.expectedCommit = undefined
+    if (this.activeAttempt !== undefined) {
+      this.activeAttempt.observation = undefined
+    }
+    this.activeAttempt = undefined
     this.debugBatch = undefined
     this.overlayDebugOwners.clear()
     // Invalidate any flush already scheduled, so it cannot fire against a later push.
@@ -299,30 +326,46 @@ export class ThrottledQueue {
   }
 
   private handleAdapterCommit(query: ParsedQuery, previous: ParsedQuery): void {
-    const pendingPathCount = this.overlaySize
-    const expected = this.expectedCommit
-    const managed = expected !== undefined && reflectsAttempt(query, expected.attempt)
-    if (managed) {
-      expected.observed = true
-    }
+    const expected = this.activeAttempt
 
-    if (isDebugArmed(this.debug)) {
-      const paths = managed
-        ? [...expected.attempt.keys()]
-        : changedQueryPaths(previous, query)
-      emitDebug(this.debug, 'adapter:commit', {
-        query: cloneQuery(query),
-        paths,
-        pendingPathCount,
-        source: managed ? 'write' : 'external',
-      }, managed ? expected.context : undefined)
-    }
-
-    if (pendingPathCount === 0) {
+    if (expected !== undefined) {
+      // Query changes can precede promise resolution, so attribute the last one
+      // only after the adapter confirms its outcome.
+      if (isDebugArmed(this.debug)) {
+        this.reportExternalObservation(expected)
+        expected.observation = {
+          query: cloneQuery(query),
+          paths: changedQueryPaths(previous, query),
+          pendingPathCount: this.overlaySize,
+        }
+      }
+      else {
+        expected.observation = undefined
+      }
       return
     }
 
-    this.reconcile(query)
+    if (isDebugArmed(this.debug)) {
+      emitDebug(this.debug, 'adapter:commit', {
+        query: cloneQuery(query),
+        paths: changedQueryPaths(previous, query),
+        pendingPathCount: this.overlaySize,
+        source: 'external',
+      })
+    }
+
+    if (!this.navigationPending) {
+      this.reconcile(query)
+    }
+  }
+
+  private reportExternalObservation(expected: NavigationAttempt): void {
+    const observation = expected.observation
+    expected.observation = undefined
+
+    if (observation !== undefined && isDebugArmed(this.debug)) {
+      emitDebug(this.debug, 'adapter:commit', { ...observation, source: 'external' })
+    }
   }
 
   private ensureAdapterObserver(): void {
@@ -511,64 +554,82 @@ export class ThrottledQueue {
       }, this.contextFor(batch!))
     }
 
-    const expectedCommit: ExpectedCommit = { attempt, context, observed: false }
-    this.expectedCommit = expectedCommit
-    const navigationGeneration = this.generation
+    const activeAttempt: NavigationAttempt = { writes: attempt, generation: this.generation, context }
+    this.activeAttempt = activeAttempt
 
+    this.navigationPending = true
+    void this.runNavigation(next, options, activeAttempt)
+  }
+
+  private async runNavigation(
+    query: ParsedQuery,
+    options: NavigateOptions,
+    expected: NavigationAttempt,
+  ): Promise<void> {
     try {
-      const navigation = runManagedNavigation(this.adapter, () => this.adapter.navigate(next, options))
+      const navigation = runManagedNavigation(this.adapter, () => this.adapter.navigate(query, options))
       if (navigation !== undefined) {
-        this.navigationPending = true
-        void navigation
-          .then(() => {
-            if (navigationGeneration === this.generation) {
-              this.completeNavigation(expectedCommit)
-            }
-          })
-          .catch((error) => {
-            if (navigationGeneration === this.generation) {
-              this.reportNavigationError(error, attempt, context)
-            }
-          })
-          .finally(() => {
-            this.expectedCommit = undefined
-            this.navigationPending = false
-            if (this.flushAfterNavigation) {
-              this.flushAfterNavigation = false
-              this.scheduleFlush(0, this.debugBatch)
-            }
-          })
+        await navigation
       }
-      else {
-        // A successful no-op navigation may not replace/notify `adapter.query` (the URL
-        // already matched). Reconcile explicitly so its optimistic delta cannot survive
-        // indefinitely and shadow a later external change.
-        this.completeNavigation(expectedCommit)
-        this.expectedCommit = undefined
+
+      if (expected.generation !== this.generation) {
+        return
       }
+
+      this.activeAttempt = undefined
+      this.completeNavigation(expected)
     }
     catch (error) {
-      this.expectedCommit = undefined
-      this.reportNavigationError(error, attempt, context)
+      if (expected.generation !== this.generation) {
+        return
+      }
+      this.activeAttempt = undefined
+      this.reportExternalObservation(expected)
+      if (expected.generation === this.generation) {
+        this.reportNavigationError(error, expected.writes, expected.context)
+      }
+    }
+    finally {
+      this.activeAttempt = undefined
+      this.navigationPending = false
+      if (this.flushAfterNavigation) {
+        this.flushAfterNavigation = false
+        this.scheduleFlush(0, this.debugBatch)
+      }
     }
   }
 
-  private completeNavigation(expected: ExpectedCommit): void {
-    const query = toValue(this.adapter.query)
-
-    // A valid adapter may expose a non-reactive query or keep the same ref for a no-op.
-    // Publish the successful commit once even when the watcher did not observe it.
-    if (!expected.observed && isDebugArmed(this.debug)) {
-      emitDebug(this.debug, 'adapter:commit', {
-        query: cloneQuery(query),
-        paths: [...expected.attempt.keys()],
-        pendingPathCount: this.overlaySize,
-        source: 'write',
-      }, expected.context)
-      expected.observed = true
+  private completeNavigation(expected: NavigationAttempt): void {
+    if (this.readLayer !== undefined) {
+      this.reportExternalObservation(expected)
+      if (expected.generation !== this.generation) {
+        return
+      }
+      const deltas: Overlay = Object.create(null)
+      for (const [path, { delta }] of expected.writes) {
+        deltas[path] = delta
+      }
+      this.readLayer.apply(cloneQuery(deltas))
+    }
+    else {
+      expected.observation = undefined
+      if (isDebugArmed(this.debug)) {
+        emitDebug(this.debug, 'adapter:commit', {
+          query: cloneQuery(toValue(this.adapter.query)),
+          paths: [...expected.writes.keys()],
+          pendingPathCount: this.overlaySize,
+          source: 'write',
+        }, expected.context)
+      }
     }
 
-    this.reconcile(query)
+    const committed: string[] = []
+    for (const [path, attempted] of expected.writes) {
+      if (this.overlayVersions.get(path) === attempted.version) {
+        committed.push(path)
+      }
+    }
+    this.settle(committed)
   }
 
   private reportNavigationError(
@@ -615,15 +676,4 @@ function changedQueryPaths(previous: ParsedQuery, query: ParsedQuery): string[] 
   ])
 
   return [...candidates].filter(path => !structuralEq(getPath(previous, path), getPath(query, path)))
-}
-
-function reflectsAttempt(query: ParsedQuery, attempt: ReadonlyMap<string, AttemptedDelta>): boolean {
-  for (const [path, { delta }] of attempt) {
-    const committed = getPath(query, path)
-    if (delta === null ? committed !== undefined : !structuralEq(committed, delta)) {
-      return false
-    }
-  }
-
-  return true
 }

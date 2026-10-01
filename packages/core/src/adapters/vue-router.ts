@@ -28,6 +28,8 @@ export interface VueRouterAdapterOptions {
  * such as `filters.sort` require `vue-router` to be configured with `qs` for
  * `parseQuery`/`stringifyQuery`; with the default flat parser only top-level keys
  * round-trip.
+ * `navigate` confirms successful and duplicate navigations. Router errors,
+ * aborted navigations, and cancelled navigations reject its promise.
  *
  * @param options - The router (defaults to `useRouter()`) and adapter defaults.
  * @returns A query adapter to pass to {@link provideQueryAdapter} or a composable.
@@ -40,7 +42,7 @@ export function createVueRouterAdapter(options: VueRouterAdapterOptions = {}): Q
   const adapter: QueryAdapter = {
     debugName: 'vue-router',
     query: () => router.currentRoute.value.query as ParsedQuery,
-    navigate: (query, navigateOptions) => {
+    navigate: async (query, navigateOptions) => {
       // `scroll` has no per-call equivalent in vue-router (it is `scrollBehavior`), so it is ignored.
       // Carry the current hash forward: a location object without `hash` resets it to `''`.
       const location = { query: query as LocationQueryRaw, hash: router.currentRoute.value.hash }
@@ -52,24 +54,20 @@ export function createVueRouterAdapter(options: VueRouterAdapterOptions = {}): Q
         emitDebug(channel, 'adapter:navigate', { adapter: 'vue-router', mode: historyMode, query: { ...query } })
       }
 
-      const result = (navigateOptions.history === 'push' ? router.push(location) : router.replace(location))
-        .then((failure) => {
-          // Duplicating the current URL is a successful no-op. Aborted/cancelled
-          // navigations did not commit and must reach the queue's rollback boundary.
-          if (failure !== undefined && !isNavigationFailure(failure, NavigationFailureType.duplicated)) {
-            throw failure
-          }
-        })
+      try {
+        const failure = await (navigateOptions.history === 'push' ? router.push(location) : router.replace(location))
 
-      if (managed) {
-        return result
+        // Duplicating the URL completes the attempt without changing the route.
+        if (failure !== undefined && !isNavigationFailure(failure, NavigationFailureType.duplicated)) {
+          throw failure
+        }
       }
-
-      // Preserve standalone fire-and-forget behavior. The queue path propagates the
-      // rejection to its batch-correlated error boundary.
-      return result.catch((error) => {
-        emitWarn(channel, 'adapter:error', { adapter: 'vue-router', error })
-      })
+      catch (error) {
+        if (!managed) {
+          emitWarn(channel, 'adapter:error', { adapter: 'vue-router', error })
+        }
+        throw error
+      }
     },
     defaultOptions: options.defaultOptions,
   }

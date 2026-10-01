@@ -10,6 +10,15 @@ import { useQueryStates } from '../../src/core/use-query-states'
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
 
 describe('createTestingAdapter', () => {
+  it.each([false, true])('applies navigation with hasMemory=%s', async (hasMemory) => {
+    const onUrlUpdate = vi.fn()
+    const adapter = createTestingAdapter({ searchParams: { q: 'old' }, hasMemory, onUrlUpdate })
+
+    await adapter.navigate({ q: 'new' }, {})
+    expect(adapter.query.value).toEqual({ q: hasMemory ? 'new' : 'old' })
+    expect(onUrlUpdate).toHaveBeenCalledExactlyOnceWith({ query: { q: 'new' }, options: {} })
+  })
+
   describe('searchParams parsing', () => {
     it('starts with an empty query when no searchParams are given', () => {
       const adapter = createTestingAdapter()
@@ -78,6 +87,22 @@ describe('createTestingAdapter', () => {
   })
 
   describe('hasMemory: false (default)', () => {
+    it.each(['toString', 'valueOf', 'toLocaleString'])('supports the query path %s', async (path) => {
+      const adapter = createTestingAdapter({ searchParams: { [path]: 'initial' } })
+      const app = createApp({})
+      installQueryAdapter(app, adapter)
+      const state = app.runWithContext(() => useQueryState(path, codecs.string))
+
+      expect(state.value).toBe('initial')
+      state.set('changed')
+      await flush()
+      expect(state.value).toBe('changed')
+      state.clear()
+      await flush()
+      expect(state.value).toBeUndefined()
+      expect(adapter.query.value).toEqual({ [path]: 'initial' })
+    })
+
     it('does not update adapter.query.value when navigate is called', async () => {
       const adapter = createTestingAdapter({ searchParams: '?count=42' })
       const app = createApp({})
@@ -91,9 +116,7 @@ describe('createTestingAdapter', () => {
       expect(adapter.query.value).toEqual({ count: '42' })
     })
 
-    it('composable reads return the optimistic overlay value, not the frozen URL', async () => {
-      // The optimistic overlay keeps the written value visible until the URL catches
-      // up; without memory the URL never updates, so the overlay value persists.
+    it('keeps completed writes visible without changing the frozen query', async () => {
       const adapter = createTestingAdapter({ searchParams: '?count=42' })
       const app = createApp({})
       installQueryAdapter(app, adapter)
@@ -103,8 +126,113 @@ describe('createTestingAdapter', () => {
       count.value = 99
       await flush()
 
-      expect(adapter.query.value).toEqual({ count: '42' }) // URL is frozen
-      expect(count.value).toBe(99) // composable sees the overlay
+      expect(adapter.query.value).toEqual({ count: '42' })
+      expect(count.value).toBe(99)
+    })
+
+    it('coalesces one batch without carrying it into the next navigation', async () => {
+      const onUrlUpdate = vi.fn()
+      const adapter = createTestingAdapter({ searchParams: { keep: 'initial' }, onUrlUpdate })
+      const app = createApp({})
+      installQueryAdapter(app, adapter)
+      const { values } = app.runWithContext(() => useQueryStates({ q: codecs.string, page: codecs.integer, sort: codecs.string }))
+
+      values.q = 'search'
+      values.page = 2
+      await flush()
+      values.sort = 'name'
+      await flush()
+
+      expect(onUrlUpdate.mock.calls.map(([event]) => event.query)).toEqual([
+        { keep: 'initial', q: 'search', page: '2' },
+        { keep: 'initial', sort: 'name' },
+      ])
+      expect(values.q).toBe('search')
+      expect(values.page).toBe(2)
+      expect(values.sort).toBe('name')
+    })
+
+    it('shares simulated values between bindings without replaying their completed writes', async () => {
+      const onUrlUpdate = vi.fn()
+      const adapter = createTestingAdapter({ onUrlUpdate })
+      const app = createApp({})
+      installQueryAdapter(app, adapter)
+      const first = app.runWithContext(() => useQueryState('q', codecs.string))
+
+      first.set('search')
+      await flush()
+      const second = app.runWithContext(() => useQueryState('q', codecs.string))
+      const page = app.runWithContext(() => useQueryState('page', codecs.integer))
+      expect(second.value).toBe('search')
+
+      page.set(2)
+      await flush()
+
+      expect(onUrlUpdate).toHaveBeenLastCalledWith({ query: { page: '2' }, options: expect.anything() })
+      expect(first.value).toBe('search')
+      expect(second.value).toBe('search')
+    })
+
+    it('preserves nested siblings in the initial base after a simulated removal', async () => {
+      const onUrlUpdate = vi.fn()
+      const adapter = createTestingAdapter({ searchParams: { filters: { sort: 'initial', category: 'keep' } }, onUrlUpdate })
+      const app = createApp({})
+      installQueryAdapter(app, adapter)
+      const sort = app.runWithContext(() => useQueryState('filters.sort', codecs.string))
+      const category = app.runWithContext(() => useQueryState('filters.category', codecs.string))
+
+      sort.clear()
+      await flush()
+      category.set('changed')
+      await flush()
+
+      expect(onUrlUpdate.mock.calls.map(([event]) => event.query)).toEqual([
+        { filters: { category: 'keep' } },
+        { filters: { sort: 'initial', category: 'changed' } },
+      ])
+      expect(sort.value).toBeUndefined()
+      expect(category.value).toBe('changed')
+      expect(adapter.query.value).toEqual({ filters: { sort: 'initial', category: 'keep' } })
+    })
+
+    it('restores the last simulated value when a later navigation throws', async () => {
+      const onUrlUpdate = vi.fn()
+      const adapter = createTestingAdapter({ searchParams: { q: 'initial' }, onUrlUpdate })
+      const app = createApp({})
+      installQueryAdapter(app, adapter)
+      const q = app.runWithContext(() => useQueryState('q', codecs.string))
+
+      q.set('completed')
+      await flush()
+      onUrlUpdate.mockImplementationOnce(() => {
+        throw new Error('blocked')
+      })
+      q.set('failed')
+      await flush()
+
+      expect(q.value).toBe('completed')
+      const page = app.runWithContext(() => useQueryState('page', codecs.integer))
+      page.set(2)
+      await flush()
+
+      expect(onUrlUpdate).toHaveBeenLastCalledWith({ query: { q: 'initial', page: '2' }, options: expect.anything() })
+      expect(q.value).toBe('completed')
+    })
+
+    it('preserves a write made during the previous navigation callback', async () => {
+      const onUrlUpdate = vi.fn()
+      const adapter = createTestingAdapter({ onUrlUpdate })
+      const app = createApp({})
+      installQueryAdapter(app, adapter)
+      const q = app.runWithContext(() => useQueryState('q', codecs.string))
+      onUrlUpdate.mockImplementationOnce(() => q.set('newer'))
+
+      q.set('first')
+      await flush()
+
+      expect(onUrlUpdate.mock.calls.map(([event]) => event.query)).toEqual([{ q: 'first' }, { q: 'newer' }])
+      expect(q.value).toBe('newer')
+      expect(adapter.query.value).toEqual({})
     })
   })
 
@@ -153,6 +281,54 @@ describe('createTestingAdapter', () => {
       await flush()
 
       expect(adapter.query.value).toEqual({ q: 'hello', page: '2' })
+    })
+  })
+
+  describe.each([false, true])('navigation history with hasMemory=%s', (hasMemory) => {
+    it('uses the configured query base across separate flushes', async () => {
+      const onUrlUpdate = vi.fn()
+      const initial = { q: 'initial', keep: 'untouched' }
+      const adapter = createTestingAdapter({ searchParams: initial, hasMemory, onUrlUpdate })
+      const app = createApp({})
+      installQueryAdapter(app, adapter)
+      const { values } = app.runWithContext(() => useQueryStates({ q: codecs.string, page: codecs.integer }))
+
+      values.q = 'changed'
+      await flush()
+      values.page = 2
+      await flush()
+
+      expect(onUrlUpdate).toHaveBeenCalledTimes(2)
+      expect(onUrlUpdate.mock.calls.map(([event]) => event.query)).toEqual([
+        { q: 'changed', keep: 'untouched' },
+        { q: hasMemory ? 'changed' : 'initial', keep: 'untouched', page: '2' },
+      ])
+      expect(adapter.query.value).toEqual(hasMemory ? { q: 'changed', keep: 'untouched', page: '2' } : initial)
+      expect(values.q).toBe('changed')
+      expect(values.page).toBe(2)
+      adapter.resetQueue()
+    })
+
+    it('uses the configured query base after clearing a param', async () => {
+      const onUrlUpdate = vi.fn()
+      const adapter = createTestingAdapter({ searchParams: { q: 'initial', keep: 'untouched' }, hasMemory, onUrlUpdate })
+      const app = createApp({})
+      installQueryAdapter(app, adapter)
+      const q = app.runWithContext(() => useQueryState('q', codecs.string))
+      const page = app.runWithContext(() => useQueryState('page', codecs.integer))
+
+      q.clear()
+      await flush()
+      page.set(2)
+      await flush()
+
+      expect(onUrlUpdate.mock.calls.map(([event]) => event.query)).toEqual([
+        { keep: 'untouched' },
+        hasMemory ? { keep: 'untouched', page: '2' } : { q: 'initial', keep: 'untouched', page: '2' },
+      ])
+      expect(q.value).toBeUndefined()
+      expect(page.value).toBe(2)
+      adapter.resetQueue()
     })
   })
 
@@ -349,6 +525,43 @@ describe('withVuqsTestingAdapter', () => {
 })
 
 describe('resetQueue', () => {
+  it('clears simulated values along with pending writes without memory', async () => {
+    const adapter = createTestingAdapter({ searchParams: { q: 'initial' } })
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const q = app.runWithContext(() => useQueryState('q', codecs.string))
+    const page = app.runWithContext(() => useQueryState('page', codecs.integer))
+
+    q.set('simulated')
+    await flush()
+    page.set(2)
+    adapter.resetQueue()
+    await flush()
+
+    expect(q.value).toBe('initial')
+    expect(page.value).toBeUndefined()
+    expect(adapter.query.value).toEqual({ q: 'initial' })
+  })
+
+  it('does not retain a simulated attempt that was reset during its callback', async () => {
+    const onUrlUpdate = vi.fn()
+    const adapter = createTestingAdapter({ searchParams: { q: 'initial' }, onUrlUpdate })
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const q = app.runWithContext(() => useQueryState('q', codecs.string))
+    onUrlUpdate.mockImplementationOnce(() => {
+      adapter.resetQueue()
+      q.set('newer')
+    })
+
+    q.set('stale')
+    await flush()
+
+    expect(onUrlUpdate.mock.calls.map(([event]) => event.query)).toEqual([{ q: 'stale' }, { q: 'newer' }])
+    expect(q.value).toBe('newer')
+    expect(adapter.query.value).toEqual({ q: 'initial' })
+  })
+
   it('clears only this adapter queue so a pending write cannot flush', async () => {
     const onUrlUpdate = vi.fn()
     const adapter = createTestingAdapter({ onUrlUpdate })

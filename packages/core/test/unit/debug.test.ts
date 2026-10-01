@@ -1,5 +1,5 @@
 import type { DebugEvent } from '../../src/core/debug/bus'
-import type { ParsedQuery } from '../../src/core/types'
+import type { ParsedQuery, QueryStateNavigate } from '../../src/core/types'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createApp, effectScope, ref } from 'vue'
 import { createTestingAdapter } from '../../src/adapters/testing'
@@ -367,7 +367,7 @@ describe('lifecycle tracing', () => {
   it('orders a synthetic no-op commit before settlement', async () => {
     const adapter = {
       query: ref<ParsedQuery>({ q: 'same' }),
-      navigate: vi.fn(() => Promise.resolve()),
+      navigate: vi.fn<QueryStateNavigate>(),
     }
     const codes: string[] = []
     busDisposers.push(addDebugReporter(event => codes.push(event.code), {
@@ -387,7 +387,7 @@ describe('lifecycle tracing', () => {
     const query = ref<ParsedQuery>({ unmanaged: undefined })
     const adapter = {
       query,
-      navigate: vi.fn((next: ParsedQuery) => {
+      navigate: vi.fn(async (next: ParsedQuery): Promise<void> => {
         query.value = { q: next.q }
       }),
     }
@@ -435,9 +435,45 @@ describe('lifecycle tracing', () => {
     await flush()
     query.value = { q: 'external' }
 
-    expect(commits.at(-1)?.data).toMatchObject({ source: 'external', query: { q: 'external' } })
     finish?.()
     await flush()
+
+    expect(commits).toHaveLength(2)
+    expect(commits[0]?.data).toMatchObject({ source: 'external', query: { q: 'external' } })
+    expect(commits[1]?.data).toMatchObject({ source: 'write', query: { q: 'pending' } })
+  })
+
+  it('reports a synchronous commit before an external change queued by the adapter', async () => {
+    const query = ref<ParsedQuery>({ q: 'initial' })
+    const adapter = {
+      query,
+      navigate(next: ParsedQuery): void {
+        query.value = next
+        queueMicrotask(() => {
+          query.value = { q: 'external' }
+        })
+      },
+    }
+    const commits: DebugEvent[] = []
+    busDisposers.push(addDebugReporter((event) => {
+      if (event.code === 'adapter:commit') {
+        commits.push(event)
+      }
+    }, { channel: getDebugChannel(adapter) }))
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const q = app.runWithContext(() => useQueryState('q', codecs.string))
+
+    q.set('write')
+    await flush()
+
+    expect(commits.map(event => event.data)).toEqual([
+      { query: { q: 'write' }, paths: ['q'], pendingPathCount: 1, source: 'write' },
+      { query: { q: 'external' }, paths: ['q'], pendingPathCount: 0, source: 'external' },
+    ])
+    expect(commits[0]?.context?.batchId).toBe(1)
+    expect(commits[1]?.context?.batchId).toBeUndefined()
+    expect(q.value).toBe('external')
   })
 
   it('carries one batch from transaction start through navigation and settlement', async () => {
@@ -453,6 +489,92 @@ describe('lifecycle tracing', () => {
     for (const code of ['tx:start', 'binding:set', 'gtq:enqueue', 'gtq:schedule', 'gtq:flush', 'adapter:navigate', 'adapter:commit', 'gtq:settle']) {
       expect(byCode.get(code)).toMatchObject({ batchId: 1, transactionIds: [1] })
     }
+  })
+
+  it('reports query changes as external after a rejected attempt', async () => {
+    const query = ref<ParsedQuery>({ q: 'old' })
+    const adapter = {
+      query,
+      navigate: vi.fn(async (): Promise<void> => {
+        query.value = { q: 'external' }
+        throw new Error('blocked')
+      }),
+    }
+    const commits: DebugEvent[] = []
+    busDisposers.push(addDebugReporter((event) => {
+      if (event.code === 'adapter:commit') {
+        commits.push(event)
+      }
+    }, { channel: getDebugChannel(adapter) }))
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const q = app.runWithContext(() => useQueryState('q', codecs.string))
+
+    q.set('pending')
+    await flush()
+
+    expect(commits).toHaveLength(1)
+    expect(commits[0]?.data).toMatchObject({ source: 'external', query: { q: 'external' } })
+    expect(commits[0]?.context?.batchId).toBeUndefined()
+    expect(q.value).toBe('external')
+  })
+
+  it('keeps completed simulations out of the pending queue and committed URL events', async () => {
+    const adapter = createTestingAdapter({ searchParams: { q: 'initial' } })
+    const channel = getDebugChannel(adapter)
+    const events: DebugEvent[] = []
+    busDisposers.push(addDebugReporter(event => events.push(event), { channel }))
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const q = app.runWithContext(() => useQueryState('q', codecs.string))
+
+    q.set('simulated')
+    await flush()
+
+    const snapshot = getDebugSnapshot(channel)
+    expect(snapshot.queues).toEqual([expect.objectContaining({ overlay: {}, overlayKeys: [], scheduled: false })])
+    expect(snapshot.engines).toEqual([expect.objectContaining({ committedSelected: { value: 'initial' }, values: { value: 'simulated' } })])
+    expect(events.filter(event => event.code === 'adapter:commit')).toEqual([])
+    expect(events.filter(event => event.code === 'gtq:settle')).toHaveLength(1)
+  })
+
+  it.each(['success', 'failure'] as const)('discards a simulation reset by a reporter during %s', async (outcome) => {
+    const onUrlUpdate = vi.fn()
+    const adapter = createTestingAdapter({ searchParams: { q: 'initial' }, onUrlUpdate })
+    onUrlUpdate.mockImplementationOnce(() => {
+      adapter.query.value = { q: 'external' }
+      if (outcome === 'failure') {
+        throw new Error('blocked')
+      }
+    })
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const q = app.runWithContext(() => useQueryState('q', codecs.string))
+    const resetValues: Array<string | undefined> = []
+    const errors: DebugEvent[] = []
+    busDisposers.push(addDebugReporter((event) => {
+      if (event.code === 'adapter:error') {
+        errors.push(event)
+      }
+      if (event.code === 'adapter:commit' && (event.data as { source: string }).source === 'external') {
+        adapter.resetQueue()
+        resetValues.push(q.value)
+      }
+    }, { channel: getDebugChannel(adapter) }))
+
+    q.set('stale')
+    await flush()
+
+    expect(resetValues).toEqual(['external'])
+    expect(errors).toEqual([])
+    expect(q.value).toBe('external')
+    expect(adapter.query.value).toEqual({ q: 'external' })
+
+    q.set('fresh')
+    await flush()
+
+    expect(q.value).toBe('fresh')
+    expect(onUrlUpdate).toHaveBeenCalledTimes(2)
   })
 
   it('omits transactionIds when a write carries no transaction id', async () => {
@@ -709,7 +831,7 @@ describe('module tracing', () => {
     const events = captureEvents()
 
     const query = ref<ParsedQuery>({})
-    const navigate = vi.fn()
+    const navigate = vi.fn<QueryStateNavigate>()
     const app = createApp({})
     installQueryAdapter(app, { query, navigate })
 
@@ -787,7 +909,7 @@ describe('parse visibility', () => {
     const events = captureEvents()
     const query = ref<ParsedQuery>({ n: 'bad', color: 'red' })
     const app = createApp({})
-    installQueryAdapter(app, { query, navigate: vi.fn() })
+    installQueryAdapter(app, { query, navigate: vi.fn<QueryStateNavigate>() })
     const state = app.runWithContext(() => useQueryStates({ n: codecs.integer, color: codecs.string }))
 
     void state.values.n
@@ -804,7 +926,7 @@ describe('parse visibility', () => {
 
   it('reports an invalid path after observation attaches late', () => {
     const query = ref<ParsedQuery>({ n: 'bad', color: 'red' })
-    const adapter = { query, navigate: vi.fn() }
+    const adapter = { query, navigate: vi.fn<QueryStateNavigate>() }
     const app = createApp({})
     installQueryAdapter(app, adapter)
     const state = app.runWithContext(() => useQueryStates({ n: codecs.integer, color: codecs.string }))

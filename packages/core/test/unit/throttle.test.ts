@@ -1,4 +1,4 @@
-import type { ParsedQuery, ParsedQueryRaw } from '../../src/core/types'
+import type { ParsedQuery, ParsedQueryRaw, QueryStateNavigate } from '../../src/core/types'
 import { describe, expect, it, vi } from 'vitest'
 import { createApp, effectScope, nextTick, ref, watchEffect } from 'vue'
 import { installQueryAdapter } from '../../src/core/adapter'
@@ -10,11 +10,45 @@ import { withTestQuery as setup } from '../helpers/adapter'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
 
+describe.each(['synchronous', 'asynchronous'] as const)('%s query commits', (mode) => {
+  it.each([
+    { name: 'number', deltas: { page: '3' }, written: { page: '3' }, committed: { page: 3 } },
+    { name: 'boolean', deltas: { enabled: 'false' }, written: { enabled: 'false' }, committed: { enabled: false } },
+    { name: 'array', deltas: { ids: ['1', '2'] }, written: { ids: ['1', '2'] }, committed: { ids: [1, 2] } },
+    { name: 'nested number', deltas: { 'filters.limit': '0' }, written: { filters: { limit: '0' } }, committed: { filters: { limit: 0 } } },
+  ])('releases the pending $name write after navigation commits', async ({ deltas, written, committed }) => {
+    const query = ref<ParsedQuery>({ other: 'keep' })
+    const commit = () => {
+      query.value = { other: 'keep', ...committed }
+    }
+    const navigate = vi.fn<QueryStateNavigate>(() => {
+      if (mode === 'asynchronous') {
+        return Promise.resolve().then(commit)
+      }
+      commit()
+    })
+    const queue = new ThrottledQueue({ query, navigate })
+
+    try {
+      queue.push(deltas, {}, 0)
+      await flush()
+
+      expect(navigate).toHaveBeenCalledOnce()
+      expect(navigate).toHaveBeenCalledWith({ other: 'keep', ...written }, {})
+      expect(query.value).toEqual({ other: 'keep', ...committed })
+      expect(queue.overlay.value).toEqual({})
+    }
+    finally {
+      queue.reset()
+    }
+  })
+})
+
 // Models a real router whose query only updates after the navigation resolves,
 // the condition under which per-engine commits used to race and clobber.
 function setupAsync(initial: ParsedQuery = {}) {
   const query = ref<ParsedQuery>(initial)
-  const navigate = vi.fn(async (next: ParsedQueryRaw) => {
+  const navigate = vi.fn(async (next: ParsedQueryRaw): Promise<void> => {
     await Promise.resolve()
     query.value = next
   })
@@ -26,6 +60,91 @@ function setupAsync(initial: ParsedQuery = {}) {
 }
 
 describe('shared update queue', () => {
+  it('preserves a newer same-value write until its own navigation confirms', async () => {
+    const query = ref<ParsedQuery>({})
+    const commits: Array<() => void> = []
+    const navigate = vi.fn((next: ParsedQueryRaw) => new Promise<void>((resolve) => {
+      commits.push(() => {
+        query.value = next
+        resolve()
+      })
+    }))
+    const queue = new ThrottledQueue({ query, navigate })
+
+    try {
+      queue.push({ q: 'same' }, {}, 0)
+      await flush()
+      queue.push({ q: 'same' }, { history: 'push' }, 0)
+      await flush()
+
+      commits.shift()?.()
+      await flush()
+
+      expect(navigate).toHaveBeenCalledTimes(2)
+      expect(navigate).toHaveBeenLastCalledWith({ q: 'same' }, { history: 'push' })
+      expect(queue.overlay.value).toEqual({ q: 'same' })
+
+      commits.shift()?.()
+      await flush()
+
+      expect(queue.overlay.value).toEqual({})
+    }
+    finally {
+      queue.reset()
+    }
+  })
+
+  it('adopts the final query even when navigation changes the requested value', async () => {
+    const query = ref<ParsedQuery>({ q: 'old' })
+    const navigate = vi.fn(async (): Promise<void> => {
+      query.value = { q: 'canonical' }
+    })
+    const app = createApp({})
+    installQueryAdapter(app, { query, navigate })
+    const q = app.runWithContext(() => useQueryState('q', codecs.string))
+
+    q.set('requested')
+    expect(q.value).toBe('requested')
+    await flush()
+
+    expect(q.value).toBe('canonical')
+  })
+
+  it('preserves a queued write after reset while an older navigation is pending', async () => {
+    const query = ref<ParsedQuery>({})
+    const commits: Array<() => void> = []
+    const navigate = vi.fn((next: ParsedQueryRaw) => new Promise<void>((resolve) => {
+      commits.push(() => {
+        query.value = next
+        resolve()
+      })
+    }))
+    const queue = new ThrottledQueue({ query, navigate })
+
+    try {
+      queue.push({ q: 'old' }, {}, 0)
+      await flush()
+      queue.reset()
+      queue.push({ q: 'new' }, {}, 0)
+      await flush()
+
+      expect(navigate).toHaveBeenCalledOnce()
+      commits.shift()?.()
+      await flush()
+
+      expect(navigate).toHaveBeenCalledTimes(2)
+      expect(queue.overlay.value).toEqual({ q: 'new' })
+      commits.shift()?.()
+      await flush()
+
+      expect(queue.overlay.value).toEqual({})
+      expect(query.value).toEqual({ q: 'new' })
+    }
+    finally {
+      queue.reset()
+    }
+  })
+
   it('syncs a write across engines bound to the same param before any flush', () => {
     const { run } = setup()
     const a = run(() => useQueryState('q', codecs.string))
@@ -116,9 +235,13 @@ describe('shared update queue', () => {
     expect(q.value).toBe('external')
   })
 
-  it.each(['sync', 'async'] as const)('reconciles a successful %s no-op navigation without a query notification', async (kind) => {
+  it.each(['synchronous', 'asynchronous'] as const)('reconciles a successful %s no-op navigation without a query notification', async (kind) => {
     const query = ref<ParsedQuery>({ q: 'same' })
-    const navigate = vi.fn(() => kind === 'async' ? Promise.resolve() : undefined)
+    const navigate = vi.fn<QueryStateNavigate>(() => {
+      if (kind === 'asynchronous') {
+        return Promise.resolve()
+      }
+    })
     const app = createApp({})
     installQueryAdapter(app, { query, navigate })
     const q = app.runWithContext(() => useQueryState('q', codecs.string))
@@ -153,7 +276,7 @@ describe('shared update queue', () => {
   it('preserves a newer same-value write when an older navigation fails', async () => {
     const query = ref<ParsedQuery>({})
     let rejectFirst: ((error: Error) => void) | undefined
-    const navigate = vi.fn((next: ParsedQueryRaw) => {
+    const navigate = vi.fn(async (next: ParsedQueryRaw): Promise<void> => {
       if (navigate.mock.calls.length === 1) {
         return new Promise<void>((_resolve, reject) => {
           rejectFirst = reject
@@ -180,7 +303,7 @@ describe('shared update queue', () => {
   it('does not re-throttle a batch whose deadline elapsed behind a navigation', async () => {
     const query = ref<ParsedQuery>({})
     let finishFirst: (() => void) | undefined
-    const navigate = vi.fn((next: ParsedQueryRaw) => {
+    const navigate = vi.fn(async (next: ParsedQueryRaw): Promise<void> => {
       if (navigate.mock.calls.length === 1) {
         return new Promise<void>((resolve) => {
           finishFirst = () => {
@@ -226,6 +349,25 @@ describe('shared update queue', () => {
     expect(q.value).toBe('pending')
   })
 
+  it.each(['set', 'clear'] as const)('settles an external query that reflects a pending %s before navigation starts', async (operation) => {
+    const { query, navigate, run } = setup({ q: 'old' })
+    const q = run(() => useQueryState('q', codecs.string))
+
+    if (operation === 'set') {
+      q.set('next')
+      query.value = { q: 'next' }
+    }
+    else {
+      q.clear()
+      query.value = {}
+    }
+    await flush()
+
+    expect(navigate).not.toHaveBeenCalled()
+    query.value = { q: 'external' }
+    expect(q.value).toBe('external')
+  })
+
   it('does not propagate unrelated query changes through consumed binding values', async () => {
     const { query, run } = setup()
     const scope = effectScope()
@@ -256,7 +398,7 @@ describe('shared update queue', () => {
 
   it('releases the adapter observer after the last binding and pending path are gone', () => {
     const query = ref<ParsedQuery>({})
-    const adapter = { query, navigate: vi.fn() }
+    const adapter = { query, navigate: vi.fn<QueryStateNavigate>() }
     const app = createApp({})
     installQueryAdapter(app, adapter)
     const commits: ParsedQuery[] = []
@@ -285,9 +427,12 @@ describe('shared update queue', () => {
     const query = ref<ParsedQuery>({ q: 'phone' })
     const apply: Array<() => void> = []
     // Defer the URL update so we can unmount the engine mid-navigation.
-    const navigate = vi.fn((next: ParsedQueryRaw) => {
-      apply.push(() => {
-        query.value = next
+    const navigate = vi.fn(async (next: ParsedQueryRaw): Promise<void> => {
+      return new Promise<void>((resolve) => {
+        apply.push(() => {
+          query.value = next
+          resolve()
+        })
       })
     })
     const app = createApp({})
@@ -300,7 +445,8 @@ describe('shared update queue', () => {
     await flush() // navigate fired; the URL update is still pending
 
     scope.stop() // engine unmounts before the URL catches up
-    apply.forEach(fn => fn()) // the adapter-scoped queue still observes the commit
+    apply.forEach(fn => fn())
+    await flush()
 
     // No replacement engine is needed to clean the overlay. A later external change is
     // adopted instead of being shadowed by a stale pending value.
@@ -313,9 +459,12 @@ describe('shared update queue', () => {
   it('never resurrects an unmounted binding\'s committed value on a later write', async () => {
     const query = ref<ParsedQuery>({ q: 'phone' })
     const apply: Array<() => void> = []
-    const navigate = vi.fn((next: ParsedQueryRaw) => {
-      apply.push(() => {
-        query.value = next
+    const navigate = vi.fn(async (next: ParsedQueryRaw): Promise<void> => {
+      return new Promise<void>((resolve) => {
+        apply.push(() => {
+          query.value = next
+          resolve()
+        })
       })
     })
     const app = createApp({})
@@ -327,7 +476,8 @@ describe('shared update queue', () => {
     }))
     await flush()
     first.stop()
-    apply.shift()?.() // commit q=sale after the binding is gone
+    apply.shift()?.()
+    await flush()
 
     query.value = { q: 'external' }
 
@@ -389,7 +539,7 @@ describe('shared update queue', () => {
 
 describe('throttledQueue.settle', () => {
   it('makes binding ownership disposal idempotent', () => {
-    const queue = new ThrottledQueue({ query: ref<ParsedQuery>({}), navigate: vi.fn() })
+    const queue = new ThrottledQueue({ query: ref<ParsedQuery>({}), navigate: vi.fn<QueryStateNavigate>() })
     const release = queue.retainBinding()
 
     release()
@@ -422,7 +572,7 @@ describe('throttledQueue.settle', () => {
   })
 
   it('handles an empty push and empty reset without starting overlay work', async () => {
-    const navigate = vi.fn()
+    const navigate = vi.fn<QueryStateNavigate>()
     const queue = new ThrottledQueue({ query: ref<ParsedQuery>({}), navigate })
 
     queue.push({}, {}, 0)
@@ -435,7 +585,7 @@ describe('throttledQueue.settle', () => {
 
   it('keeps one canonical overlay object across large write and settlement bursts', () => {
     const query = ref<ParsedQuery>({})
-    const queue = new ThrottledQueue({ query, navigate: vi.fn() })
+    const queue = new ThrottledQueue({ query, navigate: vi.fn<QueryStateNavigate>() })
     const overlay = queue.overlay.value
 
     for (let index = 0; index < 200; index++) {
@@ -451,7 +601,7 @@ describe('throttledQueue.settle', () => {
 
   it('is a no-op for paths not present in the overlay', () => {
     const query = ref<ParsedQuery>({})
-    const navigate = vi.fn((next: ParsedQueryRaw) => {
+    const navigate = vi.fn(async (next: ParsedQueryRaw): Promise<void> => {
       query.value = next
     })
     const queue = new ThrottledQueue({ query, navigate })
@@ -469,7 +619,7 @@ describe('throttledQueue.settle', () => {
 
     try {
       const query = ref<ParsedQuery>({})
-      const navigate = vi.fn((next: ParsedQueryRaw) => {
+      const navigate = vi.fn(async (next: ParsedQueryRaw): Promise<void> => {
         query.value = next
       })
       const queue = new ThrottledQueue({ query, navigate })

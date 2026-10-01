@@ -1,6 +1,6 @@
 # Testing
 
-The **testing adapter** supplies initial query state and records URL changes
+The **testing adapter** supplies initial query state and records navigation requests
 without a router mock. **Codec helpers** verify custom codec round trips.
 
 Both live at dedicated subpaths, so they are never pulled into your app bundle:
@@ -72,10 +72,16 @@ microtask (or `vi.advanceTimersByTimeAsync` when using
 
 ### Adapter memory
 
-By default the adapter is **immutable**: its `query` stays frozen at the initial
-`searchParams`, so each flushed navigation is independent and a test stays focused
-on one unit of behavior. The composable still sees its writes optimistically, but
-`adapter.query.value` never changes.
+By default, `hasMemory` is `false`: `adapter.query.value` stays at the initial
+`searchParams`. Each navigation applies its pending writes to that initial base.
+Writes in one batch are coalesced, but completed writes are not reapplied to later
+navigations. Composables retain their simulated values in a separate read layer
+shared by bindings using that adapter. Clearing a param removes its simulated
+selection, even if it exists in the initial base.
+
+For example, starting from `{}`, writing `q` and flushing emits `{ q: 'search' }`.
+Writing `page` in a later batch emits `{ page: '2' }`, while the composables still
+read `q` as `'search'` and `page` as `2`.
 
 Pass `hasMemory: true` to match a router-backed adapter, where each navigation
 updates the query so later reads build on it:
@@ -97,7 +103,8 @@ expect(adapter.query.value).toEqual({ count: '43' }) // the URL caught up
 
 Each adapter identity owns its update queue. Create a fresh adapter per test and
 pending writes cannot leak between tests. When a test intentionally reuses an
-adapter, call `resetQueue()` to discard its scheduled write:
+adapter, call `resetQueue()` to discard pending writes and scheduled navigation.
+Without memory, it also clears simulated values so reads return to the initial base:
 
 ```ts
 const adapter = createTestingAdapter()

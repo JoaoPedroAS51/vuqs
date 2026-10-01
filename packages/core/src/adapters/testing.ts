@@ -1,9 +1,11 @@
 import type { App, Ref } from 'vue'
 import type { QueryAdapter, QueryAdapterDefaultOptions } from '../core/adapter'
-import type { NavigateOptions, ParsedQuery, ParsedQueryRaw } from '../core/types'
-import { ref } from 'vue'
+import type { Overlay } from '../core/queues/throttle'
+import type { NavigateOptions, ParsedQuery, ParsedQueryRaw, QueryStateNavigate } from '../core/types'
+import { ref, shallowRef, triggerRef } from 'vue'
 import { installQueryAdapter } from '../core/adapter'
 import { setPath } from '../core/path'
+import { registerQueryReadLayer } from '../core/query-read-layer'
 import { resetQueryRuntime } from '../core/query-runtime'
 
 /**
@@ -49,6 +51,8 @@ export interface TestingAdapterOptions {
    * When `true`, each navigation updates the adapter's query so subsequent reads
    * reflect it, matching router adapter behavior. When `false` (default), the query
    * stays frozen at `searchParams`, keeping each test focused on one navigation.
+   * Without memory, completed writes remain visible in composables but are not
+   * reapplied to later navigations.
    *
    * @default false
    */
@@ -64,7 +68,7 @@ export interface TestingAdapterOptions {
  */
 export interface TestingAdapter extends QueryAdapter {
   readonly query: Ref<ParsedQuery>
-  /** Clears this adapter's pending optimistic writes and scheduled navigation. */
+  /** Clears pending writes, scheduled navigation, and simulated values without memory. */
   readonly resetQueue: () => void
 }
 
@@ -150,7 +154,7 @@ export function createTestingAdapter(options: TestingAdapterOptions = {}): Testi
 
   const query = ref<ParsedQuery>(parseSearchParams(options.searchParams))
 
-  const navigate = (next: ParsedQueryRaw, navOptions: NavigateOptions): void => {
+  const navigate: QueryStateNavigate = (next, navOptions) => {
     if (hasMemory) {
       query.value = next
     }
@@ -164,6 +168,20 @@ export function createTestingAdapter(options: TestingAdapterOptions = {}): Testi
     navigate,
     defaultOptions,
     resetQueue: () => resetQueryRuntime(adapter),
+  }
+
+  if (!hasMemory) {
+    const simulated = shallowRef<Overlay>(Object.create(null))
+    registerQueryReadLayer(adapter, {
+      values: simulated,
+      apply(deltas) {
+        Object.assign(simulated.value, deltas)
+        triggerRef(simulated)
+      },
+      reset() {
+        simulated.value = Object.create(null)
+      },
+    })
   }
 
   return adapter

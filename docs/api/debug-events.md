@@ -62,6 +62,19 @@ tx:start → binding:set → gtq:enqueue → gtq:flush
 The trace keeps every intermediate event. Its expandable details carry sequence,
 timestamps, runtime, binding, transaction, batch, scope, and the event's typed payload.
 
+A managed `adapter:commit` is emitted after navigation completes successfully,
+including when its parsed representation differs from the serialized write. It
+precedes settlement and carries the attempted paths and batch context.
+
+While a navigation is pending, the queue keeps at most one query observation for
+attribution. A later observation reports the previous one as external. The attempt's
+outcome attributes the final observation: a successful navigation reports the
+managed commit; a rejected attempt reports it as external.
+
+Without memory, the testing adapter settles completed writes into simulated read
+state. Its queue snapshot contains only pending writes, and it does not emit a
+managed `adapter:commit` for a simulation that leaves the query unchanged.
+
 ## Common summary results
 
 Summary prose describes the observable result of a correlated operation. It does not

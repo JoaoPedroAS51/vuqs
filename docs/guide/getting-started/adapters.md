@@ -139,9 +139,25 @@ jobs:
 3. **Honor** `options.scroll` if the router supports it. (vue-router maps scroll
    to `scrollBehavior`, so the per-call option does not apply there.)
 
-It may run synchronously or return a promise.
+It completes synchronously or returns a promise for asynchronous navigation.
 
 ::: tip
 The full adapter contract, including `QueryAdapterDefaultOptions`, lives in the
 [API reference](/api/adapters).
 :::
+
+## Navigation completion
+
+For synchronous navigation, `navigate` returns `void` after applying the update.
+For asynchronous navigation, it returns a promise that resolves after `query`
+exposes the final committed state, including normalization or redirects. A
+successful navigation to the current URL also completes the attempt.
+Throw or reject on failure or cancellation.
+
+The queue releases only the versions belonging to a completed attempt. It does
+not compare serialized values with the adapter's parsed representation to prove
+that navigation committed. Writes made during that attempt remain queued for the
+next navigation.
+
+When calling `adapter.navigate` directly, await the operation and handle errors; the
+queue handles failures for composable writes.

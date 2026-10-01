@@ -32,7 +32,7 @@ export interface QueryAdapter {
   debugName?: string
   /** The current parsed query, as a ref, getter, or plain value. */
   query: MaybeRefOrGetter<ParsedQuery>
-  /** Applies the next query to the URL. */
+  /** Applies the next query synchronously or asynchronously. Throws or rejects on failure or cancellation. */
   navigate: QueryStateNavigate
   /** Defaults applied to every navigation unless overridden. */
   defaultOptions?: QueryAdapterDefaultOptions

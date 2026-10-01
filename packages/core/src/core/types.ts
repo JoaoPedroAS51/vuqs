@@ -52,11 +52,14 @@ export interface NavigateOptions {
  * @remarks
  * Receives the next parsed query and the resolved navigation options. It is
  * responsible for stringifying the query, for example with `qs`, and performing
- * the navigation. It may complete synchronously or return a promise. A returned
- * promise must settle only after that navigation has committed (or failed); the
- * shared runtime uses it to prevent older commits from overtaking newer ones.
+ * the navigation. Return `void` after a synchronous navigation, or a promise that
+ * resolves after an asynchronous navigation. When the operation completes, the
+ * adapter's query must expose the final state, including normalization or redirects.
+ * Throw or reject on failure or cancellation. The shared runtime serializes
+ * attempts and removes their pending writes when the operation completes.
  *
  * @param query - The next parsed query to write to the URL.
  * @param options - The resolved navigation options for this write.
+ * @returns A promise for asynchronous navigation, or `void` for synchronous navigation.
  */
 export type QueryStateNavigate = (query: ParsedQueryRaw, options: NavigateOptions) => void | Promise<void>

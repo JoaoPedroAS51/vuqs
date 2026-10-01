@@ -145,9 +145,8 @@ export function parseRawQuerySelection<TSchema extends QueryStateSchema>(
  * Committed model: the URL is the source of truth. A write serializes to raw
  * deltas in one optimistic overlay shared by every engine using the same adapter,
  * so concurrent writes coalesce into one navigation instead of racing.
- * Once the URL reflects a delta that param's overlay entry is reconciled away;
- * entries the URL has not caught up to are kept, so an unrelated navigation cannot
- * discard an in-flight write.
+ * Successful navigation releases the versions included in that attempt. Newer
+ * writes remain pending, so completion of an earlier navigation cannot discard them.
  *
  * Defaults resolve through a layered stack: the codec defaults are the base, and
  * modules contribute reactive layers via `defaults.register`. The merged result
@@ -188,7 +187,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
   const debug = bindDebugTarget(runtime.debug, { bindingId: id })
   const lastInvalidRaw = new Map<string, unknown>()
   const pipeline = createQueryPipeline(debug)
-  const overlay = runtime.queue.overlay
+  const readOverlay = runtime.queue.readOverlay
   const transactions = createQueryTransactionBus(runtime, schema)
 
   const resolvedOptions: ResolvedQueryStateOptions = {
@@ -234,12 +233,11 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     () => pipeline.run('read', { ...mergedDefaults.value }) as QueryStateValues<TSchema>,
   )
 
-  // The live URL with this engine's pending overlay deltas applied. The optimistic
-  // overlay is one ref shared by every engine, so reading it here re-derives this
-  // engine whenever any engine writes.
+  // Read layers and pending writes share one projection across bindings, preserving
+  // consistent reads when a completed write moves out of the pending queue.
   const optimisticQuery = computed<ParsedQuery>((previous) => {
     const query = toValue(adapter.query)
-    const current = overlay.value
+    const current = readOverlay.value
 
     // Adapter queries and the shared overlay are object-level reactive sources, so any
     // path change invalidates every engine. Preserve the previous projection when none
