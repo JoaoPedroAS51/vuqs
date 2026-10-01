@@ -1,8 +1,8 @@
-import type { App, Ref } from 'vue'
+import type { App, ShallowRef } from 'vue'
 import type { QueryAdapter, QueryAdapterDefaultOptions } from '../core/adapter'
 import type { Overlay } from '../core/queues/throttle'
-import type { NavigateOptions, ParsedQuery, ParsedQueryRaw, QueryStateNavigate } from '../core/types'
-import { ref, shallowRef, triggerRef } from 'vue'
+import type { NavigateOptions, ParsedQuery, ParsedQueryRaw, ParsedQueryValue, QueryStateNavigate } from '../core/types'
+import { shallowRef, toRaw, triggerRef } from 'vue'
 import { installQueryAdapter } from '../core/adapter'
 import { setPath } from '../core/path'
 import { registerQueryReadLayer } from '../core/query-read-layer'
@@ -34,6 +34,7 @@ export interface TestingAdapterOptions {
    * the way the core resolves paths, so `'filters.sort=name'` and
    * `{ 'filters.sort': 'name' }` both read as `{ filters: { sort: 'name' } }`,
    * matching what a router adapter delivers.
+   * Query objects are copied recursively, unwrapping Vue reactive proxies.
    *
    * @example
    * ```ts
@@ -67,9 +68,30 @@ export interface TestingAdapterOptions {
  * test can assert on the URL state directly.
  */
 export interface TestingAdapter extends QueryAdapter {
-  readonly query: Ref<ParsedQuery>
+  /** The current query snapshot. Replace `.value` to notify composables of an external update. */
+  readonly query: ShallowRef<ParsedQuery>
   /** Clears pending writes, scheduled navigation, and simulated values without memory. */
   readonly resetQueue: () => void
+}
+
+function snapshotQuery(query: ParsedQuery): ParsedQuery {
+  return Object.fromEntries(
+    Object.entries(toRaw(query)).map(([key, value]) => [key, snapshotValue(value)]),
+  )
+}
+
+function snapshotValue(value: ParsedQueryValue): ParsedQueryValue {
+  const raw = toRaw(value)
+
+  if (Array.isArray(raw)) {
+    return raw.map(snapshotValue)
+  }
+
+  if (raw !== null && typeof raw === 'object') {
+    return snapshotQuery(raw)
+  }
+
+  return raw
 }
 
 // Expand each top-level key through setPath so dot-notation keys nest, aligning
@@ -90,7 +112,7 @@ function parseSearchParams(input: TestingAdapterOptions['searchParams']): Parsed
   }
 
   if (typeof input !== 'string' && !(input instanceof URLSearchParams)) {
-    return nestPaths(input)
+    return nestPaths(snapshotQuery(input))
   }
 
   const params = typeof input === 'string'
@@ -99,7 +121,7 @@ function parseSearchParams(input: TestingAdapterOptions['searchParams']): Parsed
 
   // Repeated keys collapse into an array before nesting, so `tag=a&tag=b` reads
   // as `['a', 'b']` under one path.
-  const flat: Record<string, string | string[]> = {}
+  const flat: Record<string, string | string[]> = Object.create(null)
 
   for (const [key, value] of params) {
     const existing = flat[key]
@@ -125,6 +147,9 @@ function parseSearchParams(input: TestingAdapterOptions['searchParams']): Parsed
  * Provides an initial query parsed from `searchParams` and fires `onUrlUpdate`
  * on each flushed navigation, so a test can spy on URL updates without mocking a
  * router. Pass it to {@link installQueryAdapter} or `provideQueryAdapter`.
+ * Initial query objects and navigation inputs are copied into query snapshots.
+ * To simulate an external update, replace `adapter.query.value` with a parsed
+ * query object. Mutating its properties or arrays does not notify composables.
  *
  * Each adapter identity owns its own update queue, so fresh adapters are isolated
  * automatically. Call `adapter.resetQueue()` only when reusing the same adapter
@@ -152,14 +177,15 @@ function parseSearchParams(input: TestingAdapterOptions['searchParams']): Parsed
 export function createTestingAdapter(options: TestingAdapterOptions = {}): TestingAdapter {
   const { hasMemory = false, onUrlUpdate, defaultOptions } = options
 
-  const query = ref<ParsedQuery>(parseSearchParams(options.searchParams))
+  const query = shallowRef<ParsedQuery>(parseSearchParams(options.searchParams))
 
   const navigate: QueryStateNavigate = (next, navOptions) => {
+    const snapshot = snapshotQuery(next)
     if (hasMemory) {
-      query.value = next
+      query.value = snapshot
     }
 
-    onUrlUpdate?.({ query: next, options: navOptions })
+    onUrlUpdate?.({ query: snapshot, options: navOptions })
   }
 
   const adapter: TestingAdapter = {

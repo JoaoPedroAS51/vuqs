@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createApp } from 'vue'
+import { createApp, nextTick, reactive, readonly } from 'vue'
 import { createTestingAdapter, withVuqsTestingAdapter } from '../../src/adapters/testing'
 import { installQueryAdapter } from '../../src/core/adapter'
 import { codecs } from '../../src/core/codec'
@@ -20,6 +20,53 @@ describe('createTestingAdapter', () => {
   })
 
   describe('searchParams parsing', () => {
+    it.each(['plain', 'reactive', 'readonly'] as const)('copies %s query objects before reading their properties', (kind) => {
+      const nested = reactive({ hasOwnProperty: 'nested' })
+      const original = { hasOwnProperty: 'initial', filters: nested }
+      const input = kind === 'plain' ? original : kind === 'reactive' ? reactive(original) : readonly(original)
+      const adapter = createTestingAdapter({ searchParams: input })
+      const app = createApp({})
+      installQueryAdapter(app, adapter)
+      const own = app.runWithContext(() => useQueryState('hasOwnProperty', codecs.string))
+      const nestedOwn = app.runWithContext(() => useQueryState('filters.hasOwnProperty', codecs.string))
+
+      expect(own.value).toBe('initial')
+      expect(nestedOwn.value).toBe('nested')
+      nested.hasOwnProperty = 'changed'
+      expect(adapter.query.value).toEqual({ hasOwnProperty: 'initial', filters: { hasOwnProperty: 'nested' } })
+    })
+
+    it('copies arrays containing reactive objects without changing scalar values', () => {
+      const rows = reactive([{ hasOwnProperty: 'row', tags: reactive(['a']) }])
+      const input = reactive({ rows, zero: 0, enabled: false, blank: '', nil: null, absent: undefined })
+      const adapter = createTestingAdapter({ searchParams: input })
+
+      rows[0]!.hasOwnProperty = 'changed'
+      rows[0]!.tags.push('b')
+      rows.push({ hasOwnProperty: 'extra', tags: [] })
+
+      expect(adapter.query.value).toEqual({
+        rows: [{ hasOwnProperty: 'row', tags: ['a'] }],
+        zero: 0,
+        enabled: false,
+        blank: '',
+        nil: null,
+        absent: undefined,
+      })
+    })
+
+    it.each(['string', 'URLSearchParams'] as const)('preserves hasOwnProperty from %s input', (kind) => {
+      const search = 'hasOwnProperty=initial&filters.hasOwnProperty=nested'
+      const adapter = createTestingAdapter({ searchParams: kind === 'string' ? search : new URLSearchParams(search) })
+      const app = createApp({})
+      installQueryAdapter(app, adapter)
+      const own = app.runWithContext(() => useQueryState('hasOwnProperty', codecs.string))
+      const nested = app.runWithContext(() => useQueryState('filters.hasOwnProperty', codecs.string))
+
+      expect(own.value).toBe('initial')
+      expect(nested.value).toBe('nested')
+    })
+
     it('starts with an empty query when no searchParams are given', () => {
       const adapter = createTestingAdapter()
 
@@ -83,6 +130,55 @@ describe('createTestingAdapter', () => {
       const sort = run(() => useQueryState('filters.sort', codecs.string))
 
       expect(sort.value).toBe('name')
+    })
+  })
+
+  describe.each([false, true])('query snapshots with hasMemory=%s', (hasMemory) => {
+    it('records a copied navigation query with reactive values', async () => {
+      const onUrlUpdate = vi.fn()
+      const adapter = createTestingAdapter({ searchParams: { hasOwnProperty: 'initial' }, hasMemory, onUrlUpdate })
+      const next = reactive({ hasOwnProperty: 'next', rows: reactive([{ hasOwnProperty: 'row' }]) })
+
+      await adapter.navigate(next, { history: 'push' })
+      next.hasOwnProperty = 'changed'
+      next.rows[0]!.hasOwnProperty = 'changed'
+
+      expect(onUrlUpdate).toHaveBeenCalledExactlyOnceWith({
+        query: { hasOwnProperty: 'next', rows: [{ hasOwnProperty: 'row' }] },
+        options: { history: 'push' },
+      })
+      expect(adapter.query.value).toEqual(hasMemory
+        ? { hasOwnProperty: 'next', rows: [{ hasOwnProperty: 'row' }] }
+        : { hasOwnProperty: 'initial' })
+    })
+
+    it('updates composables when the query is replaced instead of mutated', async () => {
+      const adapter = createTestingAdapter({ searchParams: { q: 'initial', filters: { sort: 'initial' }, tags: ['a'] }, hasMemory })
+      const app = createApp({})
+      installQueryAdapter(app, adapter)
+      const q = app.runWithContext(() => useQueryState('q', codecs.string))
+      const sort = app.runWithContext(() => useQueryState('filters.sort', codecs.string))
+      const tags = app.runWithContext(() => useQueryState('tags', codecs.arrayOf(codecs.string)))
+
+      expect(q.value).toBe('initial')
+      expect(sort.value).toBe('initial')
+      expect(tags.value).toEqual(['a'])
+      const filters = adapter.query.value.filters as { sort: string }
+      const currentTags = adapter.query.value.tags as string[]
+      adapter.query.value.q = 'mutated'
+      filters.sort = 'mutated'
+      currentTags.push('b')
+      await nextTick()
+
+      expect(q.value).toBe('initial')
+      expect(sort.value).toBe('initial')
+      expect(tags.value).toEqual(['a'])
+      adapter.query.value = { q: 'replaced', filters: { sort: 'replaced' }, tags: ['c'] }
+      await nextTick()
+
+      expect(q.value).toBe('replaced')
+      expect(sort.value).toBe('replaced')
+      expect(tags.value).toEqual(['c'])
     })
   })
 

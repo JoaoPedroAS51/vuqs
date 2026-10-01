@@ -99,6 +99,21 @@ await Promise.resolve()
 expect(adapter.query.value).toEqual({ count: '43' }) // the URL caught up
 ```
 
+### Query snapshots
+
+The testing adapter exposes `query` as a `shallowRef`. Initial query objects and
+navigation inputs are copied recursively, with Vue reactive proxies unwrapped.
+Changing an input object afterwards does not change the captured query.
+
+To simulate an external URL update, replace the query snapshot:
+
+```ts
+adapter.query.value = { q: 'external', tags: ['a', 'b'] }
+```
+
+Mutating properties or arrays inside `adapter.query.value` does not notify
+composables. This applies with and without memory.
+
 ### Isolating tests
 
 Each adapter identity owns its update queue. Create a fresh adapter per test and
