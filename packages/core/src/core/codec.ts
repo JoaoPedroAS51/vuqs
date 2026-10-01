@@ -98,8 +98,20 @@ const INTEGER_PATTERN = /^[+-]?\d+$/
 const HEX_PATTERN = /^[0-9a-f]+$/i
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}/
 
-// Shared by `parse` implementations that only ever read a single query
-// string: resolves the string once and skips `decode` when it is absent.
+type QueryScalar = string | number | boolean
+
+function fromQueryScalar<T>(decode: (value: QueryScalar) => T | undefined): (raw: ParsedQueryValue) => T | undefined {
+  return (raw) => {
+    const value = Array.isArray(raw) ? raw[0] : raw
+
+    if (value === null || value === undefined || typeof value === 'object') {
+      return undefined
+    }
+
+    return decode(value)
+  }
+}
+
 function fromQueryString<T>(decode: (text: string) => T | undefined): (raw: ParsedQueryValue) => T | undefined {
   return (raw) => {
     const text = getQueryString(raw)
@@ -108,12 +120,28 @@ function fromQueryString<T>(decode: (text: string) => T | undefined): (raw: Pars
   }
 }
 
-function parseInteger(text: string): number | undefined {
-  if (!INTEGER_PATTERN.test(text)) {
+function parseNumber(value: QueryScalar): number | undefined {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : undefined
+  }
+
+  const text = getQueryString(value)
+
+  if (text === undefined) {
     return undefined
   }
 
-  return Number(text)
+  const parsed = Number(text)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+function parseInteger(value: QueryScalar): number | undefined {
+  if (typeof value === 'string' && !INTEGER_PATTERN.test(value)) {
+    return undefined
+  }
+
+  const parsed = parseNumber(value)
+  return parsed !== undefined && Number.isInteger(parsed) ? parsed : undefined
 }
 
 // `structuralEq` reads `Object.keys(date)`, which is always empty, so every
@@ -150,16 +178,16 @@ export const codecs = {
     serialize: value => value,
   }),
 
-  /** Parses a base-10 integer. Non-numeric input parses as absent; serializing truncates toward zero. */
+  /** Reads an integer from a number or base-10 string. Invalid input parses as absent; serializing truncates toward zero. */
   integer: createCodec<number>({
-    parse: fromQueryString(parseInteger),
+    parse: fromQueryScalar(parseInteger),
     serialize: value => String(Math.trunc(value)),
   }),
 
   /** Parses a 1-based index from the URL into a 0-based value. Non-integer input parses as absent. */
   index: createCodec<number>({
-    parse: fromQueryString((text) => {
-      const value = parseInteger(text)
+    parse: fromQueryScalar((raw) => {
+      const value = parseInteger(raw)
 
       if (value === undefined) {
         return undefined
@@ -170,14 +198,25 @@ export const codecs = {
     serialize: value => String(value + 1),
   }),
 
-  /** Parses a non-negative hexadecimal integer. Non-hex input parses as absent; serializing pads to even length. */
+  /**
+   * Parses a non-negative hexadecimal integer, padding serialized values to even length.
+   *
+   * @remarks
+   * Numeric query nodes are interpreted as hexadecimal through their decimal
+   * text: `10` and `'10'` both decode to `16`. Invalid input parses as absent.
+   */
   hex: createCodec<number>({
-    parse: fromQueryString((text) => {
-      if (!HEX_PATTERN.test(text)) {
+    parse: fromQueryScalar((value) => {
+      const text = typeof value === 'number' && Number.isFinite(value)
+        ? String(value)
+        : getQueryString(value)
+
+      if (text === undefined || !HEX_PATTERN.test(text)) {
         return undefined
       }
 
-      return Number.parseInt(text, 16)
+      const parsed = Number.parseInt(text, 16)
+      return Number.isFinite(parsed) ? parsed : undefined
     }),
     serialize: (value) => {
       const hex = value.toString(16)
@@ -186,28 +225,24 @@ export const codecs = {
     },
   }),
 
-  /** Parses a floating-point number. Non-numeric input parses as absent. */
+  /** Reads a finite number from a number or numeric string. Invalid input parses as absent. */
   float: createCodec<number>({
-    parse: fromQueryString((text) => {
-      const parsed = Number(text)
-
-      if (!Number.isFinite(parsed)) {
-        return undefined
-      }
-
-      return parsed
-    }),
+    parse: fromQueryScalar(parseNumber),
     serialize: value => String(value),
   }),
 
-  /** Parses the strings `'true'` and `'false'`. Any other value parses as absent. */
+  /** Reads a boolean or the strings `'true'` and `'false'`. Any other value parses as absent. */
   boolean: createCodec<boolean>({
-    parse: fromQueryString((text) => {
-      if (text === 'true') {
+    parse: fromQueryScalar((value) => {
+      if (typeof value === 'boolean') {
+        return value
+      }
+
+      if (value === 'true') {
         return true
       }
 
-      if (text === 'false') {
+      if (value === 'false') {
         return false
       }
 
@@ -218,8 +253,8 @@ export const codecs = {
 
   /** Parses a `Date` from milliseconds since the epoch. Non-integer or invalid input parses as absent. */
   timestamp: createCodec<Date>({
-    parse: fromQueryString((text) => {
-      const value = parseInteger(text)
+    parse: fromQueryScalar((raw) => {
+      const value = parseInteger(raw)
 
       if (value === undefined) {
         return undefined
@@ -336,14 +371,10 @@ export const codecs = {
     const allowed = new Set<number>(values)
 
     return createCodec<T>({
-      parse: fromQueryString((text) => {
-        const parsed = Number(text)
+      parse: fromQueryScalar((value) => {
+        const parsed = parseNumber(value)
 
-        if (!Number.isFinite(parsed)) {
-          return undefined
-        }
-
-        if (!allowed.has(parsed)) {
+        if (parsed === undefined || !allowed.has(parsed)) {
           return undefined
         }
 
@@ -376,39 +407,60 @@ export const codecs = {
    */
   enum<const T extends Record<string, string | number>>(enumObject: T): Codec<T[keyof T]> {
     const byString = new Map<string, T[keyof T]>()
+    const byNumber = new Map<number, T[keyof T]>()
 
     for (const value of enumValues(enumObject)) {
-      byString.set(String(value), value as T[keyof T])
+      const member = value as T[keyof T]
+      byString.set(String(value), member)
+
+      if (typeof value === 'number') {
+        byNumber.set(value, member)
+      }
     }
 
     return createCodec<T[keyof T]>({
-      parse: fromQueryString(text => byString.get(text)),
+      parse: fromQueryScalar((value) => {
+        if (typeof value === 'number') {
+          return byNumber.get(value)
+        }
+
+        const text = getQueryString(value)
+        return text === undefined ? undefined : byString.get(text)
+      }),
       serialize: value => String(value),
     })
   },
 
   /**
-   * Builds a codec for a JSON-encoded query value.
+   * Builds a codec that reads JSON text or an already-parsed query value.
    *
    * @remarks
-   * Invalid JSON parses as absent (`undefined`). When `validate` is provided it
-   * runs on the parsed value, and a throw is caught and treated as absent, so a
-   * schema parser such as Zod's `parse` can act as the validator.
+   * Strings are decoded with `JSON.parse`. Objects and arrays are read as complete
+   * values, including empty structures. Nullish query nodes, non-finite numeric
+   * nodes, and invalid JSON text parse as absent (`undefined`).
+   *
+   * When `validate` is provided it receives the decoded or already-parsed value.
+   * Its return value is the codec result; a throw is treated as absent. Without
+   * `validate`, the value is returned as `T` without schema validation.
    *
    * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse | `JSON.parse`}
    */
   json<T>(options: { validate?: (value: unknown) => T } = {}): Codec<T> {
     return createCodec<T>({
-      parse: fromQueryString((text) => {
+      parse: (raw) => {
+        if (raw === null || raw === undefined || (typeof raw === 'number' && !Number.isFinite(raw))) {
+          return undefined
+        }
+
         try {
-          const parsed = JSON.parse(text) as unknown
+          const parsed: unknown = typeof raw === 'string' ? JSON.parse(raw) : raw
 
           return options.validate ? options.validate(parsed) : (parsed as T)
         }
         catch {
           return undefined
         }
-      }),
+      },
       serialize: value => JSON.stringify(value),
     })
   },

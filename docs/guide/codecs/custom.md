@@ -28,9 +28,11 @@ both round-trip directions.
 ## Reading the raw value
 
 `parse` receives a `ParsedQueryValue` (a string, number, boolean, `null`, an
-array, a nested object, or `undefined`). For scalar codecs, the helper
-[`getQueryString`](/api/serializer#path-helpers) normalizes that into a
-`string | undefined`:
+array, a nested object, or `undefined`). Validate the representations your codec
+accepts in `parse`.
+
+[`getQueryString`](/api/serializer#path-helpers) reads non-empty text from a string
+or the first array item. It does not convert numbers, booleans, or objects:
 
 ```ts
 import { createCodec, getQueryString } from '@vuqs/core'
@@ -53,12 +55,21 @@ import { createCodec, getQueryString } from '@vuqs/core'
 
 const percent = createCodec<number>({
   parse: (raw) => {
-    const value = getQueryString(raw)
-    if (value === undefined || !/^\d+$/.test(value)) {
-      return undefined
+    const input = Array.isArray(raw) ? raw[0] : raw
+    let value: number
+
+    if (typeof input === 'number') {
+      value = input
     }
-    const n = Number(value)
-    return n >= 0 && n <= 100 ? n : undefined // out of range → absent
+    else {
+      const text = getQueryString(raw)
+      if (text === undefined || !/^\d+$/.test(text)) {
+        return undefined
+      }
+      value = Number(text)
+    }
+
+    return Number.isInteger(value) && value >= 0 && value <= 100 ? value : undefined
   },
   serialize: value => String(value),
 })

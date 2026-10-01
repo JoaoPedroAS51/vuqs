@@ -16,6 +16,59 @@ const schema = {
 }
 
 describe('useQueryStates', () => {
+  it.each([
+    { name: 'string values', input: { page: '2', enabled: 'false', filters: { limit: '0' }, ids: ['1', '2'] } },
+    { name: 'mixed values', input: { page: 2, enabled: false, filters: { limit: 0 }, ids: [1, 2] } },
+  ])('reads $name without replacing selections with defaults', ({ input }) => {
+    const { run } = setup(input)
+    const { values } = run(() => useQueryStates({
+      page: codecs.integer.withDefault(1),
+      enabled: codecs.boolean.withDefault(true),
+      limit: queryParam('filters.limit', codecs.integer.withDefault(10)),
+      ids: codecs.arrayOf(codecs.integer),
+    }))
+
+    expect({ ...values }).toEqual({ page: 2, enabled: false, limit: 0, ids: [1, 2] })
+  })
+
+  it.each([
+    { name: 'JSON text', input: { payload: '{"range":{"min":0},"enabled":false}', rows: ['{"id":1}', '{"id":2}'] } },
+    { name: 'parsed structures', input: { payload: { range: { min: 0 }, enabled: false }, rows: [{ id: 1 }, { id: 2 }] } },
+  ])('exposes structured values from $name', ({ input }) => {
+    const { run } = setup(input)
+    const { values } = run(() => useQueryStates({
+      payload: codecs.json<{ range: { min: number }, enabled: boolean }>(),
+      rows: codecs.arrayOf(codecs.json<{ id: number }>()),
+    }))
+
+    expect({ ...values }).toEqual({
+      payload: { range: { min: 0 }, enabled: false },
+      rows: [{ id: 1 }, { id: 2 }],
+    })
+  })
+
+  it.each([
+    { name: 'string values', external: { page: '4', enabled: 'false', ids: ['3', '4'] } },
+    { name: 'mixed values', external: { page: 4, enabled: false, ids: [3, 4] } },
+  ])('adopts external $name after a successful write', async ({ external }) => {
+    const { query, navigate, run } = setup({ other: 'keep' })
+    const { values, patch } = run(() => useQueryStates({
+      page: codecs.integer,
+      enabled: codecs.boolean,
+      ids: codecs.arrayOf(codecs.integer),
+    }))
+
+    patch({ page: 3, enabled: true, ids: [1, 2] })
+    await flush()
+
+    expect(navigate).toHaveBeenCalledExactlyOnceWith({ other: 'keep', page: '3', enabled: 'true', ids: ['1', '2'] }, {})
+    expect({ ...values }).toEqual({ page: 3, enabled: true, ids: [1, 2] })
+
+    query.value = { other: 'keep', ...external }
+
+    expect({ ...values }).toEqual({ page: 4, enabled: false, ids: [3, 4] })
+  })
+
   it('reads field values from the query', () => {
     const { run } = setup({ q: 'phone', filters: { sort: 'name' } })
     const { values } = run(() => useQueryStates(schema))
@@ -282,6 +335,18 @@ describe('useQueryStates', () => {
   })
 
   describe('object params', () => {
+    it('layers parsed child values over defaults and fills absent children', () => {
+      const filters = queryParam.object('filters', {
+        limit: codecs.integer.withDefault(10),
+        enabled: codecs.boolean.withDefault(true),
+        label: codecs.string.withDefault('all'),
+      })
+      const { run } = setup({ filters: { limit: 0, enabled: false } })
+      const { values } = run(() => useQueryStates({ filters }))
+
+      expect(values.filters).toEqual({ limit: 0, enabled: false, label: 'all' })
+    })
+
     it('resolves child defaults through the engine when the object is absent', () => {
       const bounds = queryParam.object('bounds', {
         north: queryParam('n', codecs.float).withDefault(1),

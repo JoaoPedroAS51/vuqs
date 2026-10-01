@@ -11,9 +11,9 @@ A namespace of built-in codecs and codec factories. Every codec's `parse` return
 | Member | Kind | Value type | Notes |
 | --- | --- | --- | --- |
 | `codecs.string` | codec | `string` | Empty/whitespace-only → absent. |
-| `codecs.integer` | codec | `number` | Base-10; serialize truncates toward zero. |
+| `codecs.integer` | codec | `number` | Number or base-10 string; serialize truncates toward zero. |
 | `codecs.float` | codec | `number` | Non-finite → absent. |
-| `codecs.boolean` | codec | `boolean` | Only `'true'`/`'false'`. |
+| `codecs.boolean` | codec | `boolean` | Boolean or `'true'`/`'false'`. |
 | `codecs.index` | codec | `number` | 1-based URL ⇄ 0-based value. |
 | `codecs.hex` | codec | `number` | Non-negative; serialize pads to even length. |
 | `codecs.timestamp` | codec | `Date` | Milliseconds since epoch; `eq` by `valueOf`. |
@@ -23,7 +23,7 @@ A namespace of built-in codecs and codec factories. Every codec's `parse` return
 | `codecs.literal(values)` | factory | string union | Outside the set → absent. |
 | `codecs.numberLiteral(values)` | factory | number union | Outside the set → absent. |
 | `codecs.enum(enumObject)` | factory | enum members | TS `enum`; outside it → absent. |
-| `codecs.json(options?)` | factory | `T` | Invalid JSON → absent; optional `validate`. |
+| `codecs.json(options?)` | factory | `T` | JSON text or parsed value; optional `validate`. |
 
 ### codecs.arrayOf
 
@@ -125,14 +125,16 @@ function json<T>(options?: { validate?: (value: unknown) => T }): Codec<T>
 **Parameters**
 
 - `options?: { validate?: (value: unknown) => T }`
-  - `validate?: (value: unknown) => T`: runs on the decoded value and may throw to
-    reject. A throw is caught and treated as absent, so a schema parser like Zod's
-    `.parse` works directly. Omit it to accept any parsed JSON as `T`.
+  - `validate?: (value: unknown) => T`: receives the decoded or already-parsed value
+    once and may throw to reject it. Its return value is the codec result. Omit it
+    to accept the value as `T` without schema validation.
 
 **Returns**
 
 - `Codec<T>`
-  - A codec that encodes any JSON-serializable value. Invalid JSON parses as absent.
+  - A codec that reads JSON text or an already-parsed value and serializes with
+    `JSON.stringify`. Incoming arrays are read in full. Nullish nodes, non-finite
+    numeric nodes, invalid JSON text, and validator failures parse as absent.
 
 ```ts
 const range = useQueryState('range', codecs.json({ validate: priceSchema.parse }))

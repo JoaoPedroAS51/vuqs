@@ -1,7 +1,7 @@
 # Built-in codecs
 
-A **codec** converts between a typed value and its query-string form. It pairs
-`parse` (URL to value) with `serialize` (value to URL) in one object. vuqs ships
+A **codec** converts between a parsed query value and a typed value. It pairs
+`parse` (query to value) with `serialize` (value to query) in one object. vuqs ships
 codecs for the common shapes; for anything else,
 [build your own](/guide/codecs/custom).
 
@@ -10,6 +10,21 @@ import { codecs } from '@vuqs/core'
 
 codecs.string // a ready-made codec
 codecs.arrayOf(codecs.integer) // a factory: call it to get a codec
+```
+
+## Parsed query values
+
+Numeric and boolean codecs accept native values returned by the adapter, applying
+their validation and transformations directly. String codecs, string literals,
+and ISO date codecs require text. Scalar codecs consider the first array item;
+`arrayOf` processes each item and `json` reads the complete value.
+
+```ts
+codecs.integer.parse(42) // 42
+codecs.boolean.parse(false) // false
+codecs.index.parse(1) // 0
+codecs.arrayOf(codecs.integer).parse([1, '2']) // [1, 2]
+codecs.json<{ id: number }>().parse({ id: 1 }) // { id: 1 }
 ```
 
 ## Invalid input parses as absent
@@ -37,8 +52,8 @@ useQueryState('q', codecs.string.withDefault('')) // string
 
 ### Integer
 
-A base-10 integer. Non-numeric input parses as absent; serializing truncates
-toward zero.
+Reads an integer from a number or base-10 string. Fractional, non-numeric, and
+non-finite input parses as absent; serializing truncates toward zero.
 
 ```ts
 useQueryState('page', codecs.integer.withDefault(1)) // ?page=2
@@ -46,7 +61,7 @@ useQueryState('page', codecs.integer.withDefault(1)) // ?page=2
 
 ### Float
 
-A floating-point number. Non-numeric or non-finite input parses as absent.
+Reads a finite number from a number or numeric string. Invalid input parses as absent.
 
 ```ts
 useQueryState('ratio', codecs.float) // ?ratio=1.5
@@ -55,6 +70,8 @@ useQueryState('ratio', codecs.float) // ?ratio=1.5
 ### Hex
 
 A non-negative hexadecimal integer. Serializing pads to an even length.
+Numeric query values retain hexadecimal interpretation through their decimal
+text: `codecs.hex.parse(10)` and `codecs.hex.parse('10')` both return `16`.
 
 ```ts
 useQueryState('color', codecs.hex) // ?color=ff8800 → 16746496
@@ -72,7 +89,7 @@ const page = useQueryState('page', codecs.index.withDefault(0))
 
 ## Boolean
 
-The strings `'true'` and `'false'`. Anything else parses as absent.
+Reads booleans or the strings `'true'` and `'false'`. Anything else parses as absent.
 
 ```ts
 useQueryState('archived', codecs.boolean.withDefault(false)) // ?archived=true
@@ -121,7 +138,8 @@ const status = useQueryState('status', codecs.enum(Status).withDefault(Status.Ac
 
 It also accepts numeric and heterogeneous enums. A numeric member round-trips
 through its number, not its name (`Level.High` ⇄ `?level=2`), and anything outside
-the enum parses as absent.
+the enum parses as absent. Native numbers match numeric members; they are not
+converted into string members.
 
 ```ts
 enum Level {
@@ -178,9 +196,14 @@ parse repeated keys into an array. `qs` does this; see
 
 ## JSON
 
-Encodes any JSON-serializable value. Invalid JSON parses as absent. Pass a
-`validate` function, including a schema parser such as Zod's `.parse`, to validate
-the decoded value; a throw is caught and treated as absent.
+Reads JSON text or an already-parsed query value and serializes with
+`JSON.stringify`. Objects and arrays are read in full, including empty structures.
+Nullish query nodes, non-finite numeric nodes, and invalid JSON text parse as absent.
+
+Pass a `validate` function, including a schema parser such as Zod's `.parse`, to
+validate the decoded or already-parsed value. It receives the complete value once;
+its return value is the codec result and a throw is treated as absent. Without
+`validate`, the value is accepted as `T` without schema validation.
 
 ```ts
 import { z } from 'zod'
@@ -190,6 +213,16 @@ const range = z.object({ min: z.number(), max: z.number() })
 const priceRange = useQueryState('price', codecs.json({ validate: range.parse }))
 //    ^? QueryStateRef<{ min: number, max: number } | undefined>
 // ?price=%7B%22min%22%3A0%2C%22max%22%3A99%7D → { min: 0, max: 99 }
+```
+
+Use `arrayOf(json())` for repeated JSON documents. `json()` treats an incoming
+array as the JSON value itself:
+
+```ts
+const raw = ['{"id":1}', '{"id":2}']
+
+codecs.json<string[]>().parse(raw) // ['{"id":1}', '{"id":2}']
+codecs.arrayOf(codecs.json<{ id: number }>()).parse(raw) // [{ id: 1 }, { id: 2 }]
 ```
 
 ::: warning Keep JSON small

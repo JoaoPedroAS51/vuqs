@@ -67,6 +67,30 @@ describe('queryParam', () => {
 })
 
 describe('queryParam.object', () => {
+  it.each([
+    { name: 'string values', input: { range: { min: '0', max: '2.5' }, flags: ['true', 'false'] } },
+    { name: 'mixed values', input: { range: { min: 0, max: 2.5 }, flags: [true, false] } },
+  ])('reads nested objects and arrays with $name', ({ input }) => {
+    const filters = queryParam.object('filters', {
+      range: queryParam.object('range', { min: codecs.float, max: codecs.float }),
+      flags: codecs.arrayOf(codecs.boolean),
+    })
+
+    expect(filters.read({ filters: input })).toEqual({ range: { min: 0, max: 2.5 }, flags: [true, false] })
+  })
+
+  it('reads a parsed JSON child alongside other child params', () => {
+    const filters = queryParam.object('filters', {
+      q: codecs.string,
+      payload: codecs.json<{ labels: string[] }>(),
+    })
+
+    expect(filters.read({ filters: { q: 'search', payload: { labels: ['a', 'b'] } } })).toEqual({
+      q: 'search',
+      payload: { labels: ['a', 'b'] },
+    })
+  })
+
   it('composes child params under a prefix', () => {
     const bounds = queryParam.object('bounds', {
       north: queryParam('n', codecs.float).withDefault(1),

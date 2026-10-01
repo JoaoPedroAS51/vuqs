@@ -491,6 +491,30 @@ describe('lifecycle tracing', () => {
     }
   })
 
+  it('attributes a parsed representation to its confirmed write once', async () => {
+    const query = ref<ParsedQuery>({ n: 1 })
+    const adapter = {
+      query,
+      navigate: vi.fn(async (): Promise<void> => {
+        query.value = { n: 2 }
+      }),
+    }
+    const events: DebugEvent[] = []
+    busDisposers.push(addDebugReporter(event => events.push(event), { channel: getDebugChannel(adapter) }))
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const n = app.runWithContext(() => useQueryState('n', codecs.integer))
+
+    n.set(2)
+    await flush()
+
+    const commits = events.filter(event => event.code === 'adapter:commit')
+    expect(commits).toHaveLength(1)
+    expect(commits[0]?.data).toEqual({ query: { n: 2 }, paths: ['n'], pendingPathCount: 1, source: 'write' })
+    expect(commits[0]?.context).toMatchObject({ batchId: 1, transactionIds: [1] })
+    expect(inOrder(events.map(event => event.code), ['adapter:commit', 'gtq:settle'])).toBe(true)
+  })
+
   it('reports query changes as external after a rejected attempt', async () => {
     const query = ref<ParsedQuery>({ q: 'old' })
     const adapter = {

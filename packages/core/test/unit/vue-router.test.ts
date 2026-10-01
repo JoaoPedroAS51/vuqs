@@ -179,6 +179,34 @@ describe('provideVueRouterAdapter', () => {
 })
 
 describe('createVueRouterAdapter: query commits', () => {
+  it('confirms duplicate navigation while preserving the parsed query', async () => {
+    const queries: Record<string, ParsedQuery> = { 'value=3': { value: 3 }, 'value=4': { value: 4 } }
+    const router = makeRouter({
+      parseQuery: search => queries[search] as LocationQuery,
+      stringifyQuery: query => stringifyQuery(query),
+    })
+    await router.push('/?value=3')
+    const initial = router.currentRoute.value.query
+    const adapter = createVueRouterAdapter({ router })
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const scope = effectScope()
+
+    try {
+      const value = scope.run(() => app.runWithContext(() => useQueryState('value', codecs.integer)))!
+      value.set(3)
+      await flush()
+
+      expect(router.currentRoute.value.query).toBe(initial)
+      await router.push('/?value=4')
+      expect(value.value).toBe(4)
+    }
+    finally {
+      resetQueryRuntime(adapter)
+      scope.stop()
+    }
+  })
+
   it.each([
     { name: 'number', written: '3', committed: 3, external: 4, search: 'value=3', nextSearch: 'value=4' },
     { name: 'boolean', written: 'true', committed: true, external: false, search: 'value=true', nextSearch: 'value=false' },
