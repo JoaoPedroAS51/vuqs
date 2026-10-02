@@ -119,25 +119,37 @@ const status = useQueryState('status', codecs.enum(Status))
 ### codecs.json
 
 ```ts
+function json<T>(options: { validate: StandardSchemaV1<unknown, T> }): Codec<T>
 function json<T>(options?: { validate?: (value: unknown) => T }): Codec<T>
+function json<T>(options: {
+  validate?: ((value: unknown) => T) | StandardSchemaV1<unknown, T>
+}): Codec<T>
 ```
 
 **Parameters**
 
-- `options?: { validate?: (value: unknown) => T }`
-  - `validate?: (value: unknown) => T`: receives the decoded or already-parsed value
-    once and may throw to reject it. Its return value is the codec result. Omit it
-    to accept the value as `T` without schema validation.
+- `options.validate`: a callback or a synchronous Standard Schema. Receives the
+  decoded or already-parsed value once. The callback return value or schema
+  output is the codec result. Omit it to accept the value as `T` without validation.
 
 **Returns**
 
 - `Codec<T>`
   - A codec that reads JSON text or an already-parsed value and serializes with
     `JSON.stringify`. Incoming arrays are read in full. Nullish nodes, non-finite
-    numeric nodes, invalid JSON text, and validator failures parse as absent.
+    numeric nodes, invalid JSON text, validation issues, and validator throws
+    parse as absent. The returned codec's `parse` throws `TypeError` when a
+    Standard Schema returns a Promise.
+  - The validator output must round-trip through `JSON.stringify` and validation.
+
+**Example**
 
 ```ts
-const range = useQueryState('range', codecs.json({ validate: priceSchema.parse }))
+import { codecs, useQueryState } from '@vuqs/core'
+import { z } from 'zod'
+
+const priceSchema = z.object({ min: z.number(), max: z.number() })
+const range = useQueryState('range', codecs.json({ validate: priceSchema }))
 ```
 
 ## createCodec <Badge type="info" text="@vuqs/core" />

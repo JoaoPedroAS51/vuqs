@@ -1,3 +1,4 @@
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { Codec, CodecWithDefault } from '../../src/core/codec'
 import { describe, expectTypeOf, it } from 'vitest'
 import { codecs, createCodec } from '../../src/core/codec'
@@ -60,6 +61,23 @@ describe('nullable codec types', () => {
 })
 
 describe('codec value types', () => {
+  it('infers JSON values from callback and Standard Schema outputs', () => {
+    const schema: StandardSchemaV1<string, number> = {
+      '~standard': { version: 1, vendor: 'test', validate: value => ({ value: String(value).length }) },
+    }
+
+    expectTypeOf(codecs.json({ validate: schema })).toEqualTypeOf<Codec<number>>()
+    expectTypeOf(codecs.json({ validate: (value: unknown) => String(value) })).toEqualTypeOf<Codec<string>>()
+    expectTypeOf(codecs.json<{ id: number }>()).toEqualTypeOf<Codec<{ id: number }>>()
+    expectTypeOf(codecs.json()).toEqualTypeOf<Codec<unknown>>()
+    expectTypeOf(codecs.json({ validate: schema }).withDefault(0).defaultValue).toEqualTypeOf<number>()
+
+    const callableSchema = Object.assign((value: unknown): string | number => String(value), schema)
+    expectTypeOf(codecs.json({ validate: callableSchema })).toEqualTypeOf<Codec<number>>()
+
+    // @ts-expect-error the schema returns a number, not a string
+    codecs.json<string>({ validate: schema })
+  })
   it('infers numeric codecs', () => {
     expectTypeOf(codecs.index).toEqualTypeOf<Codec<number>>()
     expectTypeOf(codecs.hex).toEqualTypeOf<Codec<number>>()

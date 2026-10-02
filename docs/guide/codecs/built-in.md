@@ -204,20 +204,27 @@ The text `"null"` decodes to the JSON value `null`. Declare it in `T` when neede
 for example `codecs.json<{ id: number } | null>()`. A native `null` query node
 parses as absent.
 
-Pass a `validate` function, including a schema parser such as Zod's `.parse`, to
-validate the decoded or already-parsed value. It receives the complete value once;
-its return value is the codec result and a throw is treated as absent. Without
-`validate`, the value is accepted as `T` without schema validation.
+Pass a callback or a synchronous [Standard Schema](https://standardschema.dev/schema)
+as `validate`. It receives the complete decoded or already-parsed value once.
+The callback return value or schema output is the codec result. Validation issues
+and throws parse as absent. Without `validate`, the value is accepted as `T`
+without schema validation.
 
 ```ts
 import { z } from 'zod'
+import { codecs, useQueryState } from '@vuqs/core'
 
 const range = z.object({ min: z.number(), max: z.number() })
 
-const priceRange = useQueryState('price', codecs.json({ validate: range.parse }))
+const priceRange = useQueryState('price', codecs.json({ validate: range }))
 //    ^? QueryStateRef<{ min: number, max: number } | undefined>
 // ?price=%7B%22min%22%3A0%2C%22max%22%3A99%7D → { min: 0, max: 99 }
 ```
+
+Callbacks such as `range.parse` remain supported. The codec's `parse` throws
+`TypeError` when a Standard Schema returns a Promise. The schema output
+must remain serializable and be accepted on the next read. For transformations
+that require an inverse mapping, use a [custom codec](/guide/codecs/custom).
 
 Use `arrayOf(json())` for repeated JSON documents. `json()` treats an incoming
 array as the JSON value itself:

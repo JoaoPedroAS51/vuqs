@@ -133,19 +133,21 @@ The built-in date codecs do exactly this.
 
 For structured values you don't need a hand-rolled codec.
 [`codecs.json`](/guide/codecs/built-in#json) already accepts a `validate`
-function, and a schema parser can be passed directly:
+callback or a synchronous Standard Schema:
 
 ```ts
 import { z } from 'zod'
+import { codecs, useQueryState } from '@vuqs/core'
 
 const filters = z.object({ min: z.number(), max: z.number() })
 
-const range = useQueryState('range', codecs.json({ validate: filters.parse }))
+const range = useQueryState('range', codecs.json({ validate: filters }))
 ```
 
-A `validate` that throws (as Zod's `.parse` does on a mismatch) is caught and
-treated as absent, so an invalid URL falls back to the default, same as any other
-codec.
+Callbacks such as `filters.parse` remain supported. Validation issues and throws
+are treated as absent. The codec's `parse` throws `TypeError` when a Standard
+Schema returns a Promise.
+Schema output must round-trip through JSON serialization and validation.
 
 ## Reusing a custom codec
 
