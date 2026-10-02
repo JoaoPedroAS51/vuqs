@@ -197,6 +197,31 @@ holds none of its keys. `.withDefaultsWhenPresent()` gates the child defaults on
 the object being present in the URL (or carrying its own default), so an absent
 object stays absent instead of materializing from child defaults.
 
+Resolution follows the object composition. A present child object resolves its
+own missing children from the applicable defaults. Plain object params keep
+`selected` and `read` as the explicit selection:
+
+```ts
+import { codecs, queryParam, useQueryStates } from '@vuqs/core'
+import { withRuntimeDefaults } from '@vuqs/core/modules'
+
+const filters = queryParam.object('filters', {
+  range: queryParam.object('range', {
+    min: codecs.integer.withDefault(0),
+    max: codecs.integer,
+  }),
+})
+const query = useQueryStates({ filters }).use(withRuntimeDefaults())
+
+// URL: ?filters[range][max]=10
+query.selected.filters // { range: { max: 10 } }
+query.values.filters // { range: { min: 0, max: 10 } }
+```
+
+A missing child with `.withDefaultsWhenPresent()` stays absent even when the
+parent is present or a runtime default supplies that child. A child carrying its
+own `.withDefault(...)` can resolve while absent.
+
 ## Definitions never collide
 
 vuqs throws if two params in a schema declare the same query path, because their

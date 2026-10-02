@@ -39,6 +39,8 @@ export interface DefinedQueryParam<T> {
    * a runtime default) reaches a missing child of a present object. Absence and
    * scalars are resolved by the engine directly: a defined selection wins over
    * the default.
+   * Present object children use their own resolver. Missing presence-gated
+   * children remain absent.
    */
   resolve?: (selection: T, defaults: T | undefined) => T
   /** The param's default value, if the codec or builder declared one. */

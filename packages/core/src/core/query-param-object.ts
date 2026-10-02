@@ -114,16 +114,16 @@ export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
       const value: Record<string, unknown> = {}
 
       for (const key of childKeys) {
+        const child = children[key]
         const childSelection = selection[key]
+        const fallback = (defaults as Record<string, unknown> | undefined)?.[key as string] ?? mergedDefault?.[key]
 
         if (childSelection !== undefined) {
-          value[key] = childSelection
+          value[key] = child.resolve ? child.resolve(childSelection, fallback) : childSelection
           continue
         }
 
-        const fallback = (defaults as Record<string, unknown> | undefined)?.[key as string] ?? mergedDefault?.[key]
-
-        if (fallback !== undefined) {
+        if (!child.presenceGated && fallback !== undefined) {
           value[key] = structuralClone(fallback)
         }
       }
