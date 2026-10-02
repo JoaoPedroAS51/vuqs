@@ -1,6 +1,63 @@
-import type { Codec } from '../../src/core/codec'
+import type { Codec, CodecWithDefault } from '../../src/core/codec'
 import { describe, expectTypeOf, it } from 'vitest'
-import { codecs } from '../../src/core/codec'
+import { codecs, createCodec } from '../../src/core/codec'
+import { queryParam } from '../../src/core/query-param'
+import { createSerializer } from '../../src/core/serializer'
+import { toQueryRefs } from '../../src/core/to-query-refs'
+import { useQueryState } from '../../src/core/use-query-state'
+import { useQueryStates } from '../../src/core/use-query-states'
+
+describe('nullable codec types', () => {
+  it('widens built-in, factory, and custom value types', () => {
+    expectTypeOf(codecs.string.nullable()).toEqualTypeOf<Codec<string | null>>()
+    expectTypeOf(codecs.integer.nullable()).toEqualTypeOf<Codec<number | null>>()
+    expectTypeOf(codecs.boolean.nullable()).toEqualTypeOf<Codec<boolean | null>>()
+    expectTypeOf(codecs.isoDate.nullable()).toEqualTypeOf<Codec<Date | null>>()
+    expectTypeOf(codecs.literal(['asc', 'desc']).nullable()).toEqualTypeOf<Codec<'asc' | 'desc' | null>>()
+    expectTypeOf(codecs.arrayOf(codecs.string).nullable()).toEqualTypeOf<Codec<string[] | null>>()
+    expectTypeOf(codecs.json<{ id: number }>().nullable()).toEqualTypeOf<Codec<{ id: number } | null>>()
+    expectTypeOf(createCodec({ parse: codecs.string.parse, serialize: (value: string) => value }).nullable())
+      .toEqualTypeOf<Codec<string | null>>()
+
+    codecs.integer.nullable().serialize(null)
+    // @ts-expect-error nullable does not accept another value type
+    codecs.integer.nullable().serialize('1')
+    // @ts-expect-error the original codec stays non-nullable
+    codecs.integer.serialize(null)
+  })
+
+  it('preserves defaulted types in both modifier orders', () => {
+    expectTypeOf(codecs.string.nullable().withDefault(null)).toEqualTypeOf<CodecWithDefault<string | null>>()
+    expectTypeOf(codecs.string.withDefault('').nullable()).toEqualTypeOf<CodecWithDefault<string | null>>()
+    expectTypeOf(codecs.string.withDefault('').nullable().withDefault(null).nullable())
+      .toEqualTypeOf<CodecWithDefault<string | null>>()
+    expectTypeOf(codecs.string.nullable().nullable()).toEqualTypeOf<Codec<string | null>>()
+  })
+
+  it('narrows bound reads only when a default is declared', () => {
+    const nullable = codecs.string.nullable()
+    const noDefault = useQueryState('q', nullable)
+    const defaulted = useQueryState('q', nullable.withDefault(null))
+    const query = useQueryStates({
+      q: queryParam('search.q', nullable).withDefault(null),
+      count: codecs.integer.nullable(),
+    })
+    const refs = toQueryRefs(query)
+
+    expectTypeOf(noDefault.value).toEqualTypeOf<string | null | undefined>()
+    expectTypeOf(defaulted.value).toEqualTypeOf<string | null>()
+    expectTypeOf(query.values.q).toEqualTypeOf<string | null>()
+    expectTypeOf(refs.q.value).toEqualTypeOf<string | null>()
+    expectTypeOf(refs.count.value).toEqualTypeOf<number | null | undefined>()
+
+    defaulted.set(null)
+    query.patch({ q: null })
+    query.replace({ q: null })
+    createSerializer({ q: nullable })({ q: null })
+    // @ts-expect-error a defaulted single ref clears through clear()
+    defaulted.set(undefined)
+  })
+})
 
 describe('codec value types', () => {
   it('infers numeric codecs', () => {

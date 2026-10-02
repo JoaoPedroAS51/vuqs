@@ -162,10 +162,11 @@ function createCodec<T>(input: CodecInput<T>): Codec<T>
 **Returns**
 
 - `codec: Codec<T>`
-  - The codec, plus a `.withDefault()` factory.
+  - The codec with `.withDefault()` and `.nullable()` modifiers.
   - `parse`, `serialize`, `eq`: as supplied, with `eq` defaulted.
   - `readonly defaultValue?: T`: present only after `.withDefault()`.
   - `withDefault(defaultValue: T): CodecWithDefault<T>`: see [`Codec.withDefault`](#codec-withdefault).
+  - `nullable(): Codec<T | null>`: see [`Codec.nullable`](#codec-nullable).
 
 ```ts
 import { createCodec, getQueryString } from '@vuqs/core'
@@ -204,4 +205,44 @@ function withDefault<T>(defaultValue: T): CodecWithDefault<T>
 ```ts
 codecs.integer // Codec<number>            → ref is number | undefined
 codecs.integer.withDefault(1) // CodecWithDefault<number> → ref is number
+```
+
+## Codec.nullable <Badge type="info" text="@vuqs/core" />
+
+**Signature**
+
+```ts
+interface Codec<T> {
+  nullable: () => Codec<T | null>
+}
+
+interface CodecWithDefault<T> extends Codec<T> {
+  nullable: () => CodecWithDefault<T | null>
+}
+```
+
+**Parameters**
+
+None.
+
+**Returns**
+
+- A new codec that serializes `null` as `undefined`, omitting the param from the
+  URL. Other values use the original serializer.
+- Parsing stays unchanged, including absence and invalid-input handling.
+- Equality treats two null values as equal and null versus a non-null value as
+  unequal. Other comparisons use the original equality function.
+- An existing default is preserved. Add `.withDefault(null)` to read absence as
+  `null`.
+
+**Example**
+
+```ts
+import { codecs, useQueryState } from '@vuqs/core'
+
+const state = useQueryState('state', codecs.string.nullable().withDefault(null))
+//    ^? QueryStateRef<string | null>
+
+state.set('active')
+state.set(null) // remove the param; state reads null
 ```

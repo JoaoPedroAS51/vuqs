@@ -90,6 +90,17 @@ describe('createSerializer', () => {
     expect(serialize({ payload: null })).toEqual({})
   })
 
+  it('omits nullable values independently of default elision', () => {
+    const serialize = createSerializer({
+      q: queryParam('search.q', codecs.string.nullable()).withDefault(null),
+      count: codecs.integer.withDefault(0).nullable(),
+    }, { clearOnDefault: false })
+
+    const base = { search: { q: 'first', keep: '' }, count: '3', other: 'keep' }
+    expect(serialize(base, { q: null, count: null })).toEqual({ search: { keep: '' }, other: 'keep' })
+    expect(serialize({ q: 'second', count: 0 })).toEqual({ search: { q: 'second' }, count: '0' })
+  })
+
   it('drops a value equal to its default', () => {
     const serialize = createSerializer(schema)
 

@@ -140,6 +140,48 @@ describe('useQueryStates', () => {
     expect(values.q).toBeUndefined()
   })
 
+  it('clears nullable params through patch and refs without serializing defaults', async () => {
+    const { query, run } = setup({ search: { q: 'first', tags: ['a', 'b'], page: '2' }, other: 'keep' })
+    const state = run(() => useQueryStates({
+      q: queryParam('search.q', codecs.string.nullable()).withDefault(null),
+      tags: queryParam('search.tags', codecs.arrayOf(codecs.string).nullable()).withDefault(null),
+      page: queryParam('search.page', codecs.integer),
+    }, { clearOnDefault: false }))
+    const refs = toQueryRefs(state)
+
+    state.patch({ q: null })
+    refs.tags.set(null)
+
+    expect(state.values.q).toBeNull()
+    expect(state.values.tags).toBeNull()
+    expect(state.values.page).toBe(2)
+    await flush()
+    expect(query.value).toEqual({ search: { page: '2' }, other: 'keep' })
+
+    refs.q.set('second')
+    await flush()
+    expect(state.values.q).toBe('second')
+    expect(query.value).toEqual({ search: { page: '2', q: 'second' }, other: 'keep' })
+
+    refs.q.clear()
+    await flush()
+    expect(state.values.q).toBeNull()
+    expect(query.value).toEqual({ search: { page: '2' }, other: 'keep' })
+  })
+
+  it('preserves a date default when clearing a nullable codec with null', async () => {
+    const fallback = new Date('2026-01-01T00:00:00.000Z')
+    const { query, run } = setup({ date: '2026-02-01' })
+    const date = run(() => useQueryState('date', codecs.isoDate.withDefault(fallback).nullable()))
+
+    date.set(null)
+
+    expect(date.value).toEqual(fallback)
+    await flush()
+    expect(query.value).toEqual({})
+    expect(date.value).toEqual(fallback)
+  })
+
   it.each([
     'values',
     'single assignment',

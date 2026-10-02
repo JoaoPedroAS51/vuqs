@@ -12,10 +12,12 @@ interface Codec<T> {
   eq: (a: T, b: T) => boolean
   readonly defaultValue?: T
   withDefault: (defaultValue: T) => CodecWithDefault<T>
+  nullable: () => Codec<T | null>
 }
 
 interface CodecWithDefault<T> extends Codec<T> {
   readonly defaultValue: T
+  nullable: () => CodecWithDefault<T | null>
   // parse stays a selection (T | undefined); the engine's default layer resolves the default
 }
 

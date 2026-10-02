@@ -23,6 +23,23 @@ export interface Codec<T> {
   readonly defaultValue?: T
   /** Returns a variant carrying `defaultValue`, which the param layer applies when the value is absent. */
   withDefault: (defaultValue: T) => CodecWithDefault<T>
+  /**
+   * Returns a variant that serializes `null` as absence.
+   *
+   * @remarks
+   * Parsing stays unchanged. Non-null values use the original serialization and
+   * equality. Two null values are equal; null and a non-null value are unequal.
+   * The default is preserved without adding one.
+   *
+   * @returns A codec accepting `T | null`.
+   *
+   * @example
+   * ```ts
+   * const state = codecs.string.nullable().withDefault(null)
+   * state.serialize(null) // undefined
+   * ```
+   */
+  nullable: () => Codec<T | null>
 }
 
 /**
@@ -39,6 +56,8 @@ export interface Codec<T> {
  */
 export interface CodecWithDefault<T> extends Codec<T> {
   readonly defaultValue: T
+  /** Returns a nullable variant carrying the same default. */
+  nullable: () => CodecWithDefault<T | null>
 }
 
 /**
@@ -66,7 +85,7 @@ export interface CodecInput<T> {
  *
  * @typeParam T - The decoded value type.
  * @param input - The parse, serialize, and optional equality functions.
- * @returns A codec, including a `withDefault` factory.
+ * @returns A codec with `withDefault` and `nullable` modifiers.
  *
  * @example
  * ```ts
@@ -87,7 +106,15 @@ export function createCodec<T>(input: CodecInput<T>): Codec<T> {
       return {
         ...codec,
         defaultValue,
+        nullable: () => codec.nullable().withDefault(defaultValue),
       }
+    },
+    nullable() {
+      return createCodec<T | null>({
+        parse: codec.parse,
+        serialize: value => value === null ? undefined : codec.serialize(value),
+        eq: (a, b) => a === null || b === null ? a === b : codec.eq(a, b),
+      })
     },
   }
 

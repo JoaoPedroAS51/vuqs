@@ -13,6 +13,7 @@ interface Codec<T> {
   serialize: (value: T) => ParsedQueryValue
   eq: (a: T, b: T) => boolean
   withDefault: (value: T) => CodecWithDefault<T>
+  nullable: () => Codec<T | null>
 }
 ```
 

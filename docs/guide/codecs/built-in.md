@@ -248,6 +248,29 @@ codecs.string.withDefault('') // QueryStateRef<string>, and '' is dropped from t
 1. Reads become `T`: an absent key returns the default.
 2. The default is **omitted from the URL** via `clearOnDefault`.
 
+## Nullable writes: `.nullable()`
+
+`.nullable()` returns a codec that accepts `null` and serializes it as absence.
+Parsing stays unchanged. Without a default, an absent param still reads as
+`undefined`; use `.withDefault(null)` when the empty state should be `null`:
+
+```ts
+const state = useQueryState('state', codecs.string.nullable().withDefault(null))
+//    ^? QueryStateRef<string | null>
+
+state.set(null) // remove the param; state reads null
+```
+
+The modifier preserves an existing default in either order:
+
+```ts
+codecs.integer.withDefault(1).nullable()
+codecs.integer.nullable().withDefault(1)
+```
+
+It also works with factory and custom codecs. On a JSON codec, nullable writes
+omit `null` instead of encoding the text `"null"`.
+
 ## Summary
 
 | Codec | Type | URL example |
