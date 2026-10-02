@@ -385,15 +385,16 @@ interface QueryCore<TSchema> {
 }
 ```
 
-`transact` is the only module write primitive. A `patch` skips `undefined`
-entries; a `replace` clears absent or `undefined` entries. Both apply their full
-key set to the optimistic state before emitting one transaction start. Its
-`defaultPolicy` is `'binding'` by default, which applies `clearOnDefault`.
+`transact` is the only module write primitive. A `patch` preserves omitted params
+and clears explicit `undefined`; a `replace` clears absent or `undefined` entries.
+Both apply their full key set to the optimistic state before emitting one
+transaction start. Its `defaultPolicy` is `'binding'` by default, which applies
+`clearOnDefault`.
 Use `'preserve-explicit'` only for exact selection replay: an explicitly supplied
 value remains present even when it equals the resolved default. Codecs, the write
 pipeline, replacement clears, navigation, and transaction observation still apply.
 
-An empty or `undefined`-only patch creates no transaction. An explicitly touched
+An empty patch creates no transaction. An explicitly touched
 key emits a start even when it serializes to a no-op, because observers consume the
 write intent rather than only URL differences; it still follows normal navigation
 scheduling. The complete request is validated and serialized before the optimistic

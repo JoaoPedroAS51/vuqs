@@ -103,18 +103,42 @@ describe('query transactions', () => {
     ])
   })
 
-  it('skips an empty patch and undefined patch entries without allocating an id', () => {
+  it('skips an empty patch without allocating an id', () => {
     const adapter = createTestingAdapter()
     const { engine } = createEngine(adapter, schema)
     const starts = vi.fn()
     engine.query.transactions.observe({ start: starts })
 
     engine.query.transact({ mode: 'patch', values: {} })
-    engine.query.transact({ mode: 'patch', values: { q: undefined } })
     engine.query.transact({ mode: 'patch', values: { q: 'sale' } })
 
     expect(starts).toHaveBeenCalledOnce()
     expect(starts).toHaveBeenCalledWith(expect.objectContaining({ id: 1, keys: ['q'] }))
+  })
+
+  it('clears explicit undefined entries and preserves omitted params in a patch', async () => {
+    const onUrlUpdate = vi.fn()
+    const adapter = createTestingAdapter({
+      searchParams: { q: 'phone', filters: { sort: 'name', keep: '' }, other: 'keep' },
+      hasMemory: true,
+      onUrlUpdate,
+    })
+    const { engine } = createEngine(adapter, schema)
+    const starts = vi.fn()
+    engine.query.transactions.observe({ start: starts })
+
+    engine.query.transact({ mode: 'patch', values: { sort: undefined } })
+
+    expect(starts).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      id: 1,
+      mode: 'patch',
+      keys: ['sort'],
+      paths: ['filters.sort'],
+    }))
+    expect(engine.state.selected.value).toEqual({ q: 'phone' })
+    await flush()
+    expect(adapter.query.value).toEqual({ q: 'phone', filters: { keep: '' }, other: 'keep' })
+    expect(onUrlUpdate).toHaveBeenCalledOnce()
   })
 
   it('treats absent and undefined replace entries as clears', async () => {
@@ -181,7 +205,7 @@ describe('query transactions', () => {
     expect(adapter.query.value).toEqual({ page: '2' })
   })
 
-  it('preserves null as a legitimate codec value during replacement', async () => {
+  it.each(['patch', 'replace'] as const)('preserves null as a codec value during %s', async (mode) => {
     const nullable = createCodec<string | null>({
       parse: raw => raw === 'null' ? null : typeof raw === 'string' ? raw : undefined,
       serialize: value => value === null ? 'null' : value,
@@ -191,7 +215,7 @@ describe('query transactions', () => {
       value: queryParam('value', nullable),
     })
 
-    engine.query.transact({ mode: 'replace', values: { value: null } })
+    engine.query.transact({ mode, values: { value: null } })
 
     expect(engine.state.selected.value).toEqual({ value: null })
     await flush()
@@ -206,7 +230,7 @@ describe('query transactions', () => {
     engine.query.transactions.observe({ start: starts })
 
     engine.query.transact({ mode: 'patch', values: { q: 'same' } })
-    engine.query.transact({ mode: 'patch', values: { sort: null } })
+    engine.query.transact({ mode: 'patch', values: { sort: undefined } })
 
     expect(starts).toHaveBeenCalledTimes(2)
     expect(starts.mock.calls[0]![0]).toMatchObject({ id: 1, keys: ['q'] })

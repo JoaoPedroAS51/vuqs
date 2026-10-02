@@ -72,7 +72,7 @@ queryParam('q', { defaultValue: '' }) // a string param with a default
 ```
 
 A codec carrying `.withDefault()` produces a defaulted param. `useQueryStates`
-narrows that param to non-nullable.
+narrows that param's read type to `T` by resolving absence to the default.
 
 ## Builder modifiers
 

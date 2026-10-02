@@ -136,23 +136,20 @@ export type QueryStateRefValue<TDefinition extends DefinedQueryParam<any>>
  * @typeParam TSchema - The schema whose params determine the value types.
  */
 export type QueryStateValues<TSchema extends QueryStateSchema> = {
-  [Key in keyof TSchema]?: QueryStateValueOf<TSchema[Key]>
+  [Key in keyof TSchema]?: QueryStateValueOf<TSchema[Key]> | undefined
 }
 
 /**
- * The write map for a schema: omit a param (or pass `undefined`) to leave it
- * untouched, `null` to clear it from the URL, or a value to set it.
+ * The partial write map for a schema: omit a param to preserve it, pass
+ * `undefined` to clear it from the URL, or a value to set it.
  *
  * @remarks
- * `null` is the explicit clear command for batch and standalone writes, distinct
- * from an absent param, which is skipped. Reads never yield `null`: a cleared
- * param reads back `undefined` or its default. The three-state input allows a
- * partial write to preserve unmentioned params.
+ * A cleared param reads back `undefined` or its resolved default.
  *
  * @typeParam TSchema - The schema whose params determine the value types.
  */
 export type QueryStateWriteValues<TSchema extends QueryStateSchema> = {
-  [Key in keyof TSchema]?: QueryStateValueOf<TSchema[Key]> | null
+  [Key in keyof TSchema]?: QueryStateValueOf<TSchema[Key]> | undefined
 }
 
 /**

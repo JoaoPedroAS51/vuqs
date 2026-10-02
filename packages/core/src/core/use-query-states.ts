@@ -52,7 +52,8 @@ export type QueryComposable<TSchema extends QueryStateSchema, TApi> = TApi & {
  * The reactive value map returned by {@link useQueryStates}: each param is a
  * value, not a ref. Read `values.page`; assign `values.page = x` to write with
  * the default navigation options, or `values.page = undefined` to clear a
- * nullable param. Use Vue's `toRefs` to obtain individual refs.
+ * param whose type includes `undefined`. Use Vue's `toRefs` to obtain individual
+ * refs.
  *
  * @typeParam TSchema - The schema bound to the URL.
  */
@@ -67,16 +68,15 @@ export type QueryStatesValues<TSchema extends QueryStateSchema> = {
  */
 export interface QueryStatesActions<TSchema extends QueryStateSchema> {
   /**
-   * Partially updates params as one atomic transaction. Omit a param (or pass
-   * `undefined`) to leave it untouched, `null` to clear it, or a value to set it.
+   * Partially updates params as one atomic transaction. Omit a param to preserve
+   * it, pass `undefined` to clear it, or a value to set it.
    * Other writes in the same adapter's coalescing window may share its navigation.
    */
   patch: (values: QueryStateWriteValues<TSchema>, options?: NavigateOptions) => void
   /**
    * Replaces the whole state as one atomic transaction: sets the given params and
-   * clears every param absent or explicitly `undefined`. Both are clear signals,
-   * so this writer takes no `null`. Other writes in the same adapter's coalescing
-   * window may share its navigation.
+   * clears every param absent or explicitly `undefined`. Other writes in the
+   * adapter's coalescing window may share its navigation.
    */
   replace: (values: QueryStateValues<TSchema>, options?: NavigateOptions) => void
   /** Clears every param, optionally overriding the navigation options. */
@@ -107,8 +107,8 @@ export interface UseQueryStatesReturn<TSchema extends QueryStateSchema>
  * discard them.
  *
  * `values` is reactive: `values.page` reads, `values.page = x` writes with the
- * default options, and `values.page = undefined` clears a nullable param. Use
- * `patch` for partial batch writes (with `null` to clear) and per-call options,
+ * default options. Assigning `undefined` clears a param whose type includes it.
+ * Use `patch` for partial batch writes and per-call options,
  * `replace` to set the whole state at once (absent params clear), and `clear` to
  * reset every param. Use {@link useQueryState} for a single-param ref with
  * per-call options.
@@ -135,7 +135,7 @@ export interface UseQueryStatesReturn<TSchema extends QueryStateSchema>
  * })
  *
  * values.q = 'sale'
- * patch({ q: 'phone', sort: null }, { history: 'push' })
+ * patch({ q: 'phone', sort: undefined }, { history: 'push' })
  * ```
  */
 export function useQueryStates<TSchema extends QueryStateSchemaInput>(

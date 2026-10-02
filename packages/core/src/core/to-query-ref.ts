@@ -35,8 +35,7 @@ export interface QueryRef<TSchema extends QueryStateSchema>
  * params are omitted, defaulted params always appear. The snapshot keeps a stable
  * reference while its content is unchanged, so a `v-model` write-back cycle does
  * not churn identity. Assigning replaces the whole state: every param absent or
- * explicitly `undefined` in the assigned value is cleared. Both are clear signals,
- * so this ref takes no `null`.
+ * explicitly `undefined` in the assigned value is cleared.
  *
  * Pass the {@link useQueryStates} composable. Use this helper when the value is
  * the complete state, such as a form model or an API request object; use

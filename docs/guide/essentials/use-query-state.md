@@ -33,7 +33,7 @@ q.set('phone', { history: 'push' }) // push a history entry instead of replacing
 q.clear() // back to '' and the key leaves the URL
 ```
 
-Assigning `undefined` to a nullable param also clears it:
+Assigning `undefined` to a ref whose type includes it also clears the param:
 
 ```ts
 const color = useQueryState('color', codecs.literal(['red', 'blue'] as const))
@@ -51,7 +51,7 @@ useQueryState('q', codecs.string) // QueryStateRef<string | undefined>
 useQueryState('q', codecs.string.withDefault('')) // QueryStateRef<string>
 ```
 
-A codec with `.withDefault()` narrows the ref to non-nullable.
+A codec with `.withDefault()` narrows the ref to `T` by resolving absence to the default.
 
 ### String shorthand
 

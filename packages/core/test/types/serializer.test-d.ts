@@ -30,10 +30,12 @@ describe('createSerializer types', () => {
     expectTypeOf(serialize('?q=x', { q: 'y' })).toEqualTypeOf<ParsedQueryRaw>()
   })
 
-  it('accepts null to clear and a value to set, and rejects a string base without parse', () => {
+  it('accepts undefined to clear and rejects null outside the codec type', () => {
     const serialize = createSerializer(schema)
 
-    serialize({ q: null, page: 2 })
+    serialize({ q: undefined, page: 2 })
+    // @ts-expect-error the string codec does not accept null
+    serialize({ q: null })
     // @ts-expect-error a string base requires the `parse` option
     serialize('?q=x', { q: 'y' })
   })

@@ -57,11 +57,11 @@ type QueryStateSchemaInput = Record<string, Codec<any> | DefinedQueryParam<any>>
 type QueryStateValueOf<TDefinition> = unknown // the decoded value type of a definition
 type QueryStateRefValue<TDefinition> = unknown // T with a default, else T | undefined
 type QueryStateValues<TSchema> = Partial<Record<keyof TSchema, unknown>> // every param optional
-type QueryStateWriteValues<TSchema> = Partial<Record<keyof TSchema, unknown | null>> // the write protocol
+type QueryStateWriteValues<TSchema> = { [K in keyof TSchema]?: QueryStateValueOf<TSchema[K]> | undefined }
 ```
 
-`QueryStateWriteValues` is the three-state write map: omit/`undefined` skips,
-`null` clears, a value sets. See [null vs undefined](/guide/going-further/null-vs-undefined).
+`QueryStateWriteValues` preserves omitted params, clears explicit `undefined`, and
+sets supplied values.
 
 ## Composable types <Badge type="info" text="@vuqs/core" />
 
@@ -275,12 +275,13 @@ interface ResolvedQueryStateOptions {
 }
 ```
 
-`query.transact` atomically applies a `patch` or `replace`. Patch skips
-`undefined`; replace clears absent or `undefined` entries. `defaultPolicy` defaults
-to `'binding'`, which applies the binding's `clearOnDefault`; use
+`query.transact` atomically applies a `patch` or `replace`. Patch preserves omitted
+params and clears explicit `undefined`; replace clears absent or `undefined`
+entries. `defaultPolicy` defaults to `'binding'`, which applies the binding's
+`clearOnDefault`; use
 `'preserve-explicit'` when replaying an exact explicit selection.
 
-An empty or `undefined`-only patch creates no transaction. An explicitly touched
+An empty patch creates no transaction. An explicitly touched
 key does create a transaction start even when its serialized delta is a no-op; this
 preserves the write intent for observers and follows normal navigation scheduling.
 Request validation and serialization finish before the optimistic overlay changes:

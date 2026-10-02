@@ -22,7 +22,6 @@ let bindingCounter = 0
  * `useQueryStates` exposes a binding as `query.binding`. Lenses such as
  * {@link toQueryRefs} take it and derive their shape from `read` and `transact`
  * directly, so no shape reconstructs another and none carries a hidden brand.
- * Reactive lenses translate `undefined` to an explicit clear transaction.
  * Keeping the binding generic over `TSchema` is what
  * preserves per-key `T` vs `T | undefined` narrowing at the lens boundary.
  *
@@ -204,7 +203,7 @@ export function transactQueryKey<TSchema extends QueryStateSchema>(
 ): void {
   binding.transact({
     mode: 'patch',
-    values: { [key]: value === undefined ? null : value } as QueryStateWriteValues<TSchema>,
+    values: { [key]: value } as QueryStateWriteValues<TSchema>,
     navigation,
   })
 }

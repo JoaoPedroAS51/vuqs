@@ -19,7 +19,7 @@ const state = useQueryState(param, options?)
   - Pass either `path` (with an optional `codec`) **or** a pre-built `param`.
 - `codec?: Codec<T>`
   - How the value parses and serializes. Defaults to `codecs.string`.
-  - A codec built with `.withDefault(v)` narrows the ref to a non-nullable `T` and keeps the default out of the URL.
+  - A codec built with `.withDefault(v)` narrows the ref to `T` and keeps the default out of the URL.
 - `param?: DefinedQueryParam<T>`
   - A param from [`queryParam`](#queryparam), passed in place of `path` + `codec`.
 - `options?: UseQueryStatesOptions`
@@ -29,10 +29,10 @@ const state = useQueryState(param, options?)
 **Returns**
 
 - `state: UseQueryStateReturn<T>`
-  - A writable computed ref (`QueryStateRef<T>`) with a `.use()` for modules. `T` is
-    non-nullable when the codec or param carries a default, otherwise `T | undefined`.
+  - A writable computed ref (`QueryStateRef<T>`) with a `.use()` for modules.
+    Reads are `T` when the codec or param carries a default, otherwise `T | undefined`.
   - `state.value: T`
-    - Read or write the value; `v-model` binds here. Assigning `undefined` clears a nullable param.
+    - Read or write the value; `v-model` binds here. Assigning `undefined` clears a param whose type includes it.
   - `state.set(value, options?): void`
     - Write with per-call [navigation options](/guide/essentials/navigation-options).
   - `state.clear(options?): void`
@@ -99,17 +99,17 @@ const { values, patch, replace, clear } = useQueryStates(schema, options?)
 
 - `values: { [K in keyof TSchema]: … }`
   - A reactive, writable map. `values.k` *is* the value, not a ref. A param with a
-    default reads as non-nullable, otherwise `T | undefined`.
+    default reads as `T`, otherwise `T | undefined`.
   - Replace, don't mutate: assign a new array or object; in-place mutation does not
     navigate.
 - `patch(values, options?): void`
-  - Partial batch write applied as one atomic transaction. Per param: a value sets,
-    `null` clears, `undefined`/absent skips. Other writes in the same window may
-    share its navigation.
+  - Partial batch write applied as one atomic transaction. Omitted params are
+    preserved, `undefined` clears, and a value sets. Other writes in the same
+    window may share its navigation.
 - `replace(values, options?): void`
   - Whole-state write applied as one atomic transaction. Sets the given params and
-    clears every param absent or explicitly `undefined`. Both are clear signals,
-    so it takes no `null`. Other writes in the same window may share its navigation.
+    clears every param absent or explicitly `undefined`. Other writes in the
+    same window may share its navigation.
 - `clear(options?): void`
   - Reset every param to its default as one atomic transaction (`replace({})`).
 - `.use(module): QueryComposable<…>`
@@ -158,7 +158,7 @@ function toQueryRefs<TSchema>(query: QueryBindingSource<TSchema>): ToQueryRefs<T
 
 - `refs: ToQueryRefs<TSchema>`
   - One [`QueryStateRef`](#usequerystate) per param, with writable `.value` plus
-    `.set`/`.clear`. A param with a default reads as non-nullable, otherwise
+    `.set`/`.clear`. A param with a default reads as `T`, otherwise
     `T | undefined`. Assigning `undefined` clears.
 
 ## toQueryRef <Badge type="info" text="@vuqs/core" />
@@ -186,8 +186,7 @@ function toQueryRef<TSchema>(query: QueryBindingSource<TSchema>): QueryRef<TSche
     always appear. The snapshot keeps a stable reference while its content is
     unchanged, so a whole-object `v-model` does not churn identity.
   - Writing **replaces** the state: params not present in the assigned value are
-    cleared, as are params explicitly set to `undefined`. Both are clear signals,
-    so it takes no `null`.
+    cleared, as are params explicitly set to `undefined`.
 
 **Example**
 

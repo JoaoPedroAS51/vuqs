@@ -84,7 +84,7 @@ describe('createQueryStateEngine: optimistic overlay', () => {
     const { adapter, engine, scope } = setup(schema)
     adapter.query.value = { q: 'phone' }
 
-    engine.query.transact({ mode: 'patch', values: { q: null } })
+    engine.query.transact({ mode: 'patch', values: { q: undefined } })
 
     expect(engine.state.selected.value.q).toBeUndefined()
     scope.stop()

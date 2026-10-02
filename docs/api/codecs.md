@@ -197,8 +197,8 @@ function withDefault<T>(defaultValue: T): CodecWithDefault<T>
 **Returns**
 
 - `codec: CodecWithDefault<T>`
-  - A codec exposing `defaultValue`. Downstream APIs use it to narrow refs to
-    non-nullable and to drop the value from the URL when it equals the default
+  - A codec exposing `defaultValue`. Bound refs read as `T`, resolving absence to
+    the default. A written value equal to the default is omitted from the URL
     ([`clearOnDefault`](/guide/essentials/navigation-options#clearondefault)).
 
 ```ts

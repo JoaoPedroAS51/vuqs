@@ -19,7 +19,7 @@ interface QueryTransactionBase {
 /** A partial or exhaustive query-state write. */
 export type QueryTransactionRequest<TSchema extends QueryStateSchema>
   = | (QueryTransactionBase & {
-    /** Writes only explicitly defined values; `undefined` entries are skipped. */
+    /** Writes supplied params; `undefined` clears and omitted params are preserved. */
     mode: 'patch'
     values: QueryStateWriteValues<TSchema>
   })

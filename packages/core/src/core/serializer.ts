@@ -56,8 +56,8 @@ export interface Serializer<TSchema extends QueryStateSchema, TBase, TOutput> {
  * navigating, for example links, redirects, or SSR loaders.
  *
  * @remarks
- * Write semantics mirror the reactive writers: a param omitted from `values` (or
- * set to `undefined`) is left untouched, `null` clears it, and a value sets it.
+ * A param omitted from `values` is preserved, `undefined` clears it, and a value
+ * sets it.
  * Unmanaged params on the base are always preserved. With `clearOnDefault` (the
  * default), a written value equal to its codec default is dropped from the
  * result, while an untouched base param is kept even when it equals its default.
@@ -76,7 +76,7 @@ export interface Serializer<TSchema extends QueryStateSchema, TBase, TOutput> {
  * const serialize = createSerializer(schema)
  * serialize({ q: 'phone' })                       // { q: 'phone' }
  * serialize(route.query, { page: 2 })             // patch over the current query
- * serialize(route.query, { currency: null })      // clear a param
+ * serialize(route.query, { currency: undefined }) // clear a param
  *
  * const toUrl = createSerializer(schema, { stringify: q => qs.stringify(q, { addQueryPrefix: true }) })
  * toUrl({ q: 'phone', page: 2 })                   // '?q=phone&page=2'
@@ -134,10 +134,6 @@ export function createSerializer<TSchema extends QueryStateSchemaInput>(
     for (const key of Object.keys(values)) {
       const value = (values as Record<string, unknown>)[key]
 
-      if (value === undefined) {
-        continue
-      }
-
       const definition = normalizedSchema[key as keyof SerializerSchema<TSchema> & string]
 
       for (const path of definition.paths) {
@@ -148,7 +144,7 @@ export function createSerializer<TSchema extends QueryStateSchemaInput>(
         pruneEmptyAncestors(query, path)
       }
 
-      if (value === null) {
+      if (value === undefined) {
         continue
       }
 

@@ -50,16 +50,44 @@ describe('createSerializer', () => {
     expect(serialize({ keep: 'me' }, { q: 'phone' })).toEqual({ keep: 'me', q: 'phone' })
   })
 
-  it('clears a field with null', () => {
+  it('clears an explicit undefined param and prunes its empty ancestors', () => {
     const serialize = createSerializer(schema)
 
-    expect(serialize({ q: 'old', filters: { sort: 'name' } }, { sort: null })).toEqual({ q: 'old' })
+    expect(serialize({ q: 'old', filters: { sort: 'name' } }, { sort: undefined })).toEqual({ q: 'old' })
   })
 
-  it('skips a field set to undefined', () => {
+  it('preserves omitted params and unmanaged siblings when clearing', () => {
     const serialize = createSerializer(schema)
 
-    expect(serialize({ q: 'old' }, { q: undefined })).toEqual({ q: 'old' })
+    const base = { q: 'old', filters: { sort: 'name', keep: '' }, other: 'keep' }
+
+    expect(serialize(base, { sort: undefined })).toEqual({ q: 'old', filters: { keep: '' }, other: 'keep' })
+    expect(base).toEqual({ q: 'old', filters: { sort: 'name', keep: '' }, other: 'keep' })
+  })
+
+  it('serializes null as a JSON value and clears it with undefined', () => {
+    const serialize = createSerializer({ payload: codecs.json<{ id: number } | null>() })
+
+    expect(serialize({ payload: null })).toEqual({ payload: 'null' })
+    expect(serialize({ payload: '{"id":1}', keep: 'me' }, { payload: null })).toEqual({ payload: 'null', keep: 'me' })
+    expect(serialize({ payload: 'null', keep: 'me' }, { payload: undefined })).toEqual({ keep: 'me' })
+  })
+
+  it('clears a defaulted param even when default elision is disabled', () => {
+    const serialize = createSerializer({
+      payload: codecs.json<{ id: number } | null>().withDefault(null),
+    }, { clearOnDefault: false })
+
+    expect(serialize({ payload: null })).toEqual({ payload: 'null' })
+    expect(serialize({ payload: 'null' }, { payload: undefined })).toEqual({})
+  })
+
+  it('drops null only when it equals the codec default', () => {
+    const serialize = createSerializer({
+      payload: codecs.json<{ id: number } | null>().withDefault(null),
+    })
+
+    expect(serialize({ payload: null })).toEqual({})
   })
 
   it('drops a value equal to its default', () => {

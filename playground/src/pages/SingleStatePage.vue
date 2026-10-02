@@ -59,8 +59,8 @@ const value = computed(() => ({
       <h2>Single state + codecs</h2>
       <p>
         <code>useQueryState(path, codec)</code> binds one query key to a writable ref.
-        <code>.withDefault()</code> makes the ref non-nullable and drops the value from the URL when
-        it equals the default. <code>clear</code> reverts a field to its default.
+        <code>.withDefault()</code> resolves an absent param to its default and drops the value from the URL when
+        it equals the default. <code>clear</code> reverts a param to its default.
       </p>
     </div>
 

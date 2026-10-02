@@ -200,6 +200,10 @@ Reads JSON text or an already-parsed query value and serializes with
 `JSON.stringify`. Objects and arrays are read in full, including empty structures.
 Nullish query nodes, non-finite numeric nodes, and invalid JSON text parse as absent.
 
+The text `"null"` decodes to the JSON value `null`. Declare it in `T` when needed,
+for example `codecs.json<{ id: number } | null>()`. A native `null` query node
+parses as absent.
+
 Pass a `validate` function, including a schema parser such as Zod's `.parse`, to
 validate the decoded or already-parsed value. It receives the complete value once;
 its return value is the codec result and a throw is treated as absent. Without
@@ -241,7 +245,7 @@ codecs.string // QueryStateRef<string | undefined>
 codecs.string.withDefault('') // QueryStateRef<string>, and '' is dropped from the URL
 ```
 
-1. Reads become **non-nullable**: an absent key returns the default.
+1. Reads become `T`: an absent key returns the default.
 2. The default is **omitted from the URL** via `clearOnDefault`.
 
 ## Summary

@@ -31,8 +31,8 @@ function createSerializer<TSchema>(
 - `serialize: Serializer`
   - Callable two ways: `serialize(values)` builds a fresh query from `values`, and
     `serialize(base, values)` patches `values` over a `base` query.
-  - Write semantics match the reactive writers: `null` clears, `undefined`/absent
-    skips, a value sets. Unmanaged base params are always preserved.
+  - Omitted params are preserved, `undefined` clears, and a value sets.
+    Unmanaged base params are preserved.
   - **Throws** if a string base is passed without a `parse` option.
 
 **Example**
@@ -44,7 +44,7 @@ import qs from 'qs'
 const serialize = createSerializer(schema)
 serialize({ q: 'phone' })                  // { q: 'phone' }
 serialize(route.query, { page: 2 })        // patch over the current query
-serialize(route.query, { currency: null }) // clear a param
+serialize(route.query, { currency: undefined }) // clear a param
 
 const toUrl = createSerializer(schema, {
   stringify: q => qs.stringify(q, { addQueryPrefix: true }),

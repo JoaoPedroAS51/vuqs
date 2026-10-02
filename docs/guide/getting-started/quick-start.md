@@ -28,8 +28,7 @@ const search = useQueryState('q', codecs.string.withDefault(''))
 The ref is an ordinary Vue ref bound to the `q` key, so `v-model`, `computed`, and
 `watch` all work. Writing to it updates the URL.
 
-`.withDefault('')` does two things: it makes the ref non-nullable, and it keeps the
-default out of the URL.
+`.withDefault('')` makes an absent param read as `''` and keeps the default out of the URL.
 
 | URL | `search` |
 | --- | --- |

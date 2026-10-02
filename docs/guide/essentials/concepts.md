@@ -76,7 +76,7 @@ const schema = {
 or on a param builder (`queryParam('page', codecs.integer).withDefault(1)`), it
 changes two behaviors:
 
-1. **Reads are non-nullable.** An absent key reads back as `v`, not `undefined`,
+1. **Absence resolves to the default.** An absent key reads back as `v`,
    so `QueryStateRef<number>` instead of `QueryStateRef<number | undefined>`.
 2. **The default never reaches the URL.** When a value equals its default, vuqs
    drops the key. This is [`clearOnDefault`](/guide/essentials/navigation-options#clearondefault),

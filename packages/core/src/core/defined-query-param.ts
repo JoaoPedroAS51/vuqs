@@ -37,7 +37,8 @@ export interface DefinedQueryParam<T> {
    * params define it: an object deep-merges per child (`selection` child, else the
    * `defaults` child, else its own child default), so a layered default (for example
    * a runtime default) reaches a missing child of a present object. Absence and
-   * scalars are resolved by the engine directly (`selection ?? default`).
+   * scalars are resolved by the engine directly: a defined selection wins over
+   * the default.
    */
   resolve?: (selection: T, defaults: T | undefined) => T
   /** The param's default value, if the codec or builder declared one. */
@@ -57,10 +58,9 @@ export interface DefinedQueryParam<T> {
  * A {@link DefinedQueryParam} whose definition declares a default.
  *
  * @remarks
- * The default drives non-nullable reads at the composable boundary (a defaulted
- * `useQueryState` ref, a defaulted grouped value), but `read` stays a selection:
- * it returns `undefined` for an absent or invalid value. The default is resolved
- * by the engine's default layer, not by `read`.
+ * The default removes `undefined` from reads at the composable boundary, but
+ * `read` stays a selection: it returns `undefined` for an absent or invalid value.
+ * The default is resolved by the engine's default layer, not by `read`.
  *
  * @typeParam T - The decoded value type of the param.
  */

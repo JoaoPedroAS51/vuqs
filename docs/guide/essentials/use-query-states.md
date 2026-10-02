@@ -42,8 +42,8 @@ interface UseQueryStatesApi {
 </template>
 ```
 
-Params declaring a `.withDefault()` are **non-nullable** in `values`, so reads
-need no `?? fallback`:
+Params declaring a `.withDefault()` read as `T`: absence resolves to the default.
+For the string and number params above:
 
 ```ts
 values.q.trim() // string, no guard needed
@@ -108,28 +108,22 @@ per-field refs, `toQueryRef` (singular) for the object as one value.
 
 ### `patch`: partial write
 
-Updates some params in one atomic transaction, leaving the rest untouched. Each
-param follows the three-state [write protocol](/guide/going-further/null-vs-undefined):
+Updates supplied params in one atomic transaction and preserves omitted params:
 
-- **omit / `undefined`** leaves the param untouched.
-- **`null`** clears the param, reverting to its default.
+- **omit** preserves the param.
+- **`undefined`** clears the selection, reverting to its resolved default.
 - **a value** sets it.
 
 ```ts
 patch({ q: 'laptop', page: 1 }) // set q and page, leave sort alone
-patch({ sort: null }) // clear sort
+patch({ sort: undefined }) // clear sort
 patch({ q: 'phone' }, { history: 'push' }) // with per-call options
 ```
-
-`patch` uses `null` to distinguish "clear this one" from "don't touch this one."
-Single refs clear via `.clear()` or `= undefined` instead, covered in
-[null vs undefined](/guide/going-further/null-vs-undefined).
 
 ### `replace`: whole-state write
 
 Sets the given params and **clears every param absent or explicitly `undefined`**,
-in one atomic transaction. Absence and `undefined` are clear signals here, so
-`replace` takes no `null`. Use it when the argument is the complete state,
+in one atomic transaction. Use it when the argument is the complete state,
 such as applying a saved view:
 
 ```ts

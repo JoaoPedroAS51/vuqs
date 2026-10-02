@@ -4,6 +4,8 @@ import { computed, isRef, onScopeDispose } from 'vue'
 import { codecs } from '../../src/core/codec'
 import { defineQueryModule } from '../../src/core/module'
 import { queryParam } from '../../src/core/query-param'
+import { toQueryRef } from '../../src/core/to-query-ref'
+import { toQueryRefs } from '../../src/core/to-query-refs'
 import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
 import { withTestQuery as setup } from '../helpers/adapter'
@@ -138,6 +140,55 @@ describe('useQueryStates', () => {
     expect(values.q).toBeUndefined()
   })
 
+  it.each([
+    'values',
+    'single assignment',
+    'single set',
+    'ref assignment',
+    'ref set',
+    'whole assignment',
+    'whole set',
+    'patch',
+    'replace',
+  ] as const)('preserves null and clears with undefined through %s', async (writer) => {
+    type Payload = { id: number } | null | undefined
+    const { query, run } = setup({ payload: '{"id":1}', keep: 'me' })
+    const payloadCodec = codecs.json<{ id: number } | null>()
+    const state = run(() => useQueryStates({ payload: payloadCodec }))
+    const single = run(() => useQueryState('payload', payloadCodec))
+    const refs = toQueryRefs(state)
+    const whole = toQueryRef(state)
+    const writes: Record<typeof writer, (value: Payload) => void> = {
+      'values': value => state.values.payload = value,
+      'single assignment': value => single.value = value,
+      'single set': value => single.set(value),
+      'ref assignment': value => refs.payload.value = value,
+      'ref set': value => refs.payload.set(value),
+      'whole assignment': value => whole.value = { payload: value },
+      'whole set': value => whole.set({ payload: value }),
+      'patch': value => state.patch({ payload: value }),
+      'replace': value => state.replace({ payload: value }),
+    }
+
+    writes[writer](null)
+
+    expect(state.values.payload).toBeNull()
+    expect(single.value).toBeNull()
+    expect(whole.value).toEqual({ payload: null })
+    await flush()
+    expect(query.value).toEqual({ payload: 'null', keep: 'me' })
+    expect(refs.payload.value).toBeNull()
+
+    writes[writer](undefined)
+
+    expect(state.values.payload).toBeUndefined()
+    expect(single.value).toBeUndefined()
+    expect(whole.value).toEqual({})
+    await flush()
+    expect(query.value).toEqual({ keep: 'me' })
+    expect(refs.payload.value).toBeUndefined()
+  })
+
   describe('patch', () => {
     it('sets several fields in a single navigation', async () => {
       const { query, navigate, run } = setup()
@@ -150,14 +201,48 @@ describe('useQueryStates', () => {
       expect(query.value).toEqual({ q: 'sale', filters: { sort: 'name' } })
     })
 
-    it('clears a field with null and skips an undefined field', async () => {
+    it('clears an explicit undefined param and preserves omitted params', async () => {
       const { query, run } = setup({ q: 'phone', filters: { sort: 'name' } })
       const { patch } = run(() => useQueryStates(schema))
 
-      patch({ q: null, sort: undefined })
+      patch({ q: undefined })
       await flush()
 
       expect(query.value).toEqual({ filters: { sort: 'name' } })
+    })
+
+    it('returns to the default after clearing and preserves falsy selections', async () => {
+      const { query, run } = setup({ page: '3', other: 'keep' })
+      const { values, patch } = run(() => useQueryStates({
+        page: codecs.integer.withDefault(1),
+        enabled: codecs.boolean,
+        count: codecs.integer,
+      }))
+
+      patch({ page: undefined, enabled: false, count: 0 })
+
+      expect(values.page).toBe(1)
+      expect(values.enabled).toBe(false)
+      expect(values.count).toBe(0)
+      await flush()
+      expect(query.value).toEqual({ other: 'keep', enabled: 'false', count: '0' })
+    })
+
+    it('preserves null over a default until explicitly cleared', async () => {
+      const { query, run } = setup({ payload: '{"id":2}', other: 'keep' })
+      const { values, patch } = run(() => useQueryStates({
+        payload: codecs.json<{ id: number } | null>().withDefault({ id: 1 }),
+      }))
+
+      patch({ payload: null })
+      expect(values.payload).toBeNull()
+      await flush()
+      expect(query.value).toEqual({ payload: 'null', other: 'keep' })
+
+      patch({ payload: undefined })
+      expect(values.payload).toEqual({ id: 1 })
+      await flush()
+      expect(query.value).toEqual({ other: 'keep' })
     })
 
     it('rejects keys not in the schema without applying a partial write', async () => {

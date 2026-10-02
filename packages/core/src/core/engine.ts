@@ -398,7 +398,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
 
     const touchedKeys = request.mode === 'replace'
       ? keys
-      : keys.filter(key => Object.hasOwn(input, key) && input[key] !== undefined)
+      : keys.filter(key => Object.hasOwn(input, key))
 
     if (touchedKeys.length === 0) {
       return
@@ -413,8 +413,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     // codec or pipeline error therefore cannot leave a partial optimistic write.
     for (const key of touchedKeys) {
       const value = input[key]
-      const normalized = request.mode === 'patch' && value === null ? undefined : value
-      Object.assign(deltas, serializeParam(key, normalized, request.defaultPolicy, clearedOnDefault))
+      Object.assign(deltas, serializeParam(key, value, request.defaultPolicy, clearedOnDefault))
     }
 
     const resolvedOptions: NavigateOptions = {

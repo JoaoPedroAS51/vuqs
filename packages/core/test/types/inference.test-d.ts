@@ -3,14 +3,68 @@ import type {
   DefinedQueryParam,
   DefinedQueryParamWithDefault,
 } from '../../src/core/defined-query-param'
-import type { QueryStateValues } from '../../src/core/schema'
+import type { QueryStateValues, QueryStateWriteValues } from '../../src/core/schema'
 import type { UseQueryStateReturn } from '../../src/core/use-query-state'
 import { describe, expectTypeOf, it } from 'vitest'
 import { codecs } from '../../src/core/codec'
 import { queryParam } from '../../src/core/query-param'
 import { defineQuerySchema, parseQueryStates } from '../../src/core/schema'
+import { createSerializer } from '../../src/core/serializer'
+import { toQueryRef } from '../../src/core/to-query-ref'
+import { toQueryRefs } from '../../src/core/to-query-refs'
 import { useQueryState } from '../../src/core/use-query-state'
 import { useQueryStates } from '../../src/core/use-query-states'
+
+describe('write value inference', () => {
+  const schema = {
+    q: queryParam('q', codecs.string),
+    page: queryParam('page', codecs.integer.withDefault(1)),
+    payload: queryParam('payload', codecs.json<{ id: number } | null>()),
+  }
+
+  it('accepts explicit undefined and keeps null within the codec type', () => {
+    const patch: QueryStateWriteValues<typeof schema> = { page: undefined, payload: null }
+    const replacement: QueryStateValues<typeof schema> = { page: undefined, payload: null }
+    const query = useQueryStates(schema)
+    const serialize = createSerializer(schema)
+
+    query.patch(patch)
+    query.replace(replacement)
+    query.binding.transact({ mode: 'patch', values: patch })
+    query.binding.transact({ mode: 'replace', values: replacement })
+    serialize(patch)
+    toQueryRef(query).value = replacement
+
+    // @ts-expect-error the string codec does not accept null
+    query.patch({ q: null })
+    // @ts-expect-error the string codec does not accept null
+    query.replace({ q: null })
+    // @ts-expect-error the string codec does not accept null
+    query.binding.transact({ mode: 'patch', values: { q: null } })
+    // @ts-expect-error the string codec does not accept null
+    serialize({ q: null })
+    // @ts-expect-error the string codec does not accept null
+    toQueryRef(query).value = { q: null }
+  })
+
+  it('preserves nullable codec types in reactive lenses', () => {
+    const query = useQueryStates(schema)
+    const refs = toQueryRefs(query)
+    const single = useQueryState('payload', codecs.json<{ id: number } | null>())
+
+    expectTypeOf(query.values.payload).toEqualTypeOf<{ id: number } | null | undefined>()
+    expectTypeOf(refs.payload.value).toEqualTypeOf<{ id: number } | null | undefined>()
+    expectTypeOf(single.value).toEqualTypeOf<{ id: number } | null | undefined>()
+
+    query.values.payload = null
+    refs.payload.set(null)
+    single.set(null)
+    // @ts-expect-error the string codec does not accept null
+    query.values.q = null
+    // @ts-expect-error the string codec does not accept null
+    refs.q.set(null)
+  })
+})
 
 describe('codec inference', () => {
   it('infers scalar value types', () => {

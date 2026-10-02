@@ -67,7 +67,6 @@ export default defineConfig({
           text: 'Going further',
           items: [
             { text: 'Defining params', link: '/guide/going-further/defining-params' },
-            { text: 'null vs undefined', link: '/guide/going-further/null-vs-undefined' },
             { text: 'Building URLs', link: '/guide/going-further/serializer' },
             { text: 'Testing', link: '/guide/going-further/testing' },
             { text: 'Debugging', link: '/guide/going-further/debugging' },

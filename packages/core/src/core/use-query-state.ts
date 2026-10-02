@@ -22,8 +22,8 @@ interface SingleQueryStateSchema<T> extends QueryStateSchema {
  * Reading yields the current value, or the codec default when the param is
  * absent. Assigning `.value` schedules a write with the default navigation
  * options. `set` and `clear` do the same while accepting per-call overrides.
- * Calling `clear`, or assigning `undefined` to a nullable param, removes the
- * param from the URL.
+ * Calling `clear`, or assigning `undefined` to a ref whose type includes it,
+ * removes the param from the URL.
  *
  * @typeParam T - The param's value type.
  */
@@ -74,7 +74,7 @@ type StringQueryStateOptions = UseQueryStatesOptions & { parse?: never, serializ
  * Binds a single query key to a writable ref, using a codec with a static default.
  *
  * @remarks
- * The default makes the ref non-nullable: reading an absent key yields the default.
+ * Reading an absent key yields the default, so the ref reads as `T`.
  *
  * @typeParam T - The param's value type.
  * @param path - A dot-path into the query object, for example `'filters.sort'`.
@@ -151,7 +151,7 @@ export function useQueryState(
  * Binds a pre-built definition that declares a default to a writable ref.
  *
  * @remarks
- * The default makes the ref non-nullable: a missing key reads back as the default.
+ * Reading a missing key yields the default, so the ref reads as `T`.
  *
  * @typeParam T - The param's value type.
  * @param definition - A definition carrying a default, from a codec's `withDefault`.

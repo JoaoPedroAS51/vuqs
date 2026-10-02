@@ -20,9 +20,7 @@ serialize({ q: 'laptop', page: 2 })
 // → { q: 'laptop', page: '2' }
 ```
 
-It applies the **same** rules as the reactive writers (`clearOnDefault`, the
-[`null`/`undefined` write protocol](/guide/going-further/null-vs-undefined)), so a
-built link matches what navigating would produce.
+It uses the partial-write semantics of `patch` and applies `clearOnDefault`.
 
 ## Patching over a base
 
@@ -32,7 +30,7 @@ params **and** unmanaged params are preserved:
 ```ts
 serialize({ page: 2 }) // fresh: { page: '2' }
 serialize(route.query, { page: 2 }) // patch: keep everything, bump page
-serialize(route.query, { sort: null }) // patch: clear sort, keep the rest
+serialize(route.query, { sort: undefined }) // patch: clear sort, keep the rest
 ```
 
 Passing the current query as the base preserves its filters:
@@ -47,12 +45,16 @@ The values argument follows the three-state protocol:
 
 | In `values` | Effect |
 | --- | --- |
-| omitted / `undefined` | leave the param untouched |
-| `null` | clear the param |
+| omitted | preserve the param |
+| `undefined` | clear the param |
 | a value | set it (dropped if it equals the default, unless `clearOnDefault: false`) |
 
 Unmanaged params on the base are kept. Only params included in `values` are
 affected: the serializer never injects defaults for params you did not touch.
+
+JSON serialization omits properties with `undefined`, so a serialized partial
+write loses explicit clear instructions. Use `replace` to restore a complete
+state snapshot, where omitted params clear.
 
 ## String output
 

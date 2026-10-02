@@ -108,7 +108,7 @@ describe('module composition', () => {
         },
       })
 
-      core.query.transact({ mode: 'patch', values: { q: 'sale', category: null } })
+      core.query.transact({ mode: 'patch', values: { q: 'sale', category: undefined } })
       core.query.transact({ mode: 'replace', values: { category: 'cpu' } })
       core.query.transact({
         mode: 'replace',

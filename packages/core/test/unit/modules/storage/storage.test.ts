@@ -194,7 +194,7 @@ describe('withStorage restoration', () => {
     expect(memory.current()).toBeUndefined()
   })
 
-  it('an early no-op write intent beats a stale async snapshot', async () => {
+  it.each(['ref', 'patch'] as const)('an early %s clear beats a stale async snapshot', async (writer) => {
     const pending = deferred<StoredQuerySnapshot | undefined>()
     const memory = createMemoryStorage()
     memory.load.mockImplementation(() => pending.promise)
@@ -205,7 +205,12 @@ describe('withStorage restoration', () => {
     })))
     const sibling = test.build(() => useQueryState('q'))
 
-    sibling.clear()
+    if (writer === 'ref') {
+      sibling.clear()
+    }
+    else {
+      state.patch({ q: undefined })
+    }
     pending.resolve(snapshot({ q: 'stale' }))
     await state.storage.ready
 
