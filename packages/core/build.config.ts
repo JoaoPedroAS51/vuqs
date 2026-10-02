@@ -38,6 +38,9 @@ export default defineBuildConfig({
   },
   hooks: {
     'build:done': function (ctx) {
+      if (ctx.options.stub)
+        return
+
       let retargeted = 0
 
       for (const file of ['modules/index.d.ts', 'modules/index.d.mts']) {
