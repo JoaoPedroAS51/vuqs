@@ -1,4 +1,5 @@
-import type { QueryStorage, StoredQuerySnapshot } from '../../src/modules/storage'
+import type { StoredQuerySnapshot } from '../../src/modules/storage/snapshot'
+import type { QueryStorage } from '../../src/modules/storage/storage'
 import { vi } from 'vitest'
 
 export interface MemoryStorage {

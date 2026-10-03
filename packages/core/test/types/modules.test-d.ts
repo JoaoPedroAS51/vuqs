@@ -1,26 +1,28 @@
 import type { ComputedRef } from 'vue'
-import type { QueryCore } from '../../src/core/query-core'
-import type { QueryStateSchema, QueryStateValueAt, QueryStateWriteValues } from '../../src/core/schema'
-import type { ParsedQueryRaw } from '../../src/core/types'
-import type { QueryStorage, StorageStatus, StoredQuerySnapshot } from '../../src/modules/storage'
+import type { QueryCore } from '../../src/core/module-system/query-core'
+import type { ParsedQueryRaw } from '../../src/core/query/types'
+import type { QueryStateSchema, QueryStateValueAt, QueryStateWriteValues } from '../../src/core/schema/schema'
+import type { StoredQuerySnapshot } from '../../src/modules/storage/snapshot'
+import type { QueryStorage, StorageStatus } from '../../src/modules/storage/storage'
 import { describe, expectTypeOf, it } from 'vitest'
 import { computed, ref } from 'vue'
-import { codecs } from '../../src/core/codec'
-import { defineQueryModule } from '../../src/core/module'
-import { queryParam } from '../../src/core/query-param'
-import { useQueryState } from '../../src/core/use-query-state'
-import { useQueryStates } from '../../src/core/use-query-states'
+import { useQueryState } from '../../src/core/bindings/use-query-state'
+import { useQueryStates } from '../../src/core/bindings/use-query-states'
+import { codecs } from '../../src/core/codecs/catalog'
+import { defineQueryModule } from '../../src/core/module-system/define-query-module'
+import { queryParam } from '../../src/core/schema/params/query-param'
 import { withActiveParams } from '../../src/modules/active-params'
 import { withContext } from '../../src/modules/context'
 import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
-import { createWebStorage, withStorage } from '../../src/modules/storage'
+import { withStorage } from '../../src/modules/storage/storage'
+import { createWebStorage } from '../../src/modules/storage/web-storage'
 
 interface SelectionApi<TValue> {
   selection: ComputedRef<TValue | undefined>
   resetTo: (value: TValue) => void
 }
 
-declare module '../../src/core/module' {
+declare module '../../src/core/module-system/contract' {
   // eslint-disable-next-line unused-imports/no-unused-vars -- TParam must match the base registry signature
   interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
     'test:selection': {

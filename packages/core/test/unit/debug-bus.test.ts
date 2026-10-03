@@ -1,21 +1,11 @@
-import type { DebugEvent } from '../../src/core/debug/bus'
-import type { EngineSnapshot } from '../../src/core/debug/snapshot'
+import type { DebugEvent } from '../../src/core/diagnostics/bus'
+import type { EngineSnapshot } from '../../src/core/diagnostics/snapshot'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { reactive, ref } from 'vue'
 import { createTestingAdapter } from '../../src/adapters/testing'
-import {
-  addDebugReporter,
-  bindDebugTarget,
-  createDebugChannel,
-  DEBUG_PROTOCOL_VERSION,
-  emitDebug,
-  getDebugChannel,
-  globalDebugChannel,
-  isDebugArmed,
-  retainDebugHistory,
-} from '../../src/core/debug/bus'
-import { normalizeForHistory } from '../../src/core/debug/normalize'
-import { getDebugSnapshot, registerSnapshotSource } from '../../src/core/debug/snapshot'
+import { addDebugReporter, bindDebugTarget, createDebugChannel, DEBUG_PROTOCOL_VERSION, emitDebug, getDebugChannel, globalDebugChannel, isDebugArmed, retainDebugHistory } from '../../src/core/diagnostics/bus'
+import { normalizeForHistory } from '../../src/core/diagnostics/normalize'
+import { getDebugSnapshot, registerSnapshotSource } from '../../src/core/diagnostics/snapshot'
 
 const disposers: Array<() => void> = []
 

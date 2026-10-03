@@ -1,15 +1,18 @@
-export { installQueryAdapter, provideQueryAdapter, useQueryAdapter } from './core/adapter'
-export type { QueryAdapter, QueryAdapterDefaultOptions } from './core/adapter'
-export type { QueryBinding, QueryBindingSource } from './core/binding'
-export { codecs, createCodec } from './core/codec'
-export type { Codec, CodecInput, CodecWithDefault } from './core/codec'
-export {
-  addDebugReporter,
-  DEBUG_PROTOCOL_VERSION,
-  getDebugChannel,
-  isDebugArmed,
-  retainDebugHistory,
-} from './core/debug/bus'
+export { installQueryAdapter, provideQueryAdapter, useQueryAdapter } from './core/bindings/adapter-provider'
+export type { QueryBinding, QueryBindingSource } from './core/bindings/binding'
+export type { QueryStatesValues, UseQueryStatesOptions } from './core/bindings/binding'
+export { toQueryRef } from './core/bindings/to-query-ref'
+export type { QueryRef } from './core/bindings/to-query-ref'
+export { toQueryRefs } from './core/bindings/to-query-refs'
+export type { ToQueryRefs } from './core/bindings/to-query-refs'
+export { useQueryState } from './core/bindings/use-query-state'
+export type { QueryStateRef, UseQueryStateReturn } from './core/bindings/use-query-state'
+export { useQueryStates } from './core/bindings/use-query-states'
+export type { QueryComposable, QueryStatesActions, UseQueryStatesReturn } from './core/bindings/use-query-states'
+export { codecs } from './core/codecs/catalog'
+export { createCodec } from './core/codecs/codec'
+export type { Codec, CodecInput, CodecWithDefault } from './core/codecs/codec'
+export { addDebugReporter, DEBUG_PROTOCOL_VERSION, getDebugChannel, isDebugArmed, retainDebugHistory } from './core/diagnostics/bus'
 export type {
   AddReporterOptions,
   DebugChannelHandle,
@@ -19,26 +22,11 @@ export type {
   DebugLevel,
   Reporter,
   RetainHistoryOptions,
-} from './core/debug/bus'
-export { createDebugLogger } from './core/debug/logger'
-export type { DebugLogger } from './core/debug/logger'
-export { getDebugSnapshot } from './core/debug/snapshot'
-export type { DebugSnapshot, DebugSnapshotKind } from './core/debug/snapshot'
-export type {
-  DefinedQueryParam,
-  DefinedQueryParamWithDefault,
-} from './core/defined-query-param'
-export { createQueryStateEngine } from './core/engine'
-export type {
-  QueryDefaultsBus,
-  QueryStateEngine,
-  QueryStateEngineOptions,
-  QueryStateReads,
-  ResolvedQueryStateOptions,
-} from './core/engine'
-export { structuralEq } from './core/equality'
-export type { QueryHookBus, QueryHooks } from './core/hooks'
-export { defineQueryModule } from './core/module'
+} from './core/diagnostics/bus'
+export { createDebugLogger } from './core/diagnostics/logger'
+export type { DebugLogger } from './core/diagnostics/logger'
+export { getDebugSnapshot } from './core/diagnostics/snapshot'
+export type { DebugSnapshot, DebugSnapshotKind } from './core/diagnostics/snapshot'
 export type {
   DefinedQueryModule,
   DefinedQueryStateModule,
@@ -51,29 +39,48 @@ export type {
   QueryStateModule,
   QueryStatesFacadeModule,
   QueryStatesModule,
-} from './core/module'
-export { deletePath, getPath, getQueryString, getQueryStringArray, setPath } from './core/path'
-export type { Enforce, QueryPipeline, QueryPipelineBus, QueryPipelineStage, QueryValues } from './core/pipeline'
-export type { QueryCore } from './core/query-core'
-export { queryParam } from './core/query-param'
-export type { PrefixedQueryParamBuilder, QueryParamBuilder, QueryParamBuilderWithDefault, QueryParamObjectBuilder, QueryParamObjectBuilderWithDefault, QueryParamTransform } from './core/query-param'
-export { assertUniquePaths, buildQuery, defineQuerySchema, dropDefaults, getManagedKeys, normalizeQueryStateSchema, omitManagedKeys, parseQueryStates, serializeQueryStates } from './core/schema'
-export type { NormalizeQueryStateSchema, QueryStateRefValue, QueryStateSchema, QueryStateSchemaInput, QueryStateValueAt, QueryStateValueOf, QueryStateValues, QueryStateWriteValues } from './core/schema'
-export { createSerializer } from './core/serializer'
-export type { CreateSerializerOptions, Serializer, SerializerParse, SerializerStringify } from './core/serializer'
-export { toQueryRef } from './core/to-query-ref'
-export type { QueryRef } from './core/to-query-ref'
-export { toQueryRefs } from './core/to-query-refs'
-export type { ToQueryRefs } from './core/to-query-refs'
-export type { QueryTransaction, QueryTransactionBus, QueryTransactionDefaultPolicy, QueryTransactionObserver, QueryTransactionOrigin, QueryTransactionRequest } from './core/transaction'
-export type { NavigateOptions, ParsedQuery, ParsedQueryRaw, ParsedQueryValue, QueryStateNavigate } from './core/types'
-export { useQueryState } from './core/use-query-state'
-export type { QueryStateRef, UseQueryStateReturn } from './core/use-query-state'
-export { useQueryStates } from './core/use-query-states'
+} from './core/module-system/contract'
+export { defineQueryModule } from './core/module-system/define-query-module'
+export type { QueryCore } from './core/module-system/query-core'
+export { deletePath, getPath, setPath } from './core/query/path'
+export type { ParsedQuery, ParsedQueryRaw, ParsedQueryValue } from './core/query/types'
+export { getQueryString, getQueryStringArray } from './core/query/value'
+export type { QueryAdapter, QueryAdapterDefaultOptions } from './core/runtime/adapter'
+export type { NavigateOptions, QueryStateNavigate } from './core/runtime/adapter'
+export { createQueryStateEngine } from './core/runtime/engine'
+export type { QueryDefaultsBus, QueryStateEngine, QueryStateEngineOptions, QueryStateReads, ResolvedQueryStateOptions } from './core/runtime/engine'
+export type { QueryHookBus, QueryHooks } from './core/runtime/hooks'
+export type { Enforce, QueryPipeline, QueryPipelineBus, QueryPipelineStage, QueryValues } from './core/runtime/pipeline'
 export type {
-  QueryComposable,
-  QueryStatesActions,
-  QueryStatesValues,
-  UseQueryStatesOptions,
-  UseQueryStatesReturn,
-} from './core/use-query-states'
+  QueryTransaction,
+  QueryTransactionBus,
+  QueryTransactionDefaultPolicy,
+  QueryTransactionObserver,
+  QueryTransactionOrigin,
+  QueryTransactionRequest,
+} from './core/runtime/transaction'
+export { buildQuery, dropDefaults, omitManagedKeys, parseQueryStates, serializeQueryStates } from './core/schema/operations'
+export type { DefinedQueryParam, DefinedQueryParamWithDefault } from './core/schema/params/definition'
+export { queryParam } from './core/schema/params/query-param'
+export type {
+  PrefixedQueryParamBuilder,
+  QueryParamBuilder,
+  QueryParamBuilderWithDefault,
+  QueryParamObjectBuilder,
+  QueryParamObjectBuilderWithDefault,
+  QueryParamTransform,
+} from './core/schema/params/query-param'
+export { assertUniquePaths, defineQuerySchema, getManagedKeys, normalizeQueryStateSchema } from './core/schema/schema'
+export type {
+  NormalizeQueryStateSchema,
+  QueryStateRefValue,
+  QueryStateSchema,
+  QueryStateSchemaInput,
+  QueryStateValueAt,
+  QueryStateValueOf,
+  QueryStateValues,
+  QueryStateWriteValues,
+} from './core/schema/schema'
+export { createSerializer } from './core/schema/serializer'
+export type { CreateSerializerOptions, Serializer, SerializerParse, SerializerStringify } from './core/schema/serializer'
+export { structuralEq } from './shared/utils/object'

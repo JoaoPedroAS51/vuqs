@@ -1,6 +1,6 @@
-import type { Codec } from './core/codec'
-import type { ParsedQueryValue } from './core/types'
-import { structuralEq } from './core/equality'
+import type { Codec } from './core/codecs/codec'
+import type { ParsedQueryValue } from './core/query/types'
+import { structuralEq } from './shared/utils/object'
 
 /**
  * Tests that a codec is bijective: both `parse(serialize(input)) eq input` and

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { collectLeafPaths, deletePath, getPath, getQueryString, getQueryStringArray, setPath } from '../../src/core/path'
+import { collectLeafPaths, deletePath, getPath, setPath } from '../../src/core/query/path'
+import { getQueryString, getQueryStringArray } from '../../src/core/query/value'
 
 describe('getPath', () => {
   it('reads a nested value', () => {

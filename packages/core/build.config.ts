@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { defineBuildConfig } from 'unbuild'
 
 // In source, the built-in modules augment `QueryModuleRegistry` at its declaration
-// site (`declare module '../core/module'`) so it merges in-source and in this
+// site (`core/module-system/contract.ts`) so it merges in-source and in this
 // package's type tests. rollup-dts rewrites that specifier to the hashed shared
 // chunk it bundles the interface into, and TypeScript cannot merge a `declare
 // module "../shared/core.<hash>"` augmentation from a consumer. Retarget those
@@ -65,8 +65,8 @@ export default defineBuildConfig({
       // The type tests resolve to `src`, so nothing guards the built output: if
       // rollup-dts stops emitting the hashed-chunk augmentation this silently
       // ships unmergeable types again. Fail loudly instead.
-      if (retargeted === 0)
-        throw new Error('[build] expected to retarget the QueryModuleRegistry augmentation to @vuqs/core, but found none. Did rollup-dts change its chunk naming?')
+      if (retargeted !== 2)
+        throw new Error('[build] expected to retarget QueryModuleRegistry in both modules declaration artifacts. Did rollup-dts change its chunk naming?')
 
       // The console reporter's human-readable labels must ship only through the opt-in
       // `@vuqs/core/debug` entry. A stray import from any base module would pull them

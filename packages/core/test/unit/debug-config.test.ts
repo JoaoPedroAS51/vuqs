@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  parseStoredDebugConfig,
-  readStoredConsoleDebugConfig,
-  VUQS_DEBUG_STORAGE_KEY,
-} from '../../src/debug/config'
+import { parseStoredDebugConfig, readStoredConsoleDebugConfig, VUQS_DEBUG_STORAGE_KEY } from '../../src/debug/config'
 
 afterEach(() => {
   vi.unstubAllGlobals()

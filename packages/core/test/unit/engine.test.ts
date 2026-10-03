@@ -1,9 +1,10 @@
+import type { QueryStateSchema } from '../../src/core/schema/schema'
 import { describe, expect, it } from 'vitest'
 import { effectScope } from 'vue'
 import { createTestingAdapter } from '../../src/adapters/testing'
-import { codecs } from '../../src/core/codec'
-import { createQueryStateEngine } from '../../src/core/engine'
-import { queryParam } from '../../src/core/query-param'
+import { codecs } from '../../src/core/codecs/catalog'
+import { createQueryStateEngine } from '../../src/core/runtime/engine'
+import { queryParam } from '../../src/core/schema/params/query-param'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
 
@@ -75,6 +76,42 @@ describe('createQueryStateEngine: clearOnDefault precedence', () => {
 
     expect(adapter.query.value).toEqual({})
     scope.stop()
+  })
+})
+
+describe('createQueryStateEngine: value resolution', () => {
+  it('retains the keys and static defaults captured at creation', () => {
+    const schema: QueryStateSchema = { page: queryParam('page', codecs.integer.withDefault(1)) }
+    const { adapter, engine, scope } = setup(schema)
+
+    try {
+      expect(engine.state.values.value).toEqual({ page: 1 })
+      schema.page = queryParam('page', codecs.integer.withDefault(9))
+      schema.extra = queryParam('extra', codecs.string.withDefault('late'))
+      adapter.query.value = { page: '2', extra: 'incoming' }
+
+      expect(engine.state.values.value).toEqual({ page: 2 })
+      adapter.query.value = {}
+      expect(engine.state.values.value).toEqual({ page: 1 })
+    }
+    finally {
+      scope.stop()
+    }
+  })
+
+  it('runs the read pipeline after resolving selections and defaults', () => {
+    const { adapter, engine, scope } = setup({ page: queryParam('page', codecs.integer.withDefault(1)) })
+    engine.pipeline.tap('read', values => ({ ...values, page: Number(values.page) + 10 }))
+
+    try {
+      expect(engine.defaults.resolved.value).toEqual({ page: 11 })
+      expect(engine.state.values.value).toEqual({ page: 11 })
+      adapter.query.value = { page: '2' }
+      expect(engine.state.values.value).toEqual({ page: 12 })
+    }
+    finally {
+      scope.stop()
+    }
   })
 })
 

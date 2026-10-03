@@ -1,13 +1,13 @@
-import type { ParsedQuery, ParsedQueryRaw } from '../../src/core/types'
-import type { UseQueryStatesReturn } from '../../src/core/use-query-states'
+import type { UseQueryStatesReturn } from '../../src/core/bindings/use-query-states'
+import type { ParsedQuery, ParsedQueryRaw } from '../../src/core/query/types'
 import { describe, expect, it, vi } from 'vitest'
 import { createSSRApp, defineComponent, h, ref } from 'vue'
 import { renderToString } from 'vue/server-renderer'
-import { installQueryAdapter, provideQueryAdapter } from '../../src/core/adapter'
-import { codecs } from '../../src/core/codec'
-import { queryParam } from '../../src/core/query-param'
-import { useQueryState } from '../../src/core/use-query-state'
-import { useQueryStates } from '../../src/core/use-query-states'
+import { installQueryAdapter, provideQueryAdapter } from '../../src/core/bindings/adapter-provider'
+import { useQueryState } from '../../src/core/bindings/use-query-state'
+import { useQueryStates } from '../../src/core/bindings/use-query-states'
+import { codecs } from '../../src/core/codecs/catalog'
+import { queryParam } from '../../src/core/schema/params/query-param'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
 

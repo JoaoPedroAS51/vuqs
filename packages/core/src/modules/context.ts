@@ -1,12 +1,13 @@
 import type { ComputedRef, MaybeRefOrGetter } from 'vue'
-import type { QueryCore } from '../core/query-core'
-import type { QueryStateSchema, QueryStateValues } from '../core/schema'
-import type { NavigateOptions, ParsedQuery, ParsedQueryRaw } from '../core/types'
+import type { QueryCore } from '../core/module-system/query-core'
+import type { ParsedQuery, ParsedQueryRaw } from '../core/query/types'
+import type { NavigateOptions } from '../core/runtime/adapter'
+import type { QueryStateSchema, QueryStateValues } from '../core/schema/schema'
 import { computed, onScopeDispose, toValue, watch } from 'vue'
-import { emitDebug, isDebugArmed } from '../core/debug/bus'
-import { defineQueryModule } from '../core/module'
-import { buildQuery, dropDefaults, parseQueryStates } from '../core/schema'
-import { pickBy } from '../shared'
+import { emitDebug, isDebugArmed } from '../core/diagnostics/bus'
+import { defineQueryModule } from '../core/module-system/define-query-module'
+import { buildQuery, dropDefaults, parseQueryStates } from '../core/schema/operations'
+import { pickBy } from '../shared/utils/object'
 
 declare module '@vuqs/core' {
   interface QueryHooks {
@@ -15,7 +16,7 @@ declare module '@vuqs/core' {
   }
 }
 
-declare module '../core/module' {
+declare module '../core/module-system/contract' {
   interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
     'vuqs:context': {
       states: {

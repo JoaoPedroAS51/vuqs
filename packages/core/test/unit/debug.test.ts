@@ -1,21 +1,22 @@
-import type { DebugEvent } from '../../src/core/debug/bus'
-import type { ParsedQuery, QueryStateNavigate } from '../../src/core/types'
+import type { DebugEvent } from '../../src/core/diagnostics/bus'
+import type { ParsedQuery } from '../../src/core/query/types'
+import type { QueryStateNavigate } from '../../src/core/runtime/adapter'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createApp, effectScope, ref } from 'vue'
 import { createTestingAdapter } from '../../src/adapters/testing'
-import { installQueryAdapter } from '../../src/core/adapter'
-import { codecs } from '../../src/core/codec'
-import { addDebugReporter, createDebugChannel, getDebugChannel } from '../../src/core/debug/bus'
-import { createDebugLogger } from '../../src/core/debug/logger'
-import { getDebugSnapshot } from '../../src/core/debug/snapshot'
-import { queryParam } from '../../src/core/query-param'
-import { ThrottledQueue } from '../../src/core/queues/throttle'
-import { useQueryState } from '../../src/core/use-query-state'
-import { useQueryStates } from '../../src/core/use-query-states'
+import { installQueryAdapter } from '../../src/core/bindings/adapter-provider'
+import { useQueryState } from '../../src/core/bindings/use-query-state'
+import { useQueryStates } from '../../src/core/bindings/use-query-states'
+import { codecs } from '../../src/core/codecs/catalog'
+import { addDebugReporter, createDebugChannel, getDebugChannel } from '../../src/core/diagnostics/bus'
+import { createDebugLogger } from '../../src/core/diagnostics/logger'
+import { getDebugSnapshot } from '../../src/core/diagnostics/snapshot'
+import { ThrottledQueue } from '../../src/core/runtime/navigation-queue'
+import { queryParam } from '../../src/core/schema/params/query-param'
 import { disableDebug, enableDebug } from '../../src/debug'
 import { withContext } from '../../src/modules/context'
 import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
-import { withStorage } from '../../src/modules/storage'
+import { withStorage } from '../../src/modules/storage/storage'
 import { withTestQuery } from '../helpers/adapter'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
@@ -190,7 +191,7 @@ describe('opt-in entry (@vuqs/core/debug)', () => {
         },
       }),
     }))
-    const bus = await import('../../src/core/debug/bus')
+    const bus = await import('../../src/core/diagnostics/bus')
     await import('../../src/debug')
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
     const channel = bus.createDebugChannel('scoped')
@@ -211,7 +212,7 @@ describe('opt-in entry (@vuqs/core/debug)', () => {
       'vuqs:debug': JSON.stringify({ version: 1, console: { enabled: true } }),
     }))
 
-    const bus = await import('../../src/core/debug/bus')
+    const bus = await import('../../src/core/diagnostics/bus')
     await import('../../src/debug')
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
 
@@ -227,7 +228,7 @@ describe('opt-in entry (@vuqs/core/debug)', () => {
     vi.resetModules()
     vi.stubGlobal('window', undefined)
 
-    const bus = await import('../../src/core/debug/bus')
+    const bus = await import('../../src/core/diagnostics/bus')
     await import('../../src/debug')
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
     bus.createDebugChannel('server').debug('gtq:reset')
@@ -240,7 +241,7 @@ describe('opt-in entry (@vuqs/core/debug)', () => {
     vi.stubGlobal('window', {})
     vi.stubGlobal('localStorage', fakeStorage({ debug: 'vuqs' }))
 
-    const bus = await import('../../src/core/debug/bus')
+    const bus = await import('../../src/core/diagnostics/bus')
     await import('../../src/debug')
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
     bus.createDebugChannel('browser-disabled').debug('gtq:reset')
@@ -255,7 +256,7 @@ describe('opt-in entry (@vuqs/core/debug)', () => {
       'vuqs:debug': JSON.stringify({ version: 1, console: { enabled: false, preset: 'trace' } }),
     }))
 
-    const bus = await import('../../src/core/debug/bus')
+    const bus = await import('../../src/core/diagnostics/bus')
     await import('../../src/debug')
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
     bus.createDebugChannel('browser-disabled').debug('gtq:reset')
@@ -269,7 +270,7 @@ describe('opt-in entry (@vuqs/core/debug)', () => {
     vi.stubGlobal('localStorage', fakeStorage({ 'vuqs:debug': '{' }))
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    const bus = await import('../../src/core/debug/bus')
+    const bus = await import('../../src/core/diagnostics/bus')
     await import('../../src/debug')
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
     bus.createDebugChannel('browser-invalid').debug('gtq:reset')

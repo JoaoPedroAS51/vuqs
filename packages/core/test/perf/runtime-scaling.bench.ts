@@ -1,10 +1,10 @@
 import { afterAll, describe, it } from 'vitest'
 import { effectScope, nextTick, watchEffect } from 'vue'
 import { createTestingAdapter } from '../../src/adapters/testing'
-import { codecs } from '../../src/core/codec'
-import { createQueryStateEngine } from '../../src/core/engine'
-import { queryParam } from '../../src/core/query-param'
-import { ThrottledQueue } from '../../src/core/queues/throttle'
+import { codecs } from '../../src/core/codecs/catalog'
+import { createQueryStateEngine } from '../../src/core/runtime/engine'
+import { ThrottledQueue } from '../../src/core/runtime/navigation-queue'
+import { queryParam } from '../../src/core/schema/params/query-param'
 
 function externalFixture(bindings: number) {
   const adapter = createTestingAdapter({ hasMemory: true })

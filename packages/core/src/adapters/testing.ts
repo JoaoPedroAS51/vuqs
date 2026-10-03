@@ -1,12 +1,12 @@
 import type { App, ShallowRef } from 'vue'
-import type { QueryAdapter, QueryAdapterDefaultOptions } from '../core/adapter'
-import type { Overlay } from '../core/queues/throttle'
-import type { NavigateOptions, ParsedQuery, ParsedQueryRaw, ParsedQueryValue, QueryStateNavigate } from '../core/types'
+import type { ParsedQuery, ParsedQueryRaw, ParsedQueryValue } from '../core/query/types'
+import type { NavigateOptions, QueryAdapter, QueryAdapterDefaultOptions, QueryStateNavigate } from '../core/runtime/adapter'
+import type { Overlay } from '../core/runtime/overlay'
 import { shallowRef, toRaw, triggerRef } from 'vue'
-import { installQueryAdapter } from '../core/adapter'
-import { setPath } from '../core/path'
-import { registerQueryReadLayer } from '../core/query-read-layer'
-import { resetQueryRuntime } from '../core/query-runtime'
+import { installQueryAdapter } from '../core/bindings/adapter-provider'
+import { setPath } from '../core/query/path'
+import { resetQueryRuntime } from '../core/runtime/adapter-runtime'
+import { registerQueryReadLayer } from '../core/runtime/read-layer'
 
 /**
  * The event passed to `onUrlUpdate` for each flushed navigation.

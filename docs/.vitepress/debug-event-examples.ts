@@ -1,4 +1,4 @@
-import type { DebugEventCode, DebugEventMap } from '../../packages/core/src/core/debug/events'
+import type { DebugEventCode, DebugEventMap } from '../../packages/core/src/core/diagnostics/events'
 
 /**
  * Documentation-only sample payloads. The exhaustive map keeps every rendered

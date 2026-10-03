@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compactQuery, mergeQueries } from '../../src/core/query-object'
+import { compactQuery, mergeQueries } from '../../src/core/query/object'
 
 describe('mergeQueries', () => {
   it('deep-merges nested objects', () => {

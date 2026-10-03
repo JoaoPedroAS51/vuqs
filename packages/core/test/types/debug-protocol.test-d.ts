@@ -1,6 +1,6 @@
 import type { DebugEventCode, DebugEventMap, DebugScope, LogDebugCode, WarnDebugCode } from '../../src/debug-protocol'
 import { describe, expectTypeOf, it } from 'vitest'
-import { createDebugChannel } from '../../src/core/debug/bus'
+import { createDebugChannel } from '../../src/core/diagnostics/bus'
 
 describe('debug protocol codes', () => {
   it('derives the code set from the event map', () => {

@@ -1,6 +1,6 @@
-import type { DebugChannelHandle } from '../core/debug/bus'
+import type { DebugChannelHandle } from '../core/diagnostics/bus'
 import type { ConsoleReporterOptions } from './console-reporter'
-import { addDebugReporter } from '../core/debug/bus'
+import { addDebugReporter } from '../core/diagnostics/bus'
 import { createConsoleReporter } from './console-reporter'
 
 export {

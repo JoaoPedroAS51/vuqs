@@ -1,20 +1,13 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-// Validates the published type-only subpath as a consumer would: it compiles a
-// fixture that imports `@vuqs/core/debug-protocol` by package name, resolving through
-// the package `exports` to `dist/debug-protocol.d.ts` (not the source alias). A dangling
-// private import or a missing re-export in the emitted `.d.ts` would fail the compile.
-// It is self-contained: it builds the package if `dist` is missing rather than assuming
-// a prior step did.
-
 const coreDir = resolve(import.meta.dirname, '../..')
 let workspace: string
 
-describe('published @vuqs/core/debug-protocol', () => {
+describe('published @vuqs/core entrypoints', () => {
   beforeAll(() => {
     // Always build so a stale dist cannot hide changes in the source under test.
     execFileSync('pnpm', ['build'], { cwd: coreDir, stdio: 'ignore' })
@@ -22,30 +15,22 @@ describe('published @vuqs/core/debug-protocol', () => {
     workspace = mkdtempSync(join(tmpdir(), 'vuqs-protocol-'))
     mkdirSync(join(workspace, 'node_modules', '@vuqs'), { recursive: true })
     symlinkSync(coreDir, join(workspace, 'node_modules', '@vuqs', 'core'), 'dir')
+    symlinkSync(join(coreDir, 'node_modules', 'vue'), join(workspace, 'node_modules', 'vue'), 'dir')
+    mkdirSync(join(workspace, 'node_modules', '@standard-schema'), { recursive: true })
+    symlinkSync(join(coreDir, 'node_modules', '@standard-schema', 'spec'), join(workspace, 'node_modules', '@standard-schema', 'spec'), 'dir')
 
-    writeFileSync(join(workspace, 'consumer.ts'), [
-      `import type { DebugEventCode, DebugEventMap, DebugScope, EngineSnapshot, KnownDebugEvent } from '@vuqs/core/debug-protocol'`,
-      `import type { StoredDebugConfigV1 } from '@vuqs/core/debug/console'`,
-      `import { createConsoleReporter, createPerformanceReporter, VUQS_DEBUG_STORAGE_KEY } from '@vuqs/core/debug/console'`,
-      `export const code = 'gtq:flush' satisfies DebugEventCode`,
-      `export type Events = DebugEventMap`,
-      `export type Scope = DebugScope`,
-      `export type Event = KnownDebugEvent`,
-      `export type Snapshot = EngineSnapshot`,
-      `export const consoleReporter = createConsoleReporter({ preset: 'summary' })`,
-      `export const performanceReporter = createPerformanceReporter({ limit: 10 })`,
-      `export const storageKey = VUQS_DEBUG_STORAGE_KEY`,
-      `export const storedConfig = { version: 1, console: { enabled: true, preset: 'trace' } } satisfies StoredDebugConfigV1`,
-      ``,
-    ].join('\n'))
+    for (const file of ['consumer.ts', 'runtime.mjs']) {
+      copyFileSync(join(coreDir, 'test', 'fixtures', 'published', file), join(workspace, file))
+    }
 
     writeFileSync(join(workspace, 'tsconfig.json'), JSON.stringify({
       compilerOptions: {
         module: 'esnext',
         moduleResolution: 'bundler',
+        target: 'esnext',
         strict: true,
         noEmit: true,
-        skipLibCheck: true,
+        skipLibCheck: false,
         types: [],
       },
       files: ['consumer.ts'],
@@ -58,7 +43,7 @@ describe('published @vuqs/core/debug-protocol', () => {
     }
   })
 
-  it('compiles a consumer that imports the subpath through package exports', () => {
+  it('preserves module and codec inference through package exports', () => {
     let diagnostics = ''
 
     try {
@@ -75,6 +60,14 @@ describe('published @vuqs/core/debug-protocol', () => {
 
     expect(diagnostics, diagnostics).toBe('')
   }, 60_000)
+
+  it('shares runtime state across published entrypoints', () => {
+    expect(() => execFileSync(process.execPath, [join(workspace, 'runtime.mjs')], {
+      cwd: workspace,
+      stdio: 'pipe',
+      encoding: 'utf8',
+    })).not.toThrow()
+  })
 
   it('emits no runtime module for the type-only subpath', () => {
     const runtime = join(coreDir, 'dist', 'debug-protocol.mjs')

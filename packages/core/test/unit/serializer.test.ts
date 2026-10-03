@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { codecs } from '../../src/core/codec'
-import { addDebugReporter } from '../../src/core/debug/bus'
-import { queryParam } from '../../src/core/query-param'
-import { createSerializer } from '../../src/core/serializer'
+import { codecs } from '../../src/core/codecs/catalog'
+import { addDebugReporter } from '../../src/core/diagnostics/bus'
+import { queryParam } from '../../src/core/schema/params/query-param'
+import { createSerializer } from '../../src/core/schema/serializer'
 
 const schema = {
   q: queryParam('q', codecs.string),

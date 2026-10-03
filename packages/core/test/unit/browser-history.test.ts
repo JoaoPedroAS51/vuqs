@@ -1,14 +1,14 @@
 import type { BrowserHistoryAdapter } from '../../src/adapters/browser-history'
-import type { ParsedQuery } from '../../src/core/types'
+import type { ParsedQuery } from '../../src/core/query/types'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createApp, createRenderer, defineComponent, effectScope, h, toValue } from 'vue'
 import { createBrowserHistoryAdapter, provideBrowserHistoryAdapter } from '../../src/adapters/browser-history'
-import { installQueryAdapter } from '../../src/core/adapter'
-import { codecs } from '../../src/core/codec'
-import { addDebugReporter } from '../../src/core/debug/bus'
-import { queryParam } from '../../src/core/query-param'
-import { useQueryState } from '../../src/core/use-query-state'
-import { useQueryStates } from '../../src/core/use-query-states'
+import { installQueryAdapter } from '../../src/core/bindings/adapter-provider'
+import { useQueryState } from '../../src/core/bindings/use-query-state'
+import { useQueryStates } from '../../src/core/bindings/use-query-states'
+import { codecs } from '../../src/core/codecs/catalog'
+import { addDebugReporter } from '../../src/core/diagnostics/bus'
+import { queryParam } from '../../src/core/schema/params/query-param'
 
 function makeBrowser(initial = 'https://example.com/products?utm=campaign#results') {
   const events = new EventTarget()

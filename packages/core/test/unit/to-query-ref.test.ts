@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { computed, ref as vueRef } from 'vue'
-import { codecs } from '../../src/core/codec'
-import { queryParam } from '../../src/core/query-param'
-import { toQueryRef } from '../../src/core/to-query-ref'
-import { useQueryStates } from '../../src/core/use-query-states'
+import { toQueryRef } from '../../src/core/bindings/to-query-ref'
+import { useQueryStates } from '../../src/core/bindings/use-query-states'
+import { codecs } from '../../src/core/codecs/catalog'
+import { queryParam } from '../../src/core/schema/params/query-param'
 import { withTestQuery as setup } from '../helpers/adapter'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))

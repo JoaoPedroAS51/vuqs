@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { codecs } from '../../../../src/core/codec'
-import { useQueryStates } from '../../../../src/core/use-query-states'
+import { useQueryStates } from '../../../../src/core/bindings/use-query-states'
+import { codecs } from '../../../../src/core/codecs/catalog'
 import { withRuntimeDefaults } from '../../../../src/modules/runtime-defaults'
-import { withStorage } from '../../../../src/modules/storage'
+import { withStorage } from '../../../../src/modules/storage/storage'
 import { withTestQuery as setup } from '../../../helpers/adapter'
 import { createMemoryStorage, snapshot } from '../../../helpers/storage'
 

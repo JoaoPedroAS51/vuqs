@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createApp, nextTick, reactive, readonly } from 'vue'
 import { createTestingAdapter, withVuqsTestingAdapter } from '../../src/adapters/testing'
-import { installQueryAdapter } from '../../src/core/adapter'
-import { codecs } from '../../src/core/codec'
-import { queryParam } from '../../src/core/query-param'
-import { useQueryState } from '../../src/core/use-query-state'
-import { useQueryStates } from '../../src/core/use-query-states'
+import { installQueryAdapter } from '../../src/core/bindings/adapter-provider'
+import { useQueryState } from '../../src/core/bindings/use-query-state'
+import { useQueryStates } from '../../src/core/bindings/use-query-states'
+import { codecs } from '../../src/core/codecs/catalog'
+import { queryParam } from '../../src/core/schema/params/query-param'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
 

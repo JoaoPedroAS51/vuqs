@@ -1,5 +1,5 @@
-import type { DebugEvent, Reporter } from '../core/debug/bus'
-import type { NormalizeLimits } from '../core/debug/normalize'
+import type { DebugEvent, Reporter } from '../core/diagnostics/bus'
+import type { NormalizeLimits } from '../core/diagnostics/normalize'
 import type { DebugRedactor } from './payload'
 import { createDebugPreview, resolvePreviewLimits } from './payload'
 

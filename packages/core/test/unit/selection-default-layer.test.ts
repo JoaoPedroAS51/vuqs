@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { codecs } from '../../src/core/codec'
-import { queryParam } from '../../src/core/query-param'
-import { useQueryStates } from '../../src/core/use-query-states'
+import { useQueryStates } from '../../src/core/bindings/use-query-states'
+import { codecs } from '../../src/core/codecs/catalog'
+import { queryParam } from '../../src/core/schema/params/query-param'
 import { withRuntimeDefaults } from '../../src/modules/runtime-defaults'
 import { withTestQuery } from '../helpers/adapter'
 

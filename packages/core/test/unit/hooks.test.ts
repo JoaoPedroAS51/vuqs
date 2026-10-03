@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { globalDebugChannel } from '../../src/core/debug/bus'
-import { createQueryHooks } from '../../src/core/hooks'
+import { globalDebugChannel } from '../../src/core/diagnostics/bus'
+import { createQueryHooks } from '../../src/core/runtime/hooks'
 
 declare module '@vuqs/core' {
   interface QueryHooks {

@@ -1,7 +1,7 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { runInNewContext } from 'node:vm'
 import { describe, expect, it, vi } from 'vitest'
-import { codecs } from '../../src/core/codec'
+import { codecs } from '../../src/core/codecs/catalog'
 
 function schema<T>(validate: StandardSchemaV1.Props<unknown, T>['validate']): StandardSchemaV1<unknown, T> {
   return { '~standard': { version: 1, vendor: 'test', validate } }

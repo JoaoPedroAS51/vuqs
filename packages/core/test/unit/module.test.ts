@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { codecs } from '../../src/core/codec'
-import { defineQueryModule } from '../../src/core/module'
-import { queryParam } from '../../src/core/query-param'
-import { useQueryState } from '../../src/core/use-query-state'
-import { useQueryStates } from '../../src/core/use-query-states'
+import { useQueryState } from '../../src/core/bindings/use-query-state'
+import { useQueryStates } from '../../src/core/bindings/use-query-states'
+import { codecs } from '../../src/core/codecs/catalog'
+import { defineQueryModule } from '../../src/core/module-system/define-query-module'
+import { queryParam } from '../../src/core/schema/params/query-param'
 import { withTestQuery as setup } from '../helpers/adapter'
 
 describe('use() collision guard', () => {
@@ -45,6 +45,22 @@ describe('use() collision guard', () => {
 })
 
 describe('defineQueryModule targeted call form', () => {
+  it('uses an array of paths to distinguish a target from module options', () => {
+    const { build } = setup()
+    const factory = defineQueryModule({
+      queryStates: (_core, options: unknown) => ({ received: options }),
+      queryState: (_core, _key, options: unknown) => ({ received: options }),
+    })
+    const target = factory({ paths: ['q'] })
+    const options = { paths: 'q' }
+    const adaptive = factory(options)
+
+    expect(typeof target).toBe('object')
+    expect(build(() => useQueryState('q').use(target)).received).toBeUndefined()
+    expect(typeof adaptive).toBe('function')
+    expect(build(() => useQueryStates({ q: codecs.string }).use(factory(options))).received).toBe(options)
+  })
+
   it('accepts a key as the first argument, stripping the grouped projection', () => {
     const { build } = setup()
     const module = defineQueryModule({

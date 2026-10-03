@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { codecs } from '../../src/core/codec'
-import { createDefinedQueryParam } from '../../src/core/defined-query-param'
-import { queryParam } from '../../src/core/query-param'
+import { codecs } from '../../src/core/codecs/catalog'
+import { createDefinedQueryParam } from '../../src/core/schema/params/definition'
+import { queryParam } from '../../src/core/schema/params/query-param'
 
 describe('defined query param write guard', () => {
   it('throws when write outputs outside the declared paths', () => {

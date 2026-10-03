@@ -1,7 +1,8 @@
-import type { Codec } from '../../src/core/codec'
-import type { ParsedQueryValue } from '../../src/core/types'
+import type { Codec } from '../../src/core/codecs/codec'
+import type { ParsedQueryValue } from '../../src/core/query/types'
 import { describe, expect, it, vi } from 'vitest'
-import { codecs, createCodec } from '../../src/core/codec'
+import { codecs } from '../../src/core/codecs/catalog'
+import { createCodec } from '../../src/core/codecs/codec'
 import { isCodecBijective } from '../../src/testing'
 
 function codecCase<T>(name: string, codec: Codec<T>, raw: ParsedQueryValue, expected: T) {

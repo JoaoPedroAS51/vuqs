@@ -1,9 +1,9 @@
-import type { QueryStateValues } from '../../src/core/schema'
-import type { ParsedQuery, ParsedQueryRaw } from '../../src/core/types'
+import type { ParsedQuery, ParsedQueryRaw } from '../../src/core/query/types'
+import type { QueryStateValues } from '../../src/core/schema/schema'
 import { describe, expectTypeOf, it } from 'vitest'
-import { codecs } from '../../src/core/codec'
-import { queryParam } from '../../src/core/query-param'
-import { createSerializer } from '../../src/core/serializer'
+import { codecs } from '../../src/core/codecs/catalog'
+import { queryParam } from '../../src/core/schema/params/query-param'
+import { createSerializer } from '../../src/core/schema/serializer'
 
 const schema = {
   q: queryParam('q', codecs.string),

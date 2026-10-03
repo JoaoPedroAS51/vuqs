@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { codecs } from '../../src/core/codec'
-import { queryParam } from '../../src/core/query-param'
+import { codecs } from '../../src/core/codecs/catalog'
+import { queryParam } from '../../src/core/schema/params/query-param'
 
 describe('queryParam', () => {
   it('defines a scalar param from a path and codec', () => {

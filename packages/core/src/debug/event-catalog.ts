@@ -1,4 +1,4 @@
-import type { DebugEventCode, DebugEventMap, WarnDebugCode } from '../core/debug/events'
+import type { DebugEventCode, DebugEventMap, WarnDebugCode } from '../core/diagnostics/events'
 import { formatDebugLabelList, projectedDebugObjectKeys, quoteDebugLabel } from './labels'
 
 export type DebugSummaryPolicy = 'aggregate' | 'visible' | 'conditional' | 'trace-only' | 'passthrough'

@@ -1,7 +1,7 @@
-import type { Codec } from '../../src/core/codec'
-import type { ParsedQueryValue } from '../../src/core/types'
+import type { Codec } from '../../src/core/codecs/codec'
+import type { ParsedQueryValue } from '../../src/core/query/types'
 import { describe, expect, it } from 'vitest'
-import { codecs } from '../../src/core/codec'
+import { codecs } from '../../src/core/codecs/catalog'
 
 const OPERATIONS_PER_BATCH = 100
 

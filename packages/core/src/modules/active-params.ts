@@ -1,8 +1,8 @@
 import type { ComputedRef } from 'vue'
-import type { QueryCore } from '../core/query-core'
-import type { QueryStateSchema, QueryStateValues } from '../core/schema'
+import type { QueryCore } from '../core/module-system/query-core'
+import type { QueryStateSchema, QueryStateValues } from '../core/schema/schema'
 import { computed } from 'vue'
-import { defineQueryModule } from '../core/module'
+import { defineQueryModule } from '../core/module-system/define-query-module'
 
 /**
  * Options for the grouped {@link withActiveParams} projection.
@@ -38,7 +38,7 @@ export interface ActiveParamsStateApi {
   isActive: ComputedRef<boolean>
 }
 
-declare module '../core/module' {
+declare module '../core/module-system/contract' {
   // eslint-disable-next-line unused-imports/no-unused-vars -- TParam must match the base registry signature
   interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
     'vuqs:active-params': {

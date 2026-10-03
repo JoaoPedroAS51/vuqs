@@ -1,9 +1,10 @@
 import type { Ref } from 'vue'
-import type { ParsedQuery, QueryStateNavigate } from '../../src/core/types'
+import type { ParsedQuery } from '../../src/core/query/types'
+import type { QueryStateNavigate } from '../../src/core/runtime/adapter'
 import { vi } from 'vitest'
 import { createApp, effectScope } from 'vue'
 import { createTestingAdapter } from '../../src/adapters/testing'
-import { installQueryAdapter } from '../../src/core/adapter'
+import { installQueryAdapter } from '../../src/core/bindings/adapter-provider'
 
 export interface TestQuery {
   query: Ref<ParsedQuery>

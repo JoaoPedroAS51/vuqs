@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { structuralClone, structuralEq } from '../../src/core/equality'
+import { structuralClone, structuralEq } from '../../src/shared/utils/object'
 
 describe('structuralEq', () => {
   it('compares primitives with Object.is', () => {

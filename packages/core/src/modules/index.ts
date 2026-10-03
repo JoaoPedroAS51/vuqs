@@ -1,24 +1,10 @@
 export { withActiveParams } from './active-params'
 export type { ActiveParamsOptions, ActiveParamsStateApi, ActiveParamsStatesApi } from './active-params'
 export { withContext } from './context'
-export type {
-  ContextBaseOptions,
-  ContextNavigate,
-  ContextStateApi,
-  ContextStatesApi,
-  QueryStateContextOptions,
-  QueryStatesContextOptions,
-} from './context'
+export type { ContextBaseOptions, ContextNavigate, ContextStateApi, ContextStatesApi, QueryStateContextOptions, QueryStatesContextOptions } from './context'
 export { withRuntimeDefaults } from './runtime-defaults'
 export type { RuntimeDefaultsStateApi, RuntimeDefaultsStatesApi } from './runtime-defaults'
-export { createWebStorage, withStorage } from './storage'
-export type {
-  Awaitable,
-  QueryStorage,
-  StorageApi,
-  StorageControls,
-  StorageOptions,
-  StorageRestorePolicy,
-  StorageStatus,
-  StoredQuerySnapshot,
-} from './storage'
+export type { StoredQuerySnapshot } from './storage/snapshot'
+export { withStorage } from './storage/storage'
+export type { Awaitable, QueryStorage, StorageApi, StorageControls, StorageOptions, StorageRestorePolicy, StorageStatus } from './storage/storage'
+export { createWebStorage } from './storage/web-storage'

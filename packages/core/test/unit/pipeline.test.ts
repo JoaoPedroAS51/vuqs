@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { computed } from 'vue'
-import { globalDebugChannel } from '../../src/core/debug/bus'
-import { createQueryPipeline } from '../../src/core/pipeline'
-import { definedOnly, omitBy, pickBy } from '../../src/shared'
+import { globalDebugChannel } from '../../src/core/diagnostics/bus'
+import { createQueryPipeline } from '../../src/core/runtime/pipeline'
+import { definedOnly, omitBy, pickBy } from '../../src/shared/utils/object'
 
 describe('createQueryPipeline', () => {
   it('returns the value unchanged when a stage has no taps', () => {

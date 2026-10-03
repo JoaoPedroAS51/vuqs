@@ -1,5 +1,5 @@
-import type { DebugLevel } from '../core/debug/bus'
-import type { DebugEventCode, DebugScope } from '../core/debug/events'
+import type { DebugLevel } from '../core/diagnostics/bus'
+import type { DebugEventCode, DebugScope } from '../core/diagnostics/events'
 import type { ConsoleDebugPreset } from './console-reporter'
 import { DEBUG_EVENT_ENTRIES } from './event-catalog'
 

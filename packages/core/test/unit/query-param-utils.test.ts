@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { joinPath, prefixQuery } from '../../src/core/query-param-utils'
+import { joinPath, prefixQuery } from '../../src/core/schema/params/prefix'
 
 describe('joinPath', () => {
   it('joins a non-empty child path onto the prefix', () => {

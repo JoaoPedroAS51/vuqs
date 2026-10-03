@@ -1,6 +1,6 @@
-import type { DebugEvent } from '../core/debug/bus'
-import type { NormalizeLimits } from '../core/debug/normalize'
-import { DEFAULT_NORMALIZE_LIMITS, normalizeForHistory } from '../core/debug/normalize'
+import type { DebugEvent } from '../core/diagnostics/bus'
+import type { NormalizeLimits } from '../core/diagnostics/normalize'
+import { DEFAULT_NORMALIZE_LIMITS, normalizeForHistory } from '../core/diagnostics/normalize'
 
 export type DebugRedactor = (preview: unknown, event: DebugEvent) => unknown
 

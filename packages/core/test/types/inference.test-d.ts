@@ -1,19 +1,17 @@
-import type { Codec } from '../../src/core/codec'
-import type {
-  DefinedQueryParam,
-  DefinedQueryParamWithDefault,
-} from '../../src/core/defined-query-param'
-import type { QueryStateValues, QueryStateWriteValues } from '../../src/core/schema'
-import type { UseQueryStateReturn } from '../../src/core/use-query-state'
+import type { UseQueryStateReturn } from '../../src/core/bindings/use-query-state'
+import type { Codec } from '../../src/core/codecs/codec'
+import type { DefinedQueryParam, DefinedQueryParamWithDefault } from '../../src/core/schema/params/definition'
+import type { QueryStateValues, QueryStateWriteValues } from '../../src/core/schema/schema'
 import { describe, expectTypeOf, it } from 'vitest'
-import { codecs } from '../../src/core/codec'
-import { queryParam } from '../../src/core/query-param'
-import { defineQuerySchema, parseQueryStates } from '../../src/core/schema'
-import { createSerializer } from '../../src/core/serializer'
-import { toQueryRef } from '../../src/core/to-query-ref'
-import { toQueryRefs } from '../../src/core/to-query-refs'
-import { useQueryState } from '../../src/core/use-query-state'
-import { useQueryStates } from '../../src/core/use-query-states'
+import { toQueryRef } from '../../src/core/bindings/to-query-ref'
+import { toQueryRefs } from '../../src/core/bindings/to-query-refs'
+import { useQueryState } from '../../src/core/bindings/use-query-state'
+import { useQueryStates } from '../../src/core/bindings/use-query-states'
+import { codecs } from '../../src/core/codecs/catalog'
+import { parseQueryStates } from '../../src/core/schema/operations'
+import { queryParam } from '../../src/core/schema/params/query-param'
+import { defineQuerySchema } from '../../src/core/schema/schema'
+import { createSerializer } from '../../src/core/schema/serializer'
 
 describe('write value inference', () => {
   const schema = {

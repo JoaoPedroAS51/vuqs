@@ -1,11 +1,11 @@
-import type { QueryAdapter, QueryAdapterDefaultOptions } from '../core/adapter'
-import type { ParsedQuery, ParsedQueryValue } from '../core/types'
+import type { ParsedQuery, ParsedQueryValue } from '../core/query/types'
+import type { QueryAdapter, QueryAdapterDefaultOptions } from '../core/runtime/adapter'
 import { onScopeDispose, shallowRef } from 'vue'
-import { provideQueryAdapter } from '../core/adapter'
-import { debugChannelForAdapter, emitDebug, emitWarn, isDebugArmed } from '../core/debug/bus'
-import { isManagedNavigation } from '../core/managed-navigation'
-import { setPath } from '../core/path'
-import { resetQueryRuntime } from '../core/query-runtime'
+import { provideQueryAdapter } from '../core/bindings/adapter-provider'
+import { debugChannelForAdapter, emitDebug, emitWarn, isDebugArmed } from '../core/diagnostics/bus'
+import { setPath } from '../core/query/path'
+import { resetQueryRuntime } from '../core/runtime/adapter-runtime'
+import { isManagedNavigation } from '../core/runtime/managed-navigation'
 
 /** Options for the browser History API adapter factories. */
 export interface BrowserHistoryAdapterOptions {

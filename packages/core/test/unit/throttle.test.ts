@@ -1,11 +1,12 @@
-import type { ParsedQuery, ParsedQueryRaw, QueryStateNavigate } from '../../src/core/types'
+import type { ParsedQuery, ParsedQueryRaw } from '../../src/core/query/types'
+import type { QueryStateNavigate } from '../../src/core/runtime/adapter'
 import { describe, expect, it, vi } from 'vitest'
 import { createApp, effectScope, nextTick, ref, watchEffect } from 'vue'
-import { installQueryAdapter } from '../../src/core/adapter'
-import { codecs } from '../../src/core/codec'
-import { addDebugReporter, getDebugChannel } from '../../src/core/debug/bus'
-import { ThrottledQueue } from '../../src/core/queues/throttle'
-import { useQueryState } from '../../src/core/use-query-state'
+import { installQueryAdapter } from '../../src/core/bindings/adapter-provider'
+import { useQueryState } from '../../src/core/bindings/use-query-state'
+import { codecs } from '../../src/core/codecs/catalog'
+import { addDebugReporter, getDebugChannel } from '../../src/core/diagnostics/bus'
+import { ThrottledQueue } from '../../src/core/runtime/navigation-queue'
 import { withTestQuery as setup } from '../helpers/adapter'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))

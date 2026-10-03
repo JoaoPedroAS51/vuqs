@@ -1,9 +1,9 @@
-import type { QueryStateRef } from '../../src/core/use-query-state'
+import type { QueryStateRef } from '../../src/core/bindings/use-query-state'
 import { describe, expectTypeOf, it } from 'vitest'
-import { codecs } from '../../src/core/codec'
-import { queryParam } from '../../src/core/query-param'
-import { toQueryRefs } from '../../src/core/to-query-refs'
-import { useQueryStates } from '../../src/core/use-query-states'
+import { toQueryRefs } from '../../src/core/bindings/to-query-refs'
+import { useQueryStates } from '../../src/core/bindings/use-query-states'
+import { codecs } from '../../src/core/codecs/catalog'
+import { queryParam } from '../../src/core/schema/params/query-param'
 
 const schema = {
   q: queryParam('q', codecs.string),

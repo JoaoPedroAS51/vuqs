@@ -1,10 +1,10 @@
 import type { LocationQueryRaw, Router } from 'vue-router'
-import type { QueryAdapter, QueryAdapterDefaultOptions } from '../core/adapter'
-import type { ParsedQuery } from '../core/types'
+import type { ParsedQuery } from '../core/query/types'
+import type { QueryAdapter, QueryAdapterDefaultOptions } from '../core/runtime/adapter'
 import { isNavigationFailure, NavigationFailureType, useRouter } from 'vue-router'
-import { provideQueryAdapter } from '../core/adapter'
-import { debugChannelForAdapter, emitDebug, emitWarn, isDebugArmed } from '../core/debug/bus'
-import { isManagedNavigation } from '../core/managed-navigation'
+import { provideQueryAdapter } from '../core/bindings/adapter-provider'
+import { debugChannelForAdapter, emitDebug, emitWarn, isDebugArmed } from '../core/diagnostics/bus'
+import { isManagedNavigation } from '../core/runtime/managed-navigation'
 
 /**
  * Options for the `vue-router` adapter factories.

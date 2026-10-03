@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { codecs, createCodec } from '../../src/core/codec'
+import { codecs } from '../../src/core/codecs/catalog'
+import { createCodec } from '../../src/core/codecs/codec'
 import { isCodecBijective, testParseThenSerialize, testSerializeThenParse } from '../../src/testing'
 
 describe('testSerializeThenParse', () => {

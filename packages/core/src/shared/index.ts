@@ -1,2 +1,2 @@
-export { definedOnly, omitBy, pickBy } from './object'
-export { toReadonlyState } from './reactivity'
+export { toReadonlyState } from './to-readonly-state'
+export { definedOnly, omitBy, pickBy } from './utils/object'

@@ -1,11 +1,13 @@
-import type { QueryAdapter } from '../../src/core/adapter'
-import type { QueryStateSchema } from '../../src/core/schema'
+import type { QueryAdapter } from '../../src/core/runtime/adapter'
+import type { QueryStateSchema } from '../../src/core/schema/schema'
 import { describe, expect, it, vi } from 'vitest'
 import { effectScope, watch } from 'vue'
 import { createTestingAdapter } from '../../src/adapters/testing'
-import { codecs, createCodec } from '../../src/core/codec'
-import { createQueryStateEngine, parseRawQuerySelection } from '../../src/core/engine'
-import { queryParam } from '../../src/core/query-param'
+import { codecs } from '../../src/core/codecs/catalog'
+import { createCodec } from '../../src/core/codecs/codec'
+import { createQueryStateEngine } from '../../src/core/runtime/engine'
+import { parseQueryStates } from '../../src/core/schema/operations'
+import { queryParam } from '../../src/core/schema/params/query-param'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
 
@@ -373,7 +375,7 @@ describe('query transactions', () => {
       q: queryParam('q', codecs.string.withDefault('default')),
     }
 
-    expect(parseRawQuerySelection(selectedSchema, {})).toEqual({})
-    expect(parseRawQuerySelection(selectedSchema, { q: 'sale' })).toEqual({ q: 'sale' })
+    expect(parseQueryStates(selectedSchema, {})).toEqual({})
+    expect(parseQueryStates(selectedSchema, { q: 'sale' })).toEqual({ q: 'sale' })
   })
 })

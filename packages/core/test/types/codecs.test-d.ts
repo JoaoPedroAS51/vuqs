@@ -1,12 +1,13 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec'
-import type { Codec, CodecWithDefault } from '../../src/core/codec'
+import type { Codec, CodecWithDefault } from '../../src/core/codecs/codec'
 import { describe, expectTypeOf, it } from 'vitest'
-import { codecs, createCodec } from '../../src/core/codec'
-import { queryParam } from '../../src/core/query-param'
-import { createSerializer } from '../../src/core/serializer'
-import { toQueryRefs } from '../../src/core/to-query-refs'
-import { useQueryState } from '../../src/core/use-query-state'
-import { useQueryStates } from '../../src/core/use-query-states'
+import { toQueryRefs } from '../../src/core/bindings/to-query-refs'
+import { useQueryState } from '../../src/core/bindings/use-query-state'
+import { useQueryStates } from '../../src/core/bindings/use-query-states'
+import { codecs } from '../../src/core/codecs/catalog'
+import { createCodec } from '../../src/core/codecs/codec'
+import { queryParam } from '../../src/core/schema/params/query-param'
+import { createSerializer } from '../../src/core/schema/serializer'
 
 describe('nullable codec types', () => {
   it('widens built-in, factory, and custom value types', () => {
