@@ -16,6 +16,7 @@ packages:
 allowBuilds:
   '@parcel/watcher': false
   esbuild: true
+  unrs-resolver: true
 
 catalog:
   '@antfu/eslint-config': ^9.5.1
@@ -29,6 +30,7 @@ catalog:
   '@vitest/coverage-v8': ^5.0.1
   defu: ^6.1.7
   eslint: ^10.11.0
+  eslint-plugin-import-x: ^4.17.1
   nuxt: ^4.5.2
   turbo: ^2.11.3
   typescript: ^6.0.3

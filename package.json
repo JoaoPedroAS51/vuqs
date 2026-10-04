@@ -30,6 +30,7 @@
     "@changesets/cli": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",
+    "eslint-plugin-import-x": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:"
   }
