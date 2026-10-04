@@ -43,10 +43,10 @@
   "scripts": {
     "build": "nuxt-module-build prepare && nuxt-module-build build",
     "dev": "nuxt-module-build build --stub && nuxt-module-build prepare",
-    "test": "vitest run --passWithNoTests",
-    "test:run": "vitest run --passWithNoTests",
-    "test:types": "vitest --typecheck.only --run --passWithNoTests",
-    "typecheck": "nuxt-module-build prepare && vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:run": "vitest run",
+    "test:types": "nuxt prepare test/fixtures/basic && vue-tsc --build test/fixtures/basic/tsconfig.json",
+    "typecheck": "nuxt-module-build prepare && vue-tsc --noEmit && pnpm test:types",
     "prepublishOnly": "nuxt-module-build prepare && nuxt-module-build build"
   },
   "dependencies": {
@@ -57,6 +57,7 @@
   "devDependencies": {
     "@nuxt/module-builder": "catalog:",
     "@nuxt/schema": "catalog:",
+    "@nuxt/test-utils": "catalog:",
     "@types/node": "catalog:",
     "nuxt": "catalog:",
     "typescript": "catalog:",

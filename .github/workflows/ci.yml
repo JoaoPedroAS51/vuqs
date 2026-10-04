@@ -31,7 +31,13 @@ jobs:
 
       - run: pnpm test:coverage
 
+      - run: pnpm --filter @vuqs/nuxt test:run
+
       - run: pnpm build
+
+      - run: pnpm --filter @vuqs/core test:types:dist
+
+      - run: pnpm --filter @vuqs/core test:dist
 
       - run: pnpm playground:build
 

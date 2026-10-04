@@ -2,6 +2,7 @@
   "extends": "./.nuxt/tsconfig.json",
   "exclude": [
     "dist",
+    "test/fixtures",
     "node_modules"
   ]
 }

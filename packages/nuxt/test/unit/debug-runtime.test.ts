@@ -85,7 +85,7 @@ describe('nuxt debug runtime ownership', () => {
     expect(mocks.addConsole).not.toHaveBeenCalled()
   })
 
-  it('scopes a server reporter to the request adapter and releases every terminal path idempotently', () => {
+  it.each(['app:rendered', 'app:error', 'app:redirected'])('releases the request reporter on %s idempotently', (terminalHook) => {
     const adapter = {}
     const channel = {}
     const release = vi.fn()
@@ -102,6 +102,9 @@ describe('nuxt debug runtime ownership', () => {
 
     expect(mocks.addConsole).toHaveBeenCalledWith({ channel })
     expect([...hooks.keys()]).toEqual(['app:rendered', 'app:error', 'app:redirected'])
+    expect(mocks.getChannel).toHaveBeenCalledExactlyOnceWith(adapter)
+    hooks.get(terminalHook)!()
+    expect(release).toHaveBeenCalledOnce()
     hooks.get('app:error')?.()
     hooks.get('app:rendered')?.()
     hooks.get('app:redirected')?.()
@@ -110,13 +113,17 @@ describe('nuxt debug runtime ownership', () => {
 
   it('never falls back to the global hub when a server request has no adapter', () => {
     mocks.useAdapter.mockReturnValue(undefined)
-    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const hook = vi.fn()
 
     ;(serverPlugin as Plugin).setup({
       vueApp: { runWithContext: (run: () => unknown) => run() },
-      hook: vi.fn(),
+      hook,
     })
 
     expect(mocks.addConsole).not.toHaveBeenCalled()
+    expect(mocks.getChannel).not.toHaveBeenCalled()
+    expect(hook).not.toHaveBeenCalled()
+    expect(warn).toHaveBeenCalledExactlyOnceWith('[vuqs] server debug was requested, but no request-scoped query adapter is installed')
   })
 })
