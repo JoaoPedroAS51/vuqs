@@ -10,10 +10,6 @@ export const QUERY_STATE_MODULE = Symbol('vuqs.queryStateModule')
 /**
  * A module projection that contributes API to {@link useQueryStates}.
  *
- * @remarks
- * The module receives the shared {@link QueryCore} and returns the API merged
- * onto the composable.
- *
  * @typeParam TSchema - The schema being managed.
  * @typeParam TApi - The API this module adds.
  */
@@ -21,11 +17,6 @@ export type QueryStatesModule<TSchema extends QueryStateSchema, TApi> = (core: Q
 
 /**
  * A module projection that contributes API to {@link useQueryState}.
- *
- * @remarks
- * The projection receives a single-param {@link QueryCore} plus the logical key
- * for that param. Use the key instead of assuming the single schema's internal
- * shape.
  *
  * @typeParam TSchema - The schema being managed.
  * @typeParam TApi - The API this module adds.
@@ -51,10 +42,6 @@ export type AnyQueryStateModule<TApi> = <
 /**
  * A module defined for {@link useQueryStates}.
  *
- * @remarks
- * The type is structurally the grouped projection itself, preserving
- * function-only modules.
- *
  * @typeParam TSchema - The grouped schema the module can run against.
  * @typeParam TApi - The API added to {@link useQueryStates}.
  */
@@ -62,11 +49,6 @@ export type DefinedQueryStatesModule<TSchema extends QueryStateSchema, TApi> = Q
 
 /**
  * A module defined for {@link useQueryState}.
- *
- * @remarks
- * Single-only modules are intentionally not callable. They carry their
- * projection on an internal symbol, so they cannot be passed to
- * {@link useQueryStates} by shape.
  *
  * @typeParam TApi - The API added to {@link useQueryState}.
  */
@@ -76,11 +58,6 @@ export interface DefinedQueryStateModule<TApi> {
 
 /**
  * A module defined for both query-state facades.
- *
- * @remarks
- * The value is callable so it can still be passed to {@link useQueryStates}. The
- * single-param projection is stored on an internal symbol and consumed by
- * {@link useQueryState}.
  *
  * @typeParam TSchema - The grouped schema the module can run against.
  * @typeParam TQueryStatesApi - The API added to {@link useQueryStates}.
@@ -101,11 +78,6 @@ export type QueryModuleFacade = 'state' | 'states'
 /**
  * Type-only marker carrying the facade a module factory was built for.
  *
- * @remarks
- * Never present at runtime. A module factory (such as `withContext`) stamps it so
- * a composable's `use` can pin the facade the factory call resolves its options
- * against.
- *
  * @internal
  */
 export declare const QUERY_MODULE_KIND: unique symbol
@@ -114,23 +86,12 @@ export declare const QUERY_MODULE_KIND: unique symbol
  * Type-only marker carrying the {@link QueryModuleRegistry} name a single-only
  * registered module resolves its value-typed `state` API from.
  *
- * @remarks
- * Never present at runtime. A single-only registered module (built from a `name`
- * definition with no `queryStates`) stamps it so {@link useQueryState}'s `use`
- * resolves the `state` facet against the param it binds, keeping the module
- * non-callable so grouped composition rejects it. Mirrors {@link QUERY_MODULE_KIND}.
- *
  * @internal
  */
 export declare const QUERY_MODULE_NAME: unique symbol
 
 /**
  * A grouped module ({@link useQueryStates}) tagged with the facade it targets.
- *
- * @remarks
- * Structurally a {@link QueryStatesModule} plus the {@link QUERY_MODULE_KIND}
- * facade tag. A composable's `use` requires the exact `TFacade`, so unifying its
- * `TSchema` pins the schema a factory call resolves its grouped options against.
  *
  * @typeParam TFacade - The facade tag (`'states'`).
  * @typeParam TSchema - The schema the grouped options key against.
@@ -160,12 +121,6 @@ export interface QueryStateFacadeModule<TFacade extends QueryModuleFacade, TApi>
  * {@link QueryModuleRegistry} name so {@link useQueryState}'s `use` resolves the
  * `state` API against the bound param's value type.
  *
- * @remarks
- * Because it has no call signature it is rejected by grouped composition, while
- * the single facade resolves its API from the registry at the `use` site (against
- * the single schema `{ value }`), so the value type is recovered without a second
- * registry.
- *
  * @typeParam TName - The registry name whose `state` facet this module resolves.
  */
 export interface QueryStateNameModule<TName extends QueryModuleName>
@@ -191,11 +146,6 @@ export type QueryStateNameApiOf<
 /**
  * A dual module usable on either facade, carrying a not-yet-resolved facade tag.
  *
- * @remarks
- * Returned by a module factory's adaptive form. Composed inline, the consuming
- * `use` unifies `TFacade` to its own facade and `TSchema` to its schema; a
- * detached call leaves both at the factory defaults.
- *
  * @typeParam TFacade - The facade tag, resolved by `use` (or the factory default).
  * @typeParam TSchema - The schema the grouped options key against.
  * @typeParam TStatesApi - The API added to {@link useQueryStates}.
@@ -209,26 +159,8 @@ export interface QueryFacadeModule<TFacade, TSchema extends QueryStateSchema, TS
 /**
  * The open registry of module APIs and options, keyed by name and grouped by facade.
  *
- * @remarks
- * A module whose options or contributed API depend on the schema, the bound
- * param's value type, or the composing facade registers one entry here via
- * `declare module '@vuqs/core'`, keyed by a namespaced name. Each entry has an
- * optional `states` facet (for {@link useQueryStates}) and an optional `state`
- * facet (for {@link useQueryState}); each facet carries an optional `options`
- * type and an optional `api` type. Pair the entry with the name form of
- * {@link defineQueryModule}.
- *
- * The `states` facet resolves against the composable schema. The `state` facet
- * resolves against the single-schema `{ value: DefinedQueryParam<TValue> }`, so
- * `TSchema` inside a `state` facet is that single schema, not the schema supplied
- * by the module author. Read the bound value type with
- * `QueryStateValueAt<TSchema, 'value'>`.
- * `TParam` carries the module's inferred extra (for example a context union),
- * constrained to `string` so a `MaybeRefOrGetter<TParam>` option infers cleanly.
- *
  * @typeParam TSchema - The schema the module is applied to (the single schema in a `state` facet).
  * @typeParam TParam - The module's inferred extra, constrained to `string`.
- *
  * @example
  * ```ts
  * declare module '@vuqs/core' {
@@ -361,13 +293,6 @@ export type AdaptiveModule<
 /**
  * A module factory for a registered module: a callable with the four call forms.
  *
- * @remarks
- * `f(options?)` is adaptive: the composing `use` pins the facade and schema.
- * `f(schema, options)` builds a grouped module with schema-checked options.
- * `f(param, options)` and `f(path, options)` build a single-param module bound to
- * that param. All resolve their options and contributed API through the module's
- * {@link QueryModuleRegistry} entry.
- *
  * @typeParam TName - The registry name whose facets this factory resolves.
  */
 export interface QueryModuleFactory<TName extends QueryModuleName> {
@@ -398,11 +323,6 @@ export interface QueryModuleFactory<TName extends QueryModuleName> {
  * non-callable {@link QueryStateNameModule}, so grouped composition rejects it,
  * while the single facade resolves the value-typed API from the registry.
  *
- * @remarks
- * `f(options?)` is adaptive (single facade only). `f(param, options)` and
- * `f(path, options)` bind the value-typed API to that param. There is no grouped
- * form: a single-only entry declares no `states` facet.
- *
  * @typeParam TName - The registry name whose `state` facet this factory resolves.
  */
 export interface QueryStateNameModuleFactory<TName extends QueryModuleName> {
@@ -420,11 +340,6 @@ export interface QueryStateNameModuleFactory<TName extends QueryModuleName> {
 /**
  * A module factory for a plain (unregistered) module: a callable with the four
  * call forms, carrying the option and API types fixed by the projections.
- *
- * @remarks
- * The projection returns fix the contributed API. Options are a single fixed
- * type shared across the call forms, since a plain module does not depend on the
- * schema, value, or facade.
  *
  * @typeParam TStatesApi - The API added to {@link useQueryStates}.
  * @typeParam TStateApi - The API added to {@link useQueryState}.

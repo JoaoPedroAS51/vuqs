@@ -9,11 +9,6 @@ import { createQueryBinding, toReactiveQuery } from './binding'
 /**
  * The object returned by {@link useQueryStates}: the current API plus `use`.
  *
- * @remarks
- * Each `use(module)` call runs the module against the same {@link QueryCore},
- * merges the contributed API into this object, and widens the return type with
- * that API. Call `use` synchronously while a Vue effect scope is active.
- *
  * @typeParam TSchema - The schema being managed.
  * @typeParam TApi - The API accumulated so far.
  */
@@ -61,24 +56,6 @@ export interface UseQueryStatesReturn<TSchema extends QueryStateSchema>
 /**
  * Binds a schema's params to the URL as a reactive value map.
  *
- * @remarks
- * Reads stay in sync with `query`. Writes are applied optimistically and flushed
- * to `navigate` through the adapter-scoped coalescing queue, one navigation per
- * microtask or per `throttleMs` window. The URL is the source of truth: once it
- * reflects a write, the optimistic value for that param is reconciled away, while
- * writes the URL has not caught up to are kept so an unrelated navigation cannot
- * discard them.
- *
- * `values` is reactive: `values.page` reads, `values.page = x` writes with the
- * default options. Assigning `undefined` clears a param whose type includes it.
- * Use `patch` for partial batch writes and per-call options,
- * `replace` to set the whole state at once (absent params clear), and `clear` to
- * reset every param. Use {@link useQueryState} for a single-param ref with
- * per-call options.
- *
- * Replace, do not mutate: assigning `values.tags = [...]` navigates, but mutating
- * the array in place (`values.tags.push(...)`) does not.
- *
  * @typeParam TSchema - The schema mapping param names to definitions.
  * @param schema - The params to bind, keyed by logical name.
  * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
@@ -87,6 +64,7 @@ export interface UseQueryStatesReturn<TSchema extends QueryStateSchema>
  * @throws {Error} When two params declare the same query path.
  * @throws {Error} When no adapter has been provided.
  *
+ * @see https://vuqs.dev/guide/essentials/use-query-states
  * @example
  * ```ts
  * // Provide the adapter once (e.g. in your app root):

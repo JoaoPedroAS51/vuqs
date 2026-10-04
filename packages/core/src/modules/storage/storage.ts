@@ -76,23 +76,9 @@ declare module '../../core/module-system/contract' {
 /**
  * Mirrors explicit query selection into sync or async storage.
  *
- * @remarks
- * Storage is an exact mirror of `core.state.selected`, never a default layer.
- * With `restore: 'if-empty'`, a non-empty URL or any write intent observed while
- * loading wins over storage. Restored values are materialized back into the URL
- * through one `replace` transaction. Runtime defaults are never persisted.
- *
- * Restoration starts after component mount to preserve SSR hydration. Outside a
- * component it starts on a microtask, after synchronous module composition. The
- * transaction observer is registered immediately so an early no-op write still
- * prevents stale restoration.
- *
- * Operational failures never reject `ready` or `flush`; inspect
- * `storage.status` and `storage.error`. Invalid options throw synchronously when
- * the module is composed.
- *
  * @param options - Storage key, implementation, restore policy, and optional version.
  * @returns A dual module that contributes {@link StorageApi}.
+ * @see https://vuqs.dev/modules/storage
  */
 export const withStorage = /* @__PURE__ */ defineQueryModule({
   name: 'vuqs:storage',

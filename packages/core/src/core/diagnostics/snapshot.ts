@@ -56,11 +56,6 @@ export interface DebugSnapshot {
 /**
  * Registers a source that describes a subsystem's current state, returning a disposer.
  *
- * @remarks
- * Registration is independent of whether debug is armed, so a consumer attaching later
- * still sees subsystems created earlier. `describe` must return plain, serializable
- * data (resolved values, not reactive refs).
- *
  * @param channel - The channel that owns the subsystem.
  * @param kind - Which bucket the described value belongs to.
  * @param describe - Produces the current state on demand.

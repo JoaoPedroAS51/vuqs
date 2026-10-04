@@ -9,12 +9,6 @@ import type { QueryStateSchema } from '../schema/schema'
 /**
  * The shared core passed to query modules.
  *
- * @remarks
- * Modules use this object to derive state from the current URL selection,
- * contribute pipeline transforms, write params through `query.transact`, and coordinate
- * with other modules through `hooks`. Treat it as an implementation surface for
- * module authors, not as app-facing state.
- *
  * @typeParam TSchema - The schema being managed.
  */
 export interface QueryCore<TSchema extends QueryStateSchema> {

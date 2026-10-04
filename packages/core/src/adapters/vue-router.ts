@@ -8,9 +8,6 @@ import { isManagedNavigation } from '../core/runtime/managed-navigation'
 
 /**
  * Options for the `vue-router` adapter factories.
- *
- * @remarks
- * Shared by {@link createVueRouterAdapter} and {@link provideVueRouterAdapter}.
  */
 export interface VueRouterAdapterOptions {
   /** The router instance. Defaults to `useRouter()`, so the call must then run in a component `setup`. */
@@ -22,18 +19,9 @@ export interface VueRouterAdapterOptions {
 /**
  * Builds a {@link QueryAdapter} backed by `vue-router`.
  *
- * @remarks
- * Reads `router.currentRoute.value.query` and writes with `router.replace`,
- * switching to `router.push` when the `history` option is `'push'`. Nested keys
- * such as `filters.sort` require `vue-router` to be configured with `qs` for
- * `parseQuery`/`stringifyQuery`; with the default flat parser only top-level keys
- * round-trip.
- * `navigate` confirms successful and duplicate navigations. Router errors,
- * aborted navigations, and cancelled navigations reject its promise.
- *
  * @param options - The router (defaults to `useRouter()`) and adapter defaults.
  * @returns A query adapter to pass to {@link provideQueryAdapter} or a composable.
- *
+ * @see https://vuqs.dev/guide/getting-started/adapters
  * @see {@link https://router.vuejs.org/ | vue-router}
  */
 export function createVueRouterAdapter(options: VueRouterAdapterOptions = {}): QueryAdapter {
@@ -77,10 +65,6 @@ export function createVueRouterAdapter(options: VueRouterAdapterOptions = {}): Q
 
 /**
  * Creates a `vue-router` adapter and provides it to descendant components.
- *
- * @remarks
- * Call from a component `setup`. Equivalent to
- * `provideQueryAdapter(createVueRouterAdapter(options))`.
  *
  * @param options - The router (defaults to `useRouter()`) and adapter defaults.
  * @returns The created adapter.

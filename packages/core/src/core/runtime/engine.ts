@@ -23,12 +23,6 @@ import { createQueryPipeline } from './pipeline'
 /**
  * Options for {@link createQueryStateEngine}.
  *
- * @remarks
- * Extends {@link NavigateOptions}, so `history` and `scroll` set the navigation
- * defaults applied to every write unless a per-call write overrides them. `schema`
- * and `adapter` are required; `throttleMs` and `clearOnDefault` configure write
- * behavior and have their own defaults.
- *
  * @typeParam TSchema - The schema whose params the engine tracks.
  */
 export interface QueryStateEngineOptions<TSchema extends QueryStateSchema> extends NavigateOptions {
@@ -81,13 +75,6 @@ export interface QueryStateReads<TSchema extends QueryStateSchema> {
 /**
  * The defaults subsystem: read the merged default layers, or contribute one.
  *
- * @remarks
- * The codec defaults form the base layer. A module contributes a reactive layer
- * above it with `register`; later registrations win. The merged layers are the
- * single source the engine uses to resolve `values` and to decide `clearOnDefault`,
- * so reads and writes share one notion of the default. `resolved` exposes that
- * merge with the read pipeline applied, for modules to read.
- *
  * @typeParam TSchema - The schema whose params the engine tracks.
  */
 export interface QueryDefaultsBus<TSchema extends QueryStateSchema> {
@@ -128,22 +115,6 @@ export interface QueryStateEngine<TSchema extends QueryStateSchema> {
 
 /**
  * Creates the reactive engine behind URL-bound state.
- *
- * @remarks
- * Committed model: the URL is the source of truth. A write serializes to raw
- * deltas in one optimistic overlay shared by every engine using the same adapter,
- * so concurrent writes coalesce into one navigation instead of racing.
- * Successful navigation releases the versions included in that attempt. Newer
- * writes remain pending, so completion of an earlier navigation cannot discard them.
- *
- * Defaults resolve through a layered stack: the codec defaults are the base, and
- * modules contribute reactive layers via `defaults.register`. The merged result
- * feeds both value resolution and the `clearOnDefault` decision, so reads and
- * writes share one notion of "the default".
- *
- * The adapter runtime owns one committed-query observer regardless of binding count.
- * Each engine stabilizes its managed-path projection, so an unrelated URL change does
- * not propagate through its codecs, pipeline, or consuming component effects.
  *
  * @typeParam TSchema - The schema whose params the engine tracks.
  * @param options - Schema, resolved adapter, and the coalescing and default rules.

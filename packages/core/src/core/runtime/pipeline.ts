@@ -9,12 +9,6 @@ export type QueryValues = Record<string, unknown>
 /**
  * The pipeline stage map: each stage is an application point the engine runs,
  * with its own transform signature.
- *
- * @remarks
- * Core-owned and closed: modules tap existing stages, they do not add new ones
- * (a stage only exists where the engine applies it). Signatures are
- * heterogeneous: the value-map stages reshape parsed values, while `navigate`
- * rewrites the serialized query at the navigation boundary.
  */
 export interface QueryPipeline {
   /** Reshapes the values the app reads, for example dropping context-invalid params. */
@@ -36,11 +30,6 @@ export type Enforce = 'pre' | 'default' | 'post'
 
 /**
  * The transform pipeline modules contribute to through {@link QueryCore}.
- *
- * @remarks
- * Modules `tap` transforms at a stage; the engine `run`s the composed stage
- * inside its reactive reads and writes. Transforms must be pure functions of
- * their input so the pull-based reactivity stays correct.
  */
 export interface QueryPipelineBus {
   /**

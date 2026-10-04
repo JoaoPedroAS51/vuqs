@@ -19,12 +19,6 @@ declare module '../core/module-system/contract' {
 /**
  * Grouped API contributed by {@link withRuntimeDefaults}.
  *
- * @remarks
- * `selected` exposes the explicit URL selection and `defaults` the fallback
- * values. The module also registers those defaults as a layer, so the bound
- * `values` from {@link useQueryStates} resolve over them, making `values` the
- * effective read.
- *
  * @typeParam TSchema - The schema being managed.
  */
 export interface RuntimeDefaultsStatesApi<TSchema extends QueryStateSchema> {
@@ -40,11 +34,6 @@ export interface RuntimeDefaultsStatesApi<TSchema extends QueryStateSchema> {
 
 /**
  * Single-param API contributed by {@link withRuntimeDefaults}.
- *
- * @remarks
- * `selectedValue` exposes the explicit URL selection and `defaultValue` the
- * fallback value. The base ref's `.value` remains the effective read: selection
- * over runtime default over codec default.
  *
  * @typeParam TValue - The bound param's value type.
  */
@@ -62,21 +51,10 @@ export interface RuntimeDefaultsStateApi<TValue> {
 /**
  * Creates a module that layers runtime defaults under the bound query state.
  *
- * @remarks
- * The module registers the `setDefaults` snapshot as a default layer over the
- * codec defaults, so `values` resolve as the selection over the runtime default
- * over the codec default. Explicit URL selections override both. It also exposes
- * `selected` (the selection alone) and `defaults` (the merged fallback values).
- *
- * Pipeline `read` transforms apply to `selected`, `defaults`, and the resolved
- * `values`. Runtime defaults reset on the `'context:change'` hook, so pairing
- * this module with {@link withContext} clears stale per-context defaults without
- * direct coupling.
- *
+ * @see https://vuqs.dev/modules/runtime-defaults
  * @returns A module that contributes {@link RuntimeDefaultsStatesApi} to
  * {@link useQueryStates} and {@link RuntimeDefaultsStateApi} to
  * {@link useQueryState}.
- *
  * @example
  * ```ts
  * const { values, setDefaults } = useQueryStates(schema)

@@ -83,22 +83,9 @@ function stringifyQuery(query: ParsedQuery): string {
 /**
  * Creates a query adapter backed by the browser History API.
  *
- * @remarks
- * Requires a browser. Importing this entry on the server is safe, but calling
- * the factory there throws. Objects use dotted keys; scalar arrays use repeated
- * keys. Nullish values and empty arrays or objects are omitted. Arrays of objects
- * or arrays are unsupported. Numbers and booleans read back as strings.
- *
- * Writes preserve the pathname, hash, and `history.state`. They use `replaceState`
- * unless `history` is `'push'`, and scroll to the top only when `scroll` is `true`.
- * The reactive query updates synchronously after a successful write and on
- * `popstate`. Call `refresh()` after external `pushState` or `replaceState` calls.
- *
- * Call `dispose()` when the adapter is no longer needed. Navigation and refresh
- * throw after disposal.
- *
  * @param options - Default navigation and write options.
  * @returns An adapter to pass to `installQueryAdapter` or `provideQueryAdapter`.
+ * @see https://vuqs.dev/guide/getting-started/adapters
  */
 export function createBrowserHistoryAdapter(options: BrowserHistoryAdapterOptions = {}): BrowserHistoryAdapter {
   if (typeof window === 'undefined') {
@@ -179,10 +166,6 @@ export function createBrowserHistoryAdapter(options: BrowserHistoryAdapterOption
 
 /**
  * Creates a browser History API adapter and provides it to descendant components.
- *
- * @remarks
- * Call from a component `setup` in the browser. The adapter is disposed when
- * the component's effect scope stops.
  *
  * @param options - Default navigation and write options.
  * @returns The created adapter, already provided to descendants.

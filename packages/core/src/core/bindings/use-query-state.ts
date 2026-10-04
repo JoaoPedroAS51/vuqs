@@ -19,13 +19,7 @@ interface SingleQueryStateSchema<T> extends QueryStateSchema {
 /**
  * A writable ref bound to one query param, returned by {@link useQueryState}.
  *
- * @remarks
- * Reading yields the current value, or the codec default when the param is
- * absent. Assigning `.value` schedules a write with the default navigation
- * options. `set` and `clear` do the same while accepting per-call overrides.
- * Calling `clear`, or assigning `undefined` to a ref whose type includes it,
- * removes the param from the URL.
- *
+ * @see https://vuqs.dev/guide/essentials/use-query-state
  * @typeParam T - The param's value type.
  */
 export interface QueryStateRef<T> extends WritableComputedRef<T> {
@@ -37,11 +31,6 @@ export interface QueryStateRef<T> extends WritableComputedRef<T> {
 
 /**
  * A {@link QueryStateRef} with module support, returned by {@link useQueryState}.
- *
- * @remarks
- * Calling `use` mutates and returns the same ref object, so ref identity and
- * Vue ref behavior are preserved while the added API widens the type. Call
- * `use` synchronously while a Vue effect scope is active.
  *
  * @typeParam T - The ref value type.
  * @typeParam TApi - The API accumulated so far.
@@ -74,9 +63,6 @@ type StringQueryStateOptions = UseQueryStatesOptions & { parse?: never, serializ
 /**
  * Binds a single query key to a writable ref, using a codec with a static default.
  *
- * @remarks
- * Reading an absent key yields the default, so the ref reads as `T`.
- *
  * @typeParam T - The param's value type.
  * @param path - A dot-path into the query object, for example `'filters.sort'`.
  * @param codec - A codec carrying a default, from {@link Codec.withDefault}.
@@ -99,7 +85,6 @@ export function useQueryState<T>(
  * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
  * The query source and URL writer come from the provided adapter.
  * @returns A writable ref holding the value, or `undefined` when the key is absent.
- *
  * @example
  * ```ts
  * const q = useQueryState('q', codecs.string)
@@ -114,16 +99,10 @@ export function useQueryState<T>(
 /**
  * Binds a single query key as a string with a default, with no codec needed.
  *
- * @remarks
- * Shorthand for `codecs.string.withDefault(options.defaultValue)`. This default
- * is `string`-only; for other types pass a codec, for example
- * `codecs.integer.withDefault(0)`.
- *
  * @param path - A dot-path into the query object, for example `'filters.sort'`.
  * @param options - Behavior options plus the `defaultValue` string. The query
  * source and URL writer come from the provided adapter.
  * @returns A writable ref that always holds a string.
- *
  * @example
  * ```ts
  * const q = useQueryState('q', { defaultValue: '' })
@@ -141,7 +120,6 @@ export function useQueryState(
  * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
  * The query source and URL writer come from the provided adapter.
  * @returns A writable ref holding the string, or `undefined` when the key is absent.
- *
  * @example
  * ```ts
  * const q = useQueryState('q') // string | undefined, query and navigate from the adapter
@@ -154,9 +132,6 @@ export function useQueryState(
 
 /**
  * Binds a pre-built definition that declares a default to a writable ref.
- *
- * @remarks
- * Reading a missing key yields the default, so the ref reads as `T`.
  *
  * @typeParam T - The param's value type.
  * @param definition - A definition carrying a default, from a codec's `withDefault`.

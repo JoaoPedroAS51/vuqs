@@ -20,13 +20,6 @@ function enumValues(enumObject: Record<string, string | number>): (string | numb
 /**
  * Builds a codec for a TypeScript `enum`, accepting any of its members.
  *
- * @remarks
- * Where {@link codecs.literal} takes an explicit array, this reads the accepted
- * values from the enum object itself. It supports string, numeric, and
- * heterogeneous enums, and skips the reverse-mapping entries a numeric enum
- * exposes at runtime, so a numeric member round-trips through its number rather
- * than its key. Any value outside the enum parses as absent (`undefined`).
- *
  * @example
  * ```ts
  * enum Status {

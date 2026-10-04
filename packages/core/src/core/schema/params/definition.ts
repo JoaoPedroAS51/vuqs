@@ -11,11 +11,6 @@ export interface QueryParamReadContext {
 /**
  * A defined query param the core can execute.
  *
- * @remarks
- * Builders and codecs normalize to this shape before they reach the engine,
- * serializer, or schema helpers. `paths` is the source of truth for the query
- * keys the param owns.
- *
  * @typeParam T - The decoded value type of the param.
  */
 export interface DefinedQueryParam<T> {
@@ -59,11 +54,6 @@ export interface DefinedQueryParam<T> {
 /**
  * A {@link DefinedQueryParam} whose definition declares a default.
  *
- * @remarks
- * The default removes `undefined` from reads at the composable boundary, but
- * `read` stays a selection: it returns `undefined` for an absent or invalid value.
- * The default is resolved by the engine's default layer, not by `read`.
- *
  * @typeParam T - The decoded value type of the param.
  */
 export interface DefinedQueryParamWithDefault<T> extends DefinedQueryParam<T> {
@@ -103,10 +93,6 @@ export function createDefinedQueryParam<T>(
 
 /**
  * The raw executable pieces of a codec bound to a single dot-path.
- *
- * @remarks
- * `read` is a selection: `undefined` when the value is absent or invalid. The
- * default is resolved by the engine's default layer, not here.
  *
  * @internal
  */
@@ -149,7 +135,6 @@ export function defineCodecQueryParam<T>(path: string, codec: Codec<T>): Defined
  * within the declared paths.
  *
  * @throws {Error} When the wrapped write function writes outside `paths`.
- *
  * @internal
  */
 export function guardWrite<T>(

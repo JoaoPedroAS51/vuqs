@@ -15,10 +15,6 @@ import { timestampCodec } from './builtins/timestamp'
 
 /**
  * Built-in codecs for common value shapes.
- *
- * @remarks
- * `string`, `integer`, `float`, and `boolean` are ready-made codecs. `arrayOf`,
- * `literal`, `enum`, and `json` are factories that build a codec for a given shape.
  */
 export const codecs = {
   string: stringCodec,

@@ -20,26 +20,13 @@ import { QUERY_STATE_MODULE } from './contract'
  * Builds a module factory whose options and contributed API resolve through a
  * {@link QueryModuleRegistry} entry.
  *
- * @remarks
- * Use this form when the options or API contributed to {@link useQueryStates} or
- * {@link useQueryState} depend on the schema, the bound param's value type, or the
- * composing facade. Register the entry under `name` on {@link QueryModuleRegistry}
- * via `declare module '@vuqs/core'`, then declare the `queryStates` and
- * `queryState` projections that build each facet's API from the resolved options.
- *
- * The returned factory has four call forms: `f(options?)` (adaptive, the
- * composing `use` pins the facade and schema), `f(schema, options)` (grouped,
- * schema-checked), and `f(param, options)` / `f(path, options)` (single-param
- * bound to that param). The projections receive the resolved options as a
- * trailing argument.
- *
  * @typeParam TName - The registry name whose facets this factory resolves.
  * @param definition - The module name and its facade projections.
  * @param definition.name - The {@link QueryModuleRegistry} name to resolve.
  * @param definition.queryStates - The projection used by {@link useQueryStates}.
  * @param definition.queryState - The projection used by {@link useQueryState}.
  * @returns A factory producing a module for the resolved facade.
- *
+ * @see https://vuqs.dev/modules/authoring
  * @example
  * ```ts
  * declare module '@vuqs/core' {
@@ -100,14 +87,6 @@ export function defineQueryModule<TName extends QueryModuleName>(
  * Builds a plain module factory whose option and API types are fixed by its
  * projections.
  *
- * @remarks
- * Use this form when the options and contributed API do not depend on the schema,
- * the bound value, or the composing facade. The projection returns fix the API,
- * and a shared options type is taken from the projections' trailing argument. No
- * registry entry or `declare module` is needed.
- *
- * The returned factory has the same four call forms as the name form.
- *
  * @typeParam TStatesApi - The API added to {@link useQueryStates}.
  * @typeParam TStateApi - The API added to {@link useQueryState}.
  * @typeParam TOptions - The options shared across the call forms.
@@ -116,7 +95,6 @@ export function defineQueryModule<TName extends QueryModuleName>(
  * @param definition.queryStates - The projection used by {@link useQueryStates}.
  * @param definition.queryState - The projection used by {@link useQueryState}.
  * @returns A factory producing a module for the resolved facade.
- *
  * @example
  * ```ts
  * const withGrouped = defineQueryModule({
@@ -227,12 +205,6 @@ export function defineQueryModule(
 
 /**
  * Packages grouped and/or single-param projections into a module value.
- *
- * @remarks
- * A module with `queryStates` is callable for grouped composition; a single-only
- * module is not callable and can only be consumed by {@link useQueryState}. The
- * public {@link defineQueryModule} factory calls this to build the module value a
- * call form resolves to.
  *
  * @internal
  */

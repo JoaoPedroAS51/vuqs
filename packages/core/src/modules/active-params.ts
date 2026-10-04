@@ -54,15 +54,9 @@ declare module '../core/module-system/contract' {
 /**
  * Adds reactive views over params explicitly selected away from their resolved defaults.
  *
- * @remarks
- * A param is active when it is present in `core.state.selected` and either has no
- * resolved default or differs from that default according to the param's equality
- * function. Grouped composition can exclude schema keys from every view. The module
- * is read-only and registers no hooks, transforms, or default layers.
- *
+ * @see https://vuqs.dev/modules/active-params
  * @returns A module that contributes {@link ActiveParamsStatesApi} to
  * {@link useQueryStates} and {@link ActiveParamsStateApi} to {@link useQueryState}.
- *
  * @example
  * ```ts
  * const query = useQueryStates(schema)

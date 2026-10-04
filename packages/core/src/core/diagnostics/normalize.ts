@@ -2,12 +2,6 @@ import { isRef, toRaw } from 'vue'
 
 /**
  * Bounds applied when turning a live payload into a history record.
- *
- * @remarks
- * The buffer retains events across time, so it must never hold a live reference, a
- * reactive proxy, a cycle, or an unbounded graph. These limits cap the work and the
- * memory a single retained event can cost, including a total-node budget so a wide or
- * deep graph cannot make the synchronous pre-dispatch normalization stall the app.
  */
 export interface NormalizeLimits {
   /** Deepest object/array level walked before the value is replaced with a marker. */
@@ -39,13 +33,6 @@ interface Budget {
 
 /**
  * Produces a plain, bounded, cycle-free snapshot of a payload for the history buffer.
- *
- * @remarks
- * Vue refs and reactive proxies are unwrapped to raw data, `Error` is reduced to its
- * reportable fields, functions and symbols are dropped, and cycles and oversized
- * graphs are summarized. The result holds no live reference, so a later mutation of
- * the source cannot change a retained record. This never uses `structuredClone`,
- * which cannot clone reactive proxies.
  */
 export function normalizeForHistory(value: unknown, limits: NormalizeLimits = DEFAULT_NORMALIZE_LIMITS): unknown {
   return walk(value, limits, 0, new WeakSet<object>(), { remaining: limits.maxNodes })
@@ -53,13 +40,6 @@ export function normalizeForHistory(value: unknown, limits: NormalizeLimits = DE
 
 /**
  * Recursively freezes a normalized value so a retained record cannot be mutated in place.
- *
- * @remarks
- * A history record is stored once and delivered to every replay reporter (and shared by
- * the local and global buffers), so a mutable payload would allow one reporter to corrupt
- * what the next one replays. Only ever applied to {@link normalizeForHistory} output,
- * which is already bounded and cycle-free, so the recursion terminates; the `isFrozen`
- * short-circuit also avoids re-walking a shared, already-frozen subgraph.
  */
 export function deepFreeze<T>(value: T): T {
   if (value === null || typeof value !== 'object' || Object.isFrozen(value)) {

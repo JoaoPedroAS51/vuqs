@@ -40,10 +40,6 @@ function cloneValue(value: ParsedQueryValue): ParsedQueryValue {
  * Merges `next` over `base`, deep-merging nested plain objects and replacing
  * everything else.
  *
- * @remarks
- * Neither input is mutated. Values are not compacted: keys from either input are
- * kept as-is, so unmanaged params survive untouched.
- *
  * @internal
  */
 export function mergeQueries(base: ParsedQuery, next: ParsedQuery): ParsedQueryRaw {
@@ -59,11 +55,6 @@ export function mergeQueries(base: ParsedQuery, next: ParsedQuery): ParsedQueryR
 /**
  * Returns a copy of a query with nullish values, blank strings, and empty arrays
  * and objects removed recursively.
- *
- * @remarks
- * A blank string is one that is empty or whitespace-only. Meaningful falsy
- * values such as `0` and `false` are kept. Removing empty values prevents managed
- * paths with empty serialized values from remaining in the query. The input is not mutated.
  *
  * @internal
  */

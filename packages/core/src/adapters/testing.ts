@@ -143,18 +143,6 @@ function parseSearchParams(input: TestingAdapterOptions['searchParams']): Parsed
 /**
  * Creates a {@link QueryAdapter} backed by an in-memory ref for use in tests.
  *
- * @remarks
- * Provides an initial query parsed from `searchParams` and fires `onUrlUpdate`
- * on each flushed navigation, so a test can spy on URL updates without mocking a
- * router. Pass it to {@link installQueryAdapter} or `provideQueryAdapter`.
- * Initial query objects and navigation inputs are copied into query snapshots.
- * To simulate an external update, replace `adapter.query.value` with a parsed
- * query object. Mutating its properties or arrays does not notify composables.
- *
- * Each adapter identity owns its own update queue, so fresh adapters are isolated
- * automatically. Call `adapter.resetQueue()` only when reusing the same adapter
- * and intentionally discarding pending writes.
- *
  * @example
  * ```ts
  * import { createApp } from 'vue'
@@ -170,9 +158,9 @@ function parseSearchParams(input: TestingAdapterOptions['searchParams']): Parsed
  * const count = app.runWithContext(() => useQueryState('count', codecs.integer.withDefault(0)))
  * expect(count.value).toBe(42)
  * ```
- *
  * @param options - Initial query, update callback, and memory behavior.
  * @returns A {@link TestingAdapter} with the reactive query exposed for assertions.
+ * @see https://vuqs.dev/guide/going-further/testing
  */
 export function createTestingAdapter(options: TestingAdapterOptions = {}): TestingAdapter {
   const { hasMemory = false, onUrlUpdate, defaultOptions } = options
@@ -217,10 +205,6 @@ export function createTestingAdapter(options: TestingAdapterOptions = {}): Testi
  * Returns a Vue plugin that installs a testing adapter on an app, for use with
  * `@vue/test-utils`.
  *
- * @remarks
- * When you also need the adapter reference (e.g. to read `adapter.query.value`),
- * call {@link createTestingAdapter} and install it yourself instead.
- *
  * @example
  * ```ts
  * import { mount } from '@vue/test-utils'
@@ -230,7 +214,6 @@ export function createTestingAdapter(options: TestingAdapterOptions = {}): Testi
  *   global: { plugins: [withVuqsTestingAdapter({ searchParams: '?count=42', onUrlUpdate })] },
  * })
  * ```
- *
  * @param options - Forwarded to {@link createTestingAdapter}.
  * @returns A function that installs the testing adapter on the given Vue app.
  */

@@ -24,10 +24,6 @@ type OptionalObjectChildren<TChildren extends AnyObjectChildren> = {
 /**
  * The value type of an object param, built from its children.
  *
- * @remarks
- * A child that carries a default becomes a required key; a child without one
- * becomes optional, since its value may be absent from the query.
- *
  * @typeParam TChildren - The child param map.
  */
 export type ObjectValue<TChildren extends AnyObjectChildren> = Simplify<
@@ -49,12 +45,6 @@ export type QueryParamObjectDefault<TValue> = TValue extends object ? Partial<TV
 /**
  * The read/write mapping passed to {@link QueryParamBuilder.transform}.
  *
- * @remarks
- * `read` maps the source value to the public value, returning `undefined` to
- * expose the param as absent. `write` maps a public value back to the source.
- * `eq` compares public values; when omitted it is derived from the source
- * equality.
- *
  * @typeParam TInput - The source value type.
  * @typeParam TOutput - The public value type.
  */
@@ -66,12 +56,6 @@ export interface QueryParamTransform<TInput, TOutput> {
 
 /**
  * A param definition with chainable modifiers.
- *
- * @remarks
- * A builder is a {@link DefinedQueryParam}, so it can be passed directly to
- * `useQueryState`, `useQueryStates`, and `createSerializer`. Each modifier returns
- * a new builder, so definitions stay immutable and the last call for a given
- * modifier wins.
  *
  * @typeParam T - The param's value type.
  * @typeParam TDefaultInput - The type accepted by `withDefault`.
@@ -86,21 +70,12 @@ export interface QueryParamBuilder<T, TDefaultInput = T> extends DefinedQueryPar
   /**
    * Maps the param to a different public shape, deriving its default and equality
    * from the source unless overridden.
-   *
-   * @remarks
-   * A transformed composite resolves its inner child defaults statically: a
-   * later-registered runtime default cannot reach a missing child of a transformed
-   * value, unlike a plain object param.
    */
   transform: <TOutput>(transformer: QueryParamTransform<T, TOutput>) => QueryParamBuilder<TOutput>
 }
 
 /**
  * A {@link QueryParamBuilder} whose definition carries a default.
- *
- * @remarks
- * A defaulted param never reads back absent, so its value type is `T` rather than
- * `T | undefined`.
  *
  * @typeParam T - The param's value type.
  * @typeParam TDefaultInput - The type accepted by `withDefault`.
@@ -116,21 +91,12 @@ export interface QueryParamBuilderWithDefault<T, TDefaultInput = T>
   /**
    * Maps the param to a different public shape, deriving its default and equality
    * from the source unless overridden.
-   *
-   * @remarks
-   * A transformed composite resolves its inner child defaults statically: a
-   * later-registered runtime default cannot reach a missing child of a transformed
-   * value, unlike a plain object param.
    */
   transform: <TOutput>(transformer: QueryParamTransform<T, TOutput>) => QueryParamBuilder<TOutput>
 }
 
 /**
  * A builder for a composed object param, produced by `queryParam.object`.
- *
- * @remarks
- * Adds `withDefaultsWhenPresent` to the shared modifiers. `withDefault` accepts a
- * partial fill, layered under the child defaults.
  *
  * @typeParam T - The object value type.
  * @typeParam TDefaultInput - The type accepted by `withDefault`, a partial fill.
@@ -151,14 +117,6 @@ export interface QueryParamObjectBuilder<T, TDefaultInput = QueryParamObjectDefa
 
 /**
  * A {@link QueryParamObjectBuilder} whose resolved value carries a default.
- *
- * @remarks
- * `THasOwnDefault` records where the default comes from, which decides what
- * `withDefaultsWhenPresent` returns. Child defaults alone resolve the object to a
- * value, but gating them on URL presence can make it absent, so
- * `withDefaultsWhenPresent` drops the builder back to {@link QueryParamObjectBuilder}
- * (value `T | undefined`). An object-level `withDefault` keeps the object resolved
- * regardless of presence, so it stays defaulted.
  *
  * @typeParam T - The object value type.
  * @typeParam TDefaultInput - The type accepted by `withDefault`, a partial fill.
@@ -216,10 +174,6 @@ export type PrefixedQueryParamBuilder<TParam extends AnyDefinedQueryParam>
 
 /**
  * The raw executable pieces a builder wraps.
- *
- * @remarks
- * `read` stays raw (`undefined` when absent); the default resolves one layer up
- * from `defaultValue`, so modifiers and `transform` compose over the raw read.
  *
  * @internal
  */

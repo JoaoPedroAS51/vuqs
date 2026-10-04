@@ -5,23 +5,9 @@ import { createCodec } from '../codec'
 /**
  * Builds a codec that reads JSON text or an already-parsed query value.
  *
- * @remarks
- * Strings are decoded with `JSON.parse`. Objects and arrays are read as complete
- * values, including empty structures. Nullish query nodes, non-finite numeric
- * nodes, and invalid JSON text parse as absent (`undefined`).
- *
- * `validate` accepts a callback or a synchronous Standard Schema. It receives
- * the decoded or already-parsed value. The callback return value or schema
- * output is the codec result. Validation issues and throws parse as absent.
- * Without `validate`, the value is returned as `T` without schema validation.
- * Schema output must round-trip through `JSON.stringify` and validation.
- * The returned codec's `parse` throws `TypeError` if a Standard Schema returns
- * an asynchronous result.
- *
  * @param options - Optional callback or Standard Schema validator.
  * @param options.validate - The synchronous validator for the decoded value.
  * @returns A JSON codec whose value type is inferred from the validator output.
- *
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse | `JSON.parse`}
  */
 export function createJsonCodec<T>(options: { validate: StandardSchemaV1<unknown, T> }): Codec<T>

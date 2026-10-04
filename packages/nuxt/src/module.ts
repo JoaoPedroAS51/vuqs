@@ -55,6 +55,8 @@ export interface DebugOptions {
 /**
  * Configuration for the vuqs Nuxt module, set under the `vuqs` key in
  * `nuxt.config`.
+ *
+ * @see https://vuqs.dev/nuxt/configuration
  */
 export interface ModuleOptions {
   /**
@@ -76,13 +78,6 @@ export interface ModuleOptions {
    * Enable console diagnostics through a target-specific plugin. The default
    * summary reports writes, commits, module decisions, and warnings; programmatic
    * consumers can opt into the complete trace separately.
-   *
-   * @remarks
-   * `true` enables the browser console in development. `'force'` includes it in
-   * production. Configure `server` separately for request-scoped server logging.
-   *
-   * Console diagnostics add bundle weight. Use `'force'` only when production
-   * logging is required.
    *
    * @default false
    */

@@ -6,10 +6,6 @@ const HEX_PATTERN = /^[0-9a-f]+$/i
 
 /**
  * Parses a non-negative hexadecimal integer, padding serialized values to even length.
- *
- * @remarks
- * Numeric query nodes are interpreted as hexadecimal through their decimal
- * text: `10` and `'10'` both decode to `16`. Invalid input parses as absent.
  */
 export const hexCodec = createCodec<number>({
   parse: fromQueryScalar((value) => {

@@ -10,13 +10,7 @@ import { createObjectQueryParamFromArgs } from './object'
 /**
  * Builds a param from a path and codec, or composes one with `object`.
  *
- * @remarks
- * With no codec the param is a plain string; `{ defaultValue }` is shorthand for
- * `codecs.string.withDefault(...)`. A `CodecWithDefault` yields a defaulted param,
- * whose value reads back as `T` rather than `T | undefined`. The result is a
- * chainable builder that is also a `DefinedQueryParam`, usable directly in
- * `useQueryState`, `useQueryStates`, and `createSerializer`. `object` composes a
- * multi-key param from child params: see {@link QueryParamObjectFactory}.
+ * @see https://vuqs.dev/guide/going-further/defining-params
  */
 interface QueryParamFactory {
   /** A plain string param bound to `path`. */

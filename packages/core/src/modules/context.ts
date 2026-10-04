@@ -61,12 +61,6 @@ export interface ContextBaseOptions<TContext extends string> {
 /**
  * Grouped options for {@link withContext}.
  *
- * @remarks
- * `preserve` and `only` are keyed by schema param names. Omitting both selects
- * the base form (active context only). These options apply on
- * {@link useQueryStates}, either inferred from the composable schema or checked
- * against the schema passed to {@link withContext}.
- *
  * @typeParam TSchema - The schema whose param names key `preserve` and `only`.
  * @typeParam TContext - The union of context identifiers.
  */
@@ -89,10 +83,6 @@ export type QueryStatesContextOptions<TSchema extends QueryStateSchema, TContext
 
 /**
  * Single-param options for {@link withContext}.
- *
- * @remarks
- * `preserve` and `only` describe the one param bound by {@link useQueryState}.
- * Omitting both selects the base form (active context only).
  *
  * @typeParam TContext - The union of context identifiers.
  */
@@ -150,22 +140,7 @@ interface ContextControls<TContext extends string> {
 /**
  * Creates a context module that binds to whichever facade composes it.
  *
- * @remarks
- * The facade `use` composes it on picks the options: {@link useQueryStates}
- * types `preserve`/`only` against its schema, {@link useQueryState} types them
- * for the single param. Passing only `active` yields the base form, valid on
- * either facade. Call `withContext(schema, options)` to build a grouped module
- * with schema-checked keys outside a `use`, or `withContext(param, options)` /
- * `withContext(path, options)` to build a single-param module.
- *
- * The module taps a `read`/`write` pipeline transform that drops params invalid
- * in the active context, so such a param never enters `values` or derived module
- * state, and a write to one is dropped. An invalid param already in the URL (a
- * pasted stale link) stays hidden from reads and is cleared on the next context
- * switch via `switchTo` or `buildContextQuery`. On a context change the module
- * emits the `'context:change'` hook (so modules such as {@link withRuntimeDefaults}
- * clear per-context state). It never navigates on its own.
- *
+ * @see https://vuqs.dev/modules/context
  * @example
  * ```ts
  * const { switchTo } = useQueryStates(schema)

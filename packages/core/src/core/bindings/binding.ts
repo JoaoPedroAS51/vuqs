@@ -13,12 +13,6 @@ import { useQueryAdapter } from './adapter-provider'
 
 /**
  * Behavior options for {@link useQueryStates} and {@link useQueryState}.
- *
- * @remarks
- * `history` and `scroll` set navigation defaults for this instance; a per-call
- * write can override them. `throttleMs` coalesces writes, and `clearOnDefault`
- * drops default-valued params. The query source and URL writer come from the
- * {@link provideQueryAdapter | adapter}.
  */
 export interface UseQueryStatesOptions extends NavigateOptions {
   /** Coalesce writes within this many ms into one navigation. Defaults to a microtask. */
@@ -46,13 +40,6 @@ let bindingCounter = 0
  * The single root the reactive lenses derive from: a schema-typed whole-object
  * read plus an atomic transaction writer.
  *
- * @remarks
- * `useQueryStates` exposes a binding as `query.binding`. Lenses such as
- * {@link toQueryRefs} take it and derive their shape from `read` and `transact`
- * directly, so no shape reconstructs another and none carries a hidden brand.
- * Keeping the binding generic over `TSchema` is what
- * preserves per-key `T` vs `T | undefined` narrowing at the lens boundary.
- *
  * @typeParam TSchema - The schema whose params the binding exposes.
  */
 export interface QueryBinding<TSchema extends QueryStateSchema> {
@@ -67,11 +54,6 @@ export interface QueryBinding<TSchema extends QueryStateSchema> {
 /**
  * Anything that carries a {@link QueryBinding}: the object a reactive lens such
  * as {@link toQueryRefs} accepts.
- *
- * @remarks
- * `useQueryStates` returns a source, so `toQueryRefs(query)` reads its root
- * binding. The `binding` field is internal; pass the composable instead of
- * accessing `.binding`.
  *
  * @typeParam TSchema - The schema the binding exposes.
  */
@@ -194,17 +176,9 @@ function resolveSchemaClearOnDefault<TSchema extends QueryStateSchema>(
  * Projects a {@link QueryBinding} into the reactive dot-access value map behind
  * `useQueryStates().values`.
  *
- * @remarks
- * Each param is a per-key writable `computed` over `binding.read`/`binding.transact`,
- * wrapped in `reactive` so `values.page` reads and `values.page = x` writes with
- * the instance navigation defaults. Reactivity stays fine-grained: a per-key
- * `computed` recomputes when `read` changes but only re-notifies when its own
- * slice changes.
- *
  * @typeParam TSchema - The schema the binding exposes.
  * @param binding - The root binding to project.
  * @returns The reactive, writable value map, one entry per param.
- *
  * @internal
  */
 export function toReactiveQuery<TSchema extends QueryStateSchema>(

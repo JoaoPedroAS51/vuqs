@@ -8,11 +8,6 @@ import { getManagedKeys } from './schema'
 /**
  * Parses every param in a schema out of a parsed query object.
  *
- * @remarks
- * Reads each param's selection: a param whose value is absent or invalid is
- * omitted from the result rather than set to `undefined` or its default. Defaults
- * are resolved by the engine's default layer, not here.
- *
  * @typeParam TSchema - The schema describing the params to parse.
  * @param schema - The param definitions to parse with.
  * @param query - The parsed query object to read from.
@@ -39,12 +34,6 @@ export function parseQueryStates<TSchema extends QueryStateSchema>(
 /**
  * Serializes a value map into a nested query object.
  *
- * @remarks
- * Pass selected values only: a param equal to its default should be omitted so
- * the default does not reach the URL. Params with an absent value are skipped,
- * and each remaining param's keys are merged into the result. The result is
- * compacted, so a param that serializes to a blank or empty value leaves no key.
- *
  * @typeParam TSchema - The schema describing the params to serialize.
  * @param schema - The param definitions to serialize with.
  * @param values - The values to write, keyed by param name.
@@ -70,11 +59,6 @@ export function serializeQueryStates<TSchema extends QueryStateSchema>(
 /**
  * Removes every key the schema manages from a query, leaving unmanaged siblings
  * untouched.
- *
- * @remarks
- * Operates on a clone, so the input `query` is not mutated. Only ancestor
- * objects left empty by the removal are pruned; unmanaged params (including
- * empty ones) are preserved untouched.
  *
  * @typeParam TSchema - The schema describing which keys to remove.
  * @param schema - The schema whose managed keys are removed.
@@ -103,11 +87,6 @@ export function omitManagedKeys<TSchema extends QueryStateSchema>(
 /**
  * Builds the next query after a schema's values change.
  *
- * @remarks
- * Strips every managed key from `currentQuery`, then writes `values` back.
- * Unmanaged params are preserved, and a managed key absent from `values` is
- * dropped.
- *
  * @typeParam TSchema - The schema describing the managed params.
  * @param schema - The param definitions.
  * @param currentQuery - The query to update.
@@ -126,12 +105,6 @@ export function buildQuery<TSchema extends QueryStateSchema>(
 /**
  * Drops params whose value equals their codec default, so a default never
  * reaches the URL.
- *
- * @remarks
- * Absent (`undefined`) params are dropped too. A param with no default, or whose
- * value differs from its default, is kept. The function applies the
- * `clearOnDefault` rule without the reactive engine, for example when rendering a
- * link.
  *
  * @typeParam TSchema - The schema describing the params.
  * @param schema - The param definitions, used for per-param equality and defaults.

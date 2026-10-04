@@ -1,15 +1,9 @@
 /**
  * Compares two values structurally.
  *
- * @remarks
- * Primitives compare with `Object.is`. Arrays compare by index and plain objects
- * compare by key, both recursively. Codecs use this by default so arrays and plain
- * objects can equal freshly parsed values with different references.
- *
  * @param a - The first value.
  * @param b - The second value.
  * @returns `true` when the values are structurally equal.
- *
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/is | `Object.is`}
  */
 export function structuralEq(a: unknown, b: unknown): boolean {
@@ -43,13 +37,6 @@ export function structuralEq(a: unknown, b: unknown): boolean {
 
 /**
  * Deep-copies a decoded value so callers cannot alias a shared source.
- *
- * @remarks
- * Handles the value shapes a codec decodes to: primitives are returned as-is,
- * `Date` is rebuilt, and arrays and plain objects are cloned recursively. Avoids
- * `structuredClone`, which throws on Vue reactive proxies. Class instances other
- * than `Date` are returned by reference, since the decoded values a codec
- * produces do not include them.
  *
  * @typeParam T - The value type to clone.
  * @param value - The value to copy.
@@ -115,13 +102,8 @@ export function definedOnly<T extends object>(values: T): T {
  * Builds a function that returns a copy of an object keeping only the keys for
  * which `predicate` returns `true`.
  *
- * @remarks
- * The returned function evaluates `predicate` on each call and does not mutate
- * the input object.
- *
  * @param predicate - Returns `true` for a key to keep.
  * @returns A function that filters an object's keys.
- *
  * @example
  * ```ts
  * core.pipeline.tap(['read', 'write'], pickBy(key => isValidIn(key, active.value)))

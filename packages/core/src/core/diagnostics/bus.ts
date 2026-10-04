@@ -17,11 +17,6 @@ export type DebugLevel = 'debug' | 'warn'
 
 /**
  * Correlation dimensions attached to an event so a consumer can group related events.
- *
- * @remarks
- * Each dimension is independent: `runtimeId` isolates a `QueryAdapter` identity,
- * `bindingId` a binding/engine instance, and `transactionIds` the transaction(s) a
- * write produced. `transaction` ids are monotonic only within a single runtime.
  */
 export interface DebugContext {
   readonly runtimeId?: string
@@ -39,11 +34,6 @@ export type DebugEmissionContext = Omit<DebugContext, 'runtimeId'>
 
 /**
  * A single structured debug event. Frozen before it reaches any reporter.
- *
- * @remarks
- * Live reporters receive `data` as read-only raw references (fast, no copy). Replayed
- * events (from a history lease) carry a normalized, bounded representation instead.
- * Both preserve `seq`, `timestamp`, `code`, and `context`.
  */
 export interface DebugEvent {
   readonly code: string
@@ -97,11 +87,6 @@ export interface RetainHistoryOptions extends ChannelHistoryOptions {
 
 /**
  * The observation surface of a debug channel exposed to consumers.
- *
- * @remarks
- * It can attach reporters, retain history, and register snapshot sources, but it
- * cannot emit events: emission is internal to the core, so a consumer holding a
- * handle (e.g. from {@link getDebugChannel}) cannot forge internal event codes.
  */
 export interface DebugChannelHandle {
   readonly runtimeId?: string
@@ -419,10 +404,6 @@ function emit(channel: DebugChannel | undefined, code: string, level: DebugLevel
  * base context (the owning binding's id) into every emission, but shares the channel's
  * single FIFO, history, and snapshot registry. Reporters, leases, and snapshot
  * registration delegate straight to the channel; only emission carries the base context.
- *
- * @remarks
- * The base context wins over a call site's own context, so every binding-scoped event
- * keeps the target's `bindingId`.
  *
  * @internal
  */

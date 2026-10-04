@@ -8,10 +8,6 @@ import { definedOnly, structuralEq } from '../../shared/utils/object'
 /**
  * The whole-object writable ref produced by {@link toQueryRef}.
  *
- * @remarks
- * Reading yields a plain snapshot of the current params; writing replaces the
- * whole state. `.set`/`.clear` add per-call navigation options.
- *
  * @typeParam TSchema - The schema the binding exposes.
  */
 export interface QueryRef<TSchema extends QueryStateSchema>
@@ -29,21 +25,9 @@ export interface QueryRef<TSchema extends QueryStateSchema>
  * Binds a whole schema to one writable ref: a plain snapshot on read, an
  * exhaustive replace on write.
  *
- * @remarks
- * Reading yields a plain object with only the params that have a value: absent
- * params are omitted, defaulted params always appear. The snapshot keeps a stable
- * reference while its content is unchanged, so a `v-model` write-back cycle does
- * not churn identity. Assigning replaces the whole state: every param absent or
- * explicitly `undefined` in the assigned value is cleared.
- *
- * Pass the {@link useQueryStates} composable. Use this helper when the value is
- * the complete state, such as a form model or an API request object; use
- * {@link toQueryRefs} for per-field binding.
- *
  * @typeParam TSchema - The schema the binding exposes.
  * @param query - The {@link useQueryStates} composable to bind.
  * @returns A writable ref over the whole object, plus `.set`/`.clear`.
- *
  * @example
  * ```ts
  * const query = useQueryStates(schema)

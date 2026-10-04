@@ -7,12 +7,6 @@ import { normalizeQueryStateSchema } from './schema'
 
 /**
  * Options for {@link createSerializer}.
- *
- * @remarks
- * `stringify` and `parse` are symmetric opt-ins: provide `stringify` to get a
- * string result instead of a query object, and provide `parse` to accept a
- * string base in addition to an object. The core stays agnostic of the wire
- * format, so the `qs`/`URLSearchParams` choice lives in these two hooks.
  */
 export interface CreateSerializerOptions {
   /** Drop a value equal to its codec default. Defaults to `true`. */
@@ -50,22 +44,13 @@ export interface Serializer<TSchema extends QueryStateSchema, TBase, TOutput> {
  * Creates a reusable serializer bound to a schema, for building URLs without
  * navigating, for example links, redirects, or SSR loaders.
  *
- * @remarks
- * A param omitted from `values` is preserved, `undefined` clears it, and a value
- * sets it.
- * Unmanaged params on the base are always preserved. With `clearOnDefault` (the
- * default), a written value equal to its codec default is dropped from the
- * result, while an untouched base param is kept even when it equals its default.
- *
- * Returns a query object by default; pass `stringify` to render a string. Accepts
- * an object base by default; pass `parse` to also accept a string base.
- *
  * @typeParam TSchema - The schema describing the managed params.
  * @param schema - The params to serialize, keyed by logical name.
  * @param options - Optional `clearOnDefault`, `stringify`, and `parse` hooks.
  * @returns A {@link Serializer} for the schema.
  * @throws {Error} When a string base is passed but no `parse` option was provided.
  *
+ * @see https://vuqs.dev/guide/going-further/serializer
  * @example
  * ```ts
  * const serialize = createSerializer(schema)

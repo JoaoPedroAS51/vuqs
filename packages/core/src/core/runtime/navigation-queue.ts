@@ -62,15 +62,6 @@ interface NavigationAttempt {
 
 /**
  * The adapter-scoped queue that coalesces writes into a single navigation.
- *
- * @remarks
- * One instance backs one adapter identity. Writes from any engine merge into
- * {@link ThrottledQueue.overlay | overlay}: one canonical object
- * behind a `shallowRef`, notified atomically after each transaction without copying
- * all previously pending paths. Navigation completion owns write settlement;
- * one adapter-scoped observer tracks external query changes independently of
- * binding lifetimes. Flushes serialize navigations, so an older router commit
- * cannot complete after and overwrite a newer batch.
  */
 export class ThrottledQueue {
   /** The single optimistic overlay shared by every engine using this adapter. */
@@ -220,10 +211,6 @@ export class ThrottledQueue {
   /**
    * Removes the pending writes at the given query paths.
    *
-   * @remarks
-   * Completed navigation attempts remove their current versions. External query
-   * changes may also remove pending values they reflect exactly.
-   *
    * @param paths - The query paths whose pending writes should be removed.
    */
   settle(paths: string[]): void {
@@ -279,10 +266,6 @@ export class ThrottledQueue {
 
   /**
    * Clears pending writes, registered read layers, and scheduled flushes.
-   *
-   * @remarks
-   * An in-flight navigation keeps its serialization slot until its promise ends.
-   * Its outcome does not settle or roll back writes made after the reset.
    */
   reset(): void {
     this.readLayer?.reset()

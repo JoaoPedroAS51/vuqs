@@ -4,11 +4,6 @@ import { createCodec } from '../codec'
 
 /**
  * Builds a codec for an array whose items are each handled by `codec`.
- *
- * @remarks
- * A scalar query value is treated as a single-item array. Items that `codec`
- * rejects are dropped, and an empty result parses as absent (`undefined`).
- * Equality compares element-wise.
  */
 export function arrayOfCodec<T>(codec: Codec<T>): Codec<T[]> {
   return createCodec<T[]>({

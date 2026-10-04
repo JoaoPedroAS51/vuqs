@@ -4,12 +4,6 @@ import { emitDebug, isDebugArmed } from '../diagnostics/bus'
 /**
  * The notification event map, augmented by modules.
  *
- * @remarks
- * Empty in the core. A module that publishes a coordination event declares its
- * key and handler signature here via `declare module '@vuqs/core'`, so other modules
- * can listen without importing it. Key names are namespaced by module, for
- * example `'context:change'`.
- *
  * @example
  * ```ts
  * declare module '@vuqs/core' {
@@ -30,12 +24,6 @@ type HookArgs<Event extends keyof QueryHooks> = QueryHooks[Event] extends (...ar
 /**
  * The notification bus modules share through {@link QueryCore} to coordinate
  * without referencing each other.
- *
- * @remarks
- * Fire-and-forget: one module emits an event, others react. Handlers run
- * synchronously in an unspecified order and must be commutative: relying on
- * order is unsupported. A throwing handler is isolated and reported; it never
- * aborts the remaining handlers or the emitter.
  */
 export interface QueryHookBus {
   /**

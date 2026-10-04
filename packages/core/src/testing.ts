@@ -6,14 +6,6 @@ import { structuralEq } from './shared/utils/object'
  * Tests that a codec is bijective: both `parse(serialize(input)) eq input` and
  * `serialize(parse(serialized)) structuralEq serialized` must hold.
  *
- * @remarks
- * Both directions are tested independently via {@link testSerializeThenParse} and
- * {@link testParseThenSerialize}. Additionally, `codec.serialize(input)` must match
- * `serialized`, and `codec.parse(serialized)` must match `input`.
- *
- * Passing tests return `true`; failing tests throw with a message that identifies
- * which side failed and what the mismatch was.
- *
  * @example
  * ```ts
  * import { isCodecBijective } from '@vuqs/core/testing'
@@ -21,7 +13,6 @@ import { structuralEq } from './shared/utils/object'
  * expect(isCodecBijective(codecs.integer, '42', 42)).toBe(true)
  * expect(() => isCodecBijective(codecs.integer, '42', 47)).toThrow()
  * ```
- *
  * @param codec - The codec to test.
  * @param serialized - The expected serialized form of `input`.
  * @param input - The expected parsed form of `serialized`.
@@ -56,10 +47,6 @@ export function isCodecBijective<T>(codec: Codec<T>, serialized: ParsedQueryValu
  * Tests the serialize-then-parse direction of a codec: `parse(serialize(input))`
  * must equal `input` according to `codec.eq`.
  *
- * @remarks
- * Throws if the codec is not bijective in this direction, with a message
- * showing the expected value, the received value, and the serialized form.
- *
  * @example
  * ```ts
  * import { testSerializeThenParse } from '@vuqs/core/testing'
@@ -67,7 +54,6 @@ export function isCodecBijective<T>(codec: Codec<T>, serialized: ParsedQueryValu
  * expect(testSerializeThenParse(codecs.integer, 42)).toBe(true)
  * expect(() => testSerializeThenParse(codecs.integer, NaN)).toThrow()
  * ```
- *
  * @param codec - The codec to test.
  * @param input - The value to serialize and parse back.
  * @returns `true` if the check passes, otherwise throws.
@@ -99,10 +85,6 @@ export function testSerializeThenParse<T>(codec: Codec<T>, input: T): boolean {
  * Tests the parse-then-serialize direction of a codec: `serialize(parse(serialized))`
  * must equal `serialized` structurally (via {@link structuralEq}).
  *
- * @remarks
- * Throws if the codec is not bijective in this direction, or if the input is
- * rejected by `codec.parse` (returns `undefined`).
- *
  * @example
  * ```ts
  * import { testParseThenSerialize } from '@vuqs/core/testing'
@@ -110,7 +92,6 @@ export function testSerializeThenParse<T>(codec: Codec<T>, input: T): boolean {
  * expect(testParseThenSerialize(codecs.integer, '42')).toBe(true)
  * expect(() => testParseThenSerialize(codecs.integer, 'not-a-number')).toThrow()
  * ```
- *
  * @param codec - The codec to test.
  * @param serialized - The raw value to parse and re-serialize.
  * @returns `true` if the check passes, otherwise throws.
