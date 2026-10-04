@@ -2,19 +2,12 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { defineBuildConfig } from 'unbuild'
 
-// In source, the built-in modules augment `QueryModuleRegistry` at its declaration
-// site (`core/module-system/contract.ts`) so it merges in-source and in this
-// package's type tests. rollup-dts rewrites that specifier to the hashed shared
-// chunk it bundles the interface into, and TypeScript cannot merge a `declare
-// module "../shared/core.<hash>"` augmentation from a consumer. Retarget those
-// augmentations to the public entry, which is the specifier a consumer's imports
-// resolve through, so the registry entries merge downstream.
-const CHUNK_AUGMENTATION = /declare module (["'])(?:\.\.?\/)+shared\/core\.[^"']+\1/g
+// Consumers resolve the registry through the public entry, so augmentations
+// must target that entry rather than a source path or an aliased shared chunk.
+const REGISTRY_AUGMENTATION = /declare module (["'])(?:\.\.?\/)+(?:shared\/core\.[^"']+|core\/module-system\/contract)\1/g
 
-// A label string that lives only in the structured console reporter
-// (`src/debug/console-reporter.ts`), which is imported solely by the opt-in
-// `@vuqs/core/debug` entry. Finding it outside `debug.mjs` means a base module pulled
-// the reporter's human-readable labels into another bundle.
+// This label belongs to the opt-in console reporter. Finding it outside `debug.mjs`
+// means a base module included it in another bundle.
 const CONSOLE_SENTINEL = 'Observed an unknown debug event.'
 const CATALOG_SENTINEL = 'Combined another write with the pending URL update.'
 
@@ -54,7 +47,7 @@ export default defineBuildConfig({
           continue
         }
 
-        const next = code.replace(CHUNK_AUGMENTATION, 'declare module \'@vuqs/core\'')
+        const next = code.replace(REGISTRY_AUGMENTATION, 'declare module \'@vuqs/core\'')
 
         if (next !== code) {
           writeFileSync(path, next)
@@ -62,11 +55,8 @@ export default defineBuildConfig({
         }
       }
 
-      // The type tests resolve to `src`, so nothing guards the built output: if
-      // rollup-dts stops emitting the hashed-chunk augmentation this silently
-      // ships unmergeable types again. Fail loudly instead.
       if (retargeted !== 2)
-        throw new Error('[build] expected to retarget QueryModuleRegistry in both modules declaration artifacts. Did rollup-dts change its chunk naming?')
+        throw new Error('[build] expected to retarget QueryModuleRegistry in both modules declaration artifacts.')
 
       // The console reporter's human-readable labels must ship only through the opt-in
       // `@vuqs/core/debug` entry. A stray import from any base module would pull them
