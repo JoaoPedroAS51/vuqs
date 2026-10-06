@@ -1,3 +1,4 @@
+import type { PublicRuntimeConfig } from '@nuxt/schema'
 import type { QueryAdapterDefaultOptions } from '@vuqs/core'
 import { addImports, addPlugin, createResolver, defineNuxtModule, extendViteConfig } from '@nuxt/kit'
 import { defu } from 'defu'
@@ -174,9 +175,10 @@ export default defineNuxtModule<ModuleOptions>({
     if (options.adapter !== false) {
       const adapter = options.adapter === true || options.adapter === undefined ? {} : options.adapter
 
-      nuxt.options.runtimeConfig.public.vuqs = defu(nuxt.options.runtimeConfig.public.vuqs, {
+      const defaults: PublicRuntimeConfig['vuqs'] = {
         adapter: { defaultOptions: adapter.defaultOptions },
-      })
+      }
+      nuxt.options.runtimeConfig.public.vuqs = defu(nuxt.options.runtimeConfig.public.vuqs, defaults)
 
       addPlugin(resolve('./runtime/plugin'))
     }
