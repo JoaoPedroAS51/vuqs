@@ -31,7 +31,7 @@ bun add @vuqs/core
 | --- | --- | --- |
 | Vue | `>=3.5` | Built on the current reactivity APIs. |
 | `vue-router` | `4 \|\| 5` | Optional peer dependency, used only by the built-in adapter. |
-| Node | `>=22` | For local development. ESM-only, no CommonJS build. |
+| Node | `>=22.12.0` | For local development. ESM-only, no CommonJS build. |
 
 ::: info Using Nuxt?
 [`@vuqs/nuxt`](/nuxt/getting-started) wraps the core: it provides the vue-router

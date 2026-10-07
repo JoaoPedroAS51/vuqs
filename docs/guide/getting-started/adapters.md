@@ -40,13 +40,13 @@ app.mount('#app')
 ```
 
 `createVueRouterAdapter` returns the adapter object, and
-[`installQueryAdapter`](/api/composables#installqueryadapter) provides it to the
+[`installQueryAdapter`](/api/adapters/install-query-adapter) provides it to the
 whole app. Pass `router` explicitly: outside a component there is no `setup`, so
 the adapter cannot fall back to `useRouter()`.
 
 The adapter reads `router.currentRoute.value.query` and writes with
 `router.replace`, switching to `router.push` when the
-[`history`](/guide/essentials/navigation-options#history) option is `'push'`.
+[`history`](/guide/query-state/navigation-options#history) option is `'push'`.
 
 ::: info Using Nuxt?
 [`@vuqs/nuxt`](/nuxt/getting-started) installs this adapter app-wide.
@@ -64,7 +64,7 @@ installQueryAdapter(app, createVueRouterAdapter({
 }))
 ```
 
-These sit at the bottom of the [precedence chain](/guide/essentials/navigation-options#precedence):
+These sit at the bottom of the [precedence chain](/guide/query-state/navigation-options#precedence):
 a per-call or per-composable option still wins.
 
 ::: details Provide from a component instead
@@ -88,7 +88,7 @@ provideVueRouterAdapter()
 
 ::: details Using nested keys like `filters.sort`? Configure qs
 `vue-router`'s default query parser is flat, so dotted keys such as `filters.sort`
-do not round-trip. To use [nested keys](/guide/going-further/defining-params#nested-keys),
+do not round-trip. To use [nested keys](/guide/query-state/defining-params#nested-keys),
 configure the router with [`qs`](https://github.com/ljharb/qs):
 
 ```ts
@@ -190,7 +190,7 @@ provideQueryAdapter({
 ```
 
 `navigate(query, options)` receives the next **parsed** query object and the
-resolved [navigation options](/guide/essentials/navigation-options). It owns three
+resolved [navigation options](/guide/query-state/navigation-options). It owns three
 jobs:
 
 1. **Stringify** the query, for example with `qs`.
@@ -202,7 +202,7 @@ It completes synchronously or returns a promise for asynchronous navigation.
 
 ::: tip
 The full adapter contract, including `QueryAdapterDefaultOptions`, lives in the
-[API reference](/api/adapters).
+[API reference](/api/adapters/query-adapter).
 :::
 
 ## Navigation completion

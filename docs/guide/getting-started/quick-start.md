@@ -7,7 +7,7 @@ root of your app. Without one, the composables below throw.
 
 ## One param
 
-[`useQueryState`](/guide/essentials/use-query-state) binds a single query key to a
+[`useQueryState`](/guide/query-state/use-query-state) binds a single query key to a
 writable ref. Pass the key and a [codec](/guide/codecs/built-in) describing its
 type:
 
@@ -38,7 +38,7 @@ The ref is an ordinary Vue ref bound to the `q` key, so `v-model`, `computed`, a
 
 ## A group of params
 
-[`useQueryStates`](/guide/essentials/use-query-states) binds keys that change
+[`useQueryStates`](/guide/query-state/use-query-states) binds keys that change
 together and returns a reactive `values` map plus batch writers. Each entry is a
 codec, with the map key used as the query key:
 
@@ -71,13 +71,15 @@ Assigning several `values.*` in a row coalesces into **one** navigation, so a
 
 ::: tip
 `values` is a reactive map. To work with params as individual refs, convert it
-with [`toQueryRefs`](/guide/essentials/use-query-states#per-field-refs-with-toqueryrefs).
+with [`toQueryRefs`](/guide/query-state/use-query-states#per-field-refs-with-toqueryrefs).
 :::
 
 ## Next steps
 
-- [Concepts](/guide/essentials/concepts): codecs, params, schemas, and the commit cycle.
+- [Concepts](/guide/query-state/concepts): codecs, params, schemas, and the commit cycle.
 - [Built-in codecs](/guide/codecs/built-in): every type vuqs ships, and how to build your own.
-- [Navigation & options](/guide/essentials/navigation-options): `push` vs `replace`, throttling, and option precedence.
+- [Defining params](/guide/query-state/defining-params): reusable definitions, schemas, and modifiers.
+- [Navigation & options](/guide/query-state/navigation-options): `push` vs `replace`, throttling, and option precedence.
+- [Building URLs](/guide/query-state/building-urls): build query objects and links from your schema.
 - [Modules](/modules/): opt-in behavior composed onto `useQueryStates` or
   `useQueryState` when URL state alone is not enough.

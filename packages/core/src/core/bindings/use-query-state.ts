@@ -19,7 +19,7 @@ interface SingleQueryStateSchema<T> extends QueryStateSchema {
 /**
  * A writable ref bound to one query param, returned by {@link useQueryState}.
  *
- * @see https://vuqs.dev/guide/essentials/use-query-state
+ * @see https://vuqs.dev/guide/query-state/use-query-state
  * @typeParam T - The param's value type.
  */
 export interface QueryStateRef<T> extends WritableComputedRef<T> {

@@ -1,10 +1,10 @@
 # Modules
 
-The [core](/guide/essentials/concepts) binds typed values to the URL. Additional
+The [core](/guide/query-state/concepts) binds typed values to the URL. Additional
 behavior, such as runtime defaults or context-dependent state, lives in opt-in
 **modules** composed onto
-[`useQueryStates`](/guide/essentials/use-query-states) (a group) or
-[`useQueryState`](/guide/essentials/use-query-state) (one param) with `.use()`. The
+[`useQueryStates`](/guide/query-state/use-query-states) (a group) or
+[`useQueryState`](/guide/query-state/use-query-state) (one param) with `.use()`. The
 core remains independent of those policies.
 
 ```ts
@@ -51,7 +51,7 @@ import { withActiveParams, withContext, withRuntimeDefaults, withStorage } from 
 ```
 
 Importing the core never pulls in module code. Under Nuxt, the
-[`@vuqs/nuxt`](/nuxt/auto-imports) module auto-imports them.
+[`@vuqs/nuxt`](/nuxt/configuration#autoimports) module auto-imports them.
 
 ## Available modules
 
@@ -67,9 +67,9 @@ Custom modules use the same composition surface without changing the built-ins.
 ## When you don't need modules
 
 If you only sync state to the URL, stay with
-[`useQueryState`](/guide/essentials/use-query-state) and
-[`useQueryStates`](/guide/essentials/use-query-states). Modules are additive: the
-same [schema](/guide/essentials/concepts#schema-a-map-of-params) works with or
+[`useQueryState`](/guide/query-state/use-query-state) and
+[`useQueryStates`](/guide/query-state/use-query-states). Modules are additive: the
+same [schema](/guide/query-state/concepts#schema-a-map-of-params) works with or
 without them.
 
 ## Writing your own

@@ -10,7 +10,7 @@ import { createObjectQueryParamFromArgs } from './object'
 /**
  * Builds a param from a path and codec, or composes one with `object`.
  *
- * @see https://vuqs.dev/guide/going-further/defining-params
+ * @see https://vuqs.dev/guide/query-state/defining-params
  */
 interface QueryParamFactory {
   /** A plain string param bound to `path`. */

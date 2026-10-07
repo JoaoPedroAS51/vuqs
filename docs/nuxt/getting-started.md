@@ -1,7 +1,6 @@
 # Getting started
 
-`@vuqs/nuxt` auto-imports the composables and codecs, and provides the
-[query adapter](/nuxt/adapter) for Nuxt's router app-wide, including apps without pages.
+`@vuqs/nuxt` installs the query adapter for Nuxt's router and registers the composables, codecs, and built-in module factories as auto-imports. Apps without pages are supported through Nuxt's minimal router.
 
 ## Install
 
@@ -9,7 +8,7 @@
 pnpm add @vuqs/core @vuqs/nuxt
 ```
 
-Register it in `nuxt.config`:
+Register the module:
 
 ```ts
 // nuxt.config.ts
@@ -18,8 +17,7 @@ export default defineNuxtConfig({
 })
 ```
 
-The composables and codecs are now auto-imported, and the adapter is installed
-app-wide:
+## Usage
 
 ```vue
 <script setup lang="ts">
@@ -31,16 +29,14 @@ const search = useQueryState('q', codecs.string.withDefault(''))
 </template>
 ```
 
-## Registered APIs
+Writing to `search` updates the URL through the installed adapter. No per-component provider is required.
 
-- **[Auto-imports](/nuxt/auto-imports):** the composables, the `codecs` namespace,
-  and the [modules](/modules/).
-- **[The adapter](/nuxt/adapter):** the adapter for Nuxt's router, installed on the Vue
-  app so every composable resolves it.
+## Next steps
 
-Use [`vuqs` configuration](/nuxt/configuration) to select auto-import groups, set
-adapter defaults, or disable the built-in adapter.
+- [Configuration](/nuxt/configuration): auto-import groups, adapter defaults, and debug targets.
+- [Routing and adapters](/nuxt/adapter): nested queries and custom adapters.
+- [Query state](/guide/query-state/use-query-states): grouped values and batch writes.
 
 ## Compatibility
 
-Works with **Nuxt 3 and Nuxt 4** (`compatibility: { nuxt: '>=3.0.0' }`).
+The module declares support for Nuxt 3 and Nuxt 4 (`nuxt: '>=3.0.0'`).

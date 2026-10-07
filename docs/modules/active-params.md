@@ -1,4 +1,4 @@
-# withActiveParams <Badge type="tip" text="@vuqs/core/modules" />
+# Active params
 
 Derives which params are explicitly selected away from their resolved defaults.
 Use it for active-filter badges, summaries, and per-param indicators without
@@ -47,55 +47,7 @@ status.isActive.value
 
 The single-param form takes no options.
 
-## API
-
-### `useQueryStates`
-
-`withActiveParams(options?)` contributes `ActiveParamsStatesApi<TSchema>`:
-
-```ts
-interface ActiveParamsStatesApi<TSchema extends QueryStateSchema> {
-  activeKeys: ComputedRef<readonly (keyof TSchema & string)[]>
-  activeCount: ComputedRef<number>
-  hasActive: ComputedRef<boolean>
-  isActive: (key: keyof TSchema & string) => boolean
-}
-```
-
-- `activeKeys: ComputedRef<readonly (keyof TSchema & string)[]>`: active params in schema order.
-- `activeCount: ComputedRef<number>`: the number of active params.
-- `hasActive: ComputedRef<boolean>`: whether at least one param is active.
-- `isActive(key): boolean`: whether one schema param is active.
-
-`isActive(key)` reads the same reactive source as the computed views. Call it in a
-template, `computed`, or effect when its result must update reactively:
-
-```ts
-const hasActiveStatus = computed(() => query.isActive('status'))
-```
-
-### `useQueryState`
-
-`withActiveParams()` contributes `ActiveParamsStateApi`:
-
-```ts
-interface ActiveParamsStateApi {
-  isActive: ComputedRef<boolean>
-}
-```
-
-- `isActive: ComputedRef<boolean>`: whether the bound param is active.
-
-## Options
-
-```ts
-interface ActiveParamsOptions<TSchema extends QueryStateSchema> {
-  exclude?: readonly (keyof TSchema & string)[]
-}
-```
-
-`exclude` is static. The module captures it when composed. Pass a new module
-instance when the excluded keys need to change.
+See the [withActiveParams reference](/api/modules/with-active-params) for call forms, options, return values, and types.
 
 ## Signals
 
@@ -159,11 +111,11 @@ const summary = computed(() => ({
 ## Debugging
 
 `withActiveParams` is a read-only projection and emits no module-specific debug
-events. Use [vuqs debug logging](/guide/going-further/debugging) to inspect the
+events. Use [vuqs debug logging](/guide/debugging/enabling) to inspect the
 transactions, pipeline taps, and default-layer changes that feed its computed
 state.
 
 ## Nuxt
 
-Under [`@vuqs/nuxt`](/nuxt/auto-imports), `withActiveParams` is auto-imported
+Under [`@vuqs/nuxt`](/nuxt/configuration#autoimports), `withActiveParams` is auto-imported
 with the other modules.

@@ -22,7 +22,7 @@ equality), and a `.withDefault()`, exactly like the built-ins.
 2. **`serialize` and `parse` must round-trip.** `parse(serialize(x))` should equal
    `x` for every valid `x`.
 
-[`@vuqs/core/testing`](/guide/going-further/testing#testing-custom-codecs) asserts
+[`@vuqs/core/testing`](/guide/testing#testing-custom-codecs) asserts
 both round-trip directions.
 
 ## Reading the raw value
@@ -31,7 +31,7 @@ both round-trip directions.
 array, a nested object, or `undefined`). Validate the representations your codec
 accepts in `parse`.
 
-[`getQueryString`](/api/serializer#path-helpers) reads non-empty text from a string
+[`getQueryString`](/api/utils/get-path) reads non-empty text from a string
 or the first array item. It does not convert numbers, booleans, or objects:
 
 ```ts
@@ -113,7 +113,7 @@ support.
 ## Custom equality
 
 `eq` decides when a value equals its default (for
-[`clearOnDefault`](/guide/essentials/navigation-options#clearondefault)) and when
+[`clearOnDefault`](/guide/query-state/navigation-options#clearondefault)) and when
 an optimistic write has been reconciled. It defaults to a deep structural compare,
 which compares primitives with `Object.is` and recursively compares arrays and
 plain objects. Override it for other value shapes or when structural comparison
@@ -152,7 +152,7 @@ Schema output must round-trip through JSON serialization and validation.
 ## Reusing a custom codec
 
 A custom codec is a plain value: export it from a module and use it across your
-app, or wrap it in a named [param](/guide/going-further/defining-params):
+app, or wrap it in a named [param](/guide/query-state/defining-params):
 
 ```ts
 // codecs.ts

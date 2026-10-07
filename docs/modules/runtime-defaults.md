@@ -1,4 +1,4 @@
-# withRuntimeDefaults <Badge type="tip" text="@vuqs/core/modules" />
+# Runtime defaults
 
 Layers runtime defaults *under* the bound query state, so they shape what the UI
 reads without ever reaching the URL. It composes onto a group with `useQueryStates`
@@ -35,57 +35,7 @@ perPage.setDefault(20)
 perPage.value // the selection if present, else 20
 ```
 
-## API
-
-`withRuntimeDefaults()` takes no options. It contributes a grouped API to
-`useQueryStates` and a per-param API to `useQueryState`.
-
-### On `useQueryStates`
-
-```ts
-interface RuntimeDefaultsStatesApi<TSchema extends QueryStateSchema> {
-  selected: Readonly<QueryStateValues<TSchema>>
-  defaults: Readonly<QueryStateValues<TSchema>>
-  setDefaults: (values: QueryStateValues<TSchema>) => void
-  clearDefaults: () => void
-}
-```
-
-`RuntimeDefaultsStatesApi<TSchema>` contributes:
-
-- `selected: Readonly<QueryStateValues<TSchema>>`
-  - The explicit URL selections, a readonly reactive map, with no runtime or codec
-    defaults applied.
-- `defaults: Readonly<QueryStateValues<TSchema>>`
-  - The fallback values: runtime defaults from `setDefaults` over codec defaults.
-- `setDefaults(values: QueryStateValues<TSchema>): void`
-  - **Replaces** the runtime defaults with a snapshot. It does not merge. These
-    feed `defaults` and the resolved `values`, but are never written to the URL.
-- `clearDefaults(): void`
-  - Drops the runtime defaults, leaving codec defaults in place.
-
-### On `useQueryState`
-
-```ts
-interface RuntimeDefaultsStateApi<TValue> {
-  selectedValue: ComputedRef<TValue | undefined>
-  defaultValue: ComputedRef<TValue | undefined>
-  setDefault: (value: TValue) => void
-  clearDefault: () => void
-}
-```
-
-`RuntimeDefaultsStateApi<TValue>` is merged onto the ref:
-
-- `selectedValue: ComputedRef<TValue | undefined>`
-  - The explicit URL selection for this param.
-- `defaultValue: ComputedRef<TValue | undefined>`
-  - The fallback for this param: runtime default over codec default.
-- `setDefault(value: TValue): void` / `clearDefault(): void`
-  - Set or drop the runtime default for this one param.
-
-The effective read is the base `values` map (grouped) or the ref's `.value`
-(single). Writes still go through the base composable.
+See the [withRuntimeDefaults reference](/api/modules/with-runtime-defaults) for call forms, options, return values, and types.
 
 ## Signals
 
@@ -131,7 +81,7 @@ default while a *differing* runtime default exists persists the write instead of
 clearing to the runtime default. For example, if the codec default is `usd` and
 the runtime default is `eur`, assigning `values.currency = 'usd'` writes
 `?currency=usd` and reads it back, rather than clearing to `eur`.
-[`clearOnDefault`](/guide/essentials/navigation-options#clearondefault) only drops a
+[`clearOnDefault`](/guide/query-state/navigation-options#clearondefault) only drops a
 write that equals the *resolved* default, which here is `eur`.
 
 ### URL contents
@@ -183,11 +133,11 @@ Selecting `archived` writes `?status=archived`; clearing it restores the default
 
 ## Debugging
 
-When [vuqs debug logging](/guide/going-further/debugging) is enabled, the module
+When [vuqs debug logging](/guide/debugging/enabling) is enabled, the module
 logs under `[vuqs rd]`. The stream includes default-layer registration and
 disposal, `setDefaults`/`clearDefaults`, and resets caused by `context:change`.
 
 ## Nuxt
 
-Under [`@vuqs/nuxt`](/nuxt/auto-imports), `withRuntimeDefaults` is auto-imported
+Under [`@vuqs/nuxt`](/nuxt/configuration#autoimports), `withRuntimeDefaults` is auto-imported
 with the other modules.

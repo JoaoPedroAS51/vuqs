@@ -160,7 +160,7 @@ function parseSearchParams(input: TestingAdapterOptions['searchParams']): Parsed
  * ```
  * @param options - Initial query, update callback, and memory behavior.
  * @returns A {@link TestingAdapter} with the reactive query exposed for assertions.
- * @see https://vuqs.dev/guide/going-further/testing
+ * @see https://vuqs.dev/guide/testing
  */
 export function createTestingAdapter(options: TestingAdapterOptions = {}): TestingAdapter {
   const { hasMemory = false, onUrlUpdate, defaultOptions } = options

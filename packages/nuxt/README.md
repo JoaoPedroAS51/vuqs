@@ -74,8 +74,7 @@ export default defineNuxtConfig({
 
 ### Bring your own adapter
 
-Set `adapter: false` and provide one yourself (for example with `qs` for nested
-keys, or a non-router source):
+Set `adapter: false` when providing your own adapter:
 
 ```ts
 export default defineNuxtConfig({
@@ -86,6 +85,7 @@ export default defineNuxtConfig({
 
 ```ts
 // plugins/vuqs.ts
+import { installQueryAdapter } from '@vuqs/core'
 import { createVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
 
 export default defineNuxtPlugin((nuxtApp) => {
@@ -97,5 +97,5 @@ export default defineNuxtPlugin((nuxtApp) => {
 
 vue-router's default query parser is flat, so nested keys such as `filters.sort`
 won't round-trip. To use them, configure the router with `qs` via
-`app/router.options.ts`. See the
+`app/router.options.ts`, keeping the installed adapter enabled. See the
 [vuqs adapter docs](https://vuqs.dev/nuxt/adapter#nested-keys).

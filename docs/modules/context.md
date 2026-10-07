@@ -1,4 +1,4 @@
-# withContext <Badge type="tip" text="@vuqs/core/modules" />
+# Context changes
 
 Makes state behave differently across **contexts**: tabs, wizard steps, view
 modes. Switching to a context preserves some params, resets the rest, and drops
@@ -41,105 +41,7 @@ const category = useQueryState('category', codecs.string)
 // dropped from reads and the URL when the active context is not 'products'
 ```
 
-## API
-
-`withContext(options)` binds to whichever composable composes it. To build a module
-outside a `.use` chain, pass a schema (`withContext(schema, options)`) or a param
-(`withContext(param, options)`) so the facade is explicit (see
-[Typing `preserve` and `only`](#typing-preserve-and-only)). Every form contributes the
-same controls:
-
-```ts
-interface ContextControls<TContext extends string> {
-  activeContext: ComputedRef<TContext>
-  buildContextQuery: (currentQuery: ParsedQuery, nextContext: TContext) => ParsedQueryRaw
-  switchTo: (target: TContext, options?: NavigateOptions) => void
-}
-
-interface ContextStatesApi<TContext extends string> extends ContextControls<TContext> {}
-
-interface ContextStateApi<TContext extends string> extends ContextControls<TContext> {}
-```
-
-`ContextControls` describes the shared members; it is not a package export.
-
-- `activeContext: ComputedRef<TContext>`
-  - The current context as a ref, mirroring the `active` option.
-- `buildContextQuery(currentQuery, nextContext): ParsedQueryRaw`
-  - The reconciled query for switching to `nextContext`, **without navigating**.
-    Use it to render a link.
-- `switchTo(target, options?): void`
-  - Switches in **one navigation**, reconciling the query and handing it to your
-    [`navigate`](#options) option. Throws if `navigate` is not
-    configured.
-
-It also filters params by the active context, so a param invalid there is absent
-from `values`, generated writes, and every module's derived state. A stale external
-URL may still contain the raw param until the next write, when the write pipeline
-drops it.
-
-## Options
-
-`active` and `navigate` are shared. `preserve` and `only` take a different shape
-per composable:
-
-```ts
-type ContextNavigate<TContext extends string> = (
-  target: TContext,
-  query: ParsedQueryRaw,
-  options?: NavigateOptions,
-) => void
-
-interface ContextBaseOptions<TContext extends string> {
-  active: MaybeRefOrGetter<TContext>
-  navigate?: ContextNavigate<TContext>
-}
-
-type QueryStatesContextOptions<TSchema extends QueryStateSchema, TContext extends string>
-  = ContextBaseOptions<TContext> & (
-    | { preserve?: undefined, only?: undefined }
-    | {
-      preserve: ReadonlyArray<keyof TSchema & string>
-      only?: Partial<Record<keyof TSchema & string, readonly TContext[]>>
-    }
-    | {
-      preserve?: ReadonlyArray<keyof TSchema & string>
-      only: Partial<Record<keyof TSchema & string, readonly TContext[]>>
-    }
-  )
-
-type QueryStateContextOptions<TContext extends string> = ContextBaseOptions<TContext> & (
-  | { preserve?: undefined, only?: undefined }
-  | {
-    preserve: boolean
-    only?: readonly TContext[]
-  }
-  | {
-    preserve?: boolean
-    only: readonly TContext[]
-  }
-)
-```
-
-- `active: MaybeRefOrGetter<TContext>`
-  - The current context, supplied as an opaque identifier such as a tab `ref`, route
-    param, or wizard step. The module does not derive it.
-- `preserve`
-  - Grouped: `ReadonlyArray<keyof TSchema & string>`, the params kept across a switch. Everything not
-    listed resets.
-  - Single: `boolean`, whether the one param carries over.
-- `only`
-  - Grouped: `Partial<Record<keyof TSchema & string, readonly TContext[]>>`, restricting which contexts each param
-    exists in. An omitted param is valid everywhere.
-  - Single: `readonly TContext[]`, the contexts the one param exists in.
-- `navigate?: (target, query, options?) => void`
-  - How to reach a context. `switchTo` reconciles the query and calls this with the
-    target context and reconciled query. Map the context to a route in this callback.
-    Omit it and `switchTo` throws; `buildContextQuery` remains available for manual
-    navigation.
-
-Omit both `preserve` and `only` for the base form: every managed param then resets on
-a switch.
+See the [withContext reference](/api/modules/with-context) for call forms, options, return values, and types.
 
 ## Signals
 
@@ -259,12 +161,12 @@ removes `category` in one navigation.
 
 ## Debugging
 
-When [vuqs debug logging](/guide/going-further/debugging) is enabled, the module
+When [vuqs debug logging](/guide/debugging/enabling) is enabled, the module
 logs under the `ctx` scope. The stream includes context changes, keys kept or dropped
 by `buildContextQuery`, and `switchTo` targets. Pipeline and signal activity also
 appears under the `pipeline` and `hooks` scopes.
 
 ## Nuxt
 
-Under [`@vuqs/nuxt`](/nuxt/auto-imports), `withContext` is auto-imported with the
+Under [`@vuqs/nuxt`](/nuxt/configuration#autoimports), `withContext` is auto-imported with the
 other modules.

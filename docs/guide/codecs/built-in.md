@@ -240,13 +240,13 @@ codecs.arrayOf(codecs.json<{ id: number }>()).parse(raw) // [{ id: 1 }, { id: 2 
 ::: warning Keep JSON small
 JSON values are URL-encoded and can grow long quickly. For a couple of params it
 is fine; for a large object, prefer several scalar keys or a
-[composite param](/guide/going-further/defining-params#composite-params).
+[composite param](/guide/query-state/defining-params#composite-params).
 :::
 
 ## Defaults: `.withDefault()`
 
 Every codec carries a `.withDefault(value)`. It changes two things, covered in
-[Concepts](/guide/essentials/concepts#default-value-not-the-same-as-empty):
+[Concepts](/guide/query-state/concepts#default-value-not-the-same-as-empty):
 
 ```ts
 codecs.string // QueryStateRef<string | undefined>

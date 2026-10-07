@@ -1,4 +1,4 @@
-# withStorage <Badge type="tip" text="@vuqs/core/modules" />
+# Storage
 
 Mirrors the explicit query selection to sync or async storage and can restore it
 into an empty URL. Storage is a durable mirror of URL state, not a default layer.
@@ -42,81 +42,7 @@ const search = useQueryState('q', codecs.string)
 await search.storage.ready
 ```
 
-## API
-
-`withStorage(options)` contributes the same `StorageApi` to `useQueryStates` and
-`useQueryState`.
-
-```ts
-interface StorageApi {
-  storage: StorageControls
-}
-```
-
-### Storage controls
-
-```ts
-type StorageStatus = 'restoring' | 'ready' | 'error'
-
-interface StorageControls {
-  status: ComputedRef<StorageStatus>
-  error: ShallowRef<unknown | undefined>
-  ready: Promise<void>
-  flush: () => Promise<void>
-}
-```
-
-- `status` describes the latest lifecycle outcome.
-- `error` contains the latest operational failure and clears after a later
-  successful write.
-- `ready` resolves when the initial restore attempt settles.
-- `flush()` captures the writes requested when it is called and waits for that
-  boundary to settle. Before `ready`, it also waits for initialization, but not
-  for writes requested afterward.
-
-### Storage adapter
-
-Implement `QueryStorage` to use IndexedDB, a native bridge, or a test double:
-
-```ts
-type Awaitable<T> = T | PromiseLike<T>
-
-interface QueryStorage {
-  load(key: string): Awaitable<StoredQuerySnapshot | undefined>
-  save(key: string, snapshot: StoredQuerySnapshot): Awaitable<void>
-  remove(key: string): Awaitable<void>
-}
-
-function createWebStorage(
-  resolveStorage: () => Storage | undefined,
-): QueryStorage
-```
-
-Synchronous adapters are valid because their results satisfy `Awaitable`.
-`createWebStorage` provides a JSON-backed adapter for `localStorage` or
-`sessionStorage`. Its resolver is lazy, so referencing `window` inside it is
-SSR-safe.
-
-## Options
-
-```ts
-type StorageRestorePolicy = 'if-empty' | 'never'
-
-interface StorageOptions {
-  key: string
-  storage: QueryStorage
-  restore?: StorageRestorePolicy
-  version?: string
-}
-```
-
-- `key` identifies the snapshot in the storage implementation.
-- `storage` implements the async-first [`QueryStorage`](#storage-adapter)
-  boundary.
-- `restore` defaults to `if-empty`. Use `never` for write-only mirroring.
-- `version` rejects snapshots written by an incompatible application version.
-
-Invalid options throw synchronously when the module is composed with `.use()`.
+See the [withStorage reference](/api/modules/with-storage) for call forms, options, return values, and types.
 
 ## Signals
 
@@ -150,14 +76,7 @@ selection immediately.
 The module persists the explicit selection after the read pipeline, serialized
 through the schema:
 
-```ts
-interface StoredQuerySnapshot {
-  format: 1
-  version?: string
-  savedAt: number
-  query: ParsedQueryRaw
-}
-```
+The snapshot uses the [`StoredQuerySnapshot`](/api/modules/with-storage#storedquerysnapshot) envelope.
 
 Only explicit selections are included, including explicitly present values equal
 to a default. Codec defaults, registered default layers, and resolved `values`
@@ -223,12 +142,12 @@ needs storage to reflect the writes requested before that call.
 
 ## Debugging
 
-When [vuqs debug logging](/guide/going-further/debugging) is enabled, the module
+When [vuqs debug logging](/guide/debugging/enabling) is enabled, the module
 logs under `[vuqs storage]`. The stream includes the restore policy and winner,
 `save`/`remove` operations with revisions, coalesced writes, and operational
 failures.
 
 ## Nuxt
 
-Under [`@vuqs/nuxt`](/nuxt/auto-imports), `withStorage` is auto-imported. Import
+Under [`@vuqs/nuxt`](/nuxt/configuration#autoimports), `withStorage` is auto-imported. Import
 `createWebStorage` from `@vuqs/core/modules`, or provide your own `QueryStorage`.

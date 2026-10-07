@@ -50,7 +50,7 @@ export interface Serializer<TSchema extends QueryStateSchema, TBase, TOutput> {
  * @returns A {@link Serializer} for the schema.
  * @throws {Error} When a string base is passed but no `parse` option was provided.
  *
- * @see https://vuqs.dev/guide/going-further/serializer
+ * @see https://vuqs.dev/guide/query-state/building-urls
  * @example
  * ```ts
  * const serialize = createSerializer(schema)

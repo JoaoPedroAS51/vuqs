@@ -1,7 +1,7 @@
-# Adapter
+# Routing and adapters
 
 The module installs a query adapter on the Vue app through
-[`installQueryAdapter`](/api/composables#installqueryadapter), so every composable
+[`installQueryAdapter`](/api/adapters/install-query-adapter), so every composable
 resolves it with no per-component setup.
 
 The module uses the [vue-router adapter](/guide/getting-started/adapters#vue-router)
@@ -11,31 +11,11 @@ automatically uses Nuxt's minimal router. No additional configuration is needed.
 Both adapters preserve the current path and hash when writing query state and
 support `history: 'push'` and `history: 'replace'`.
 
-## Adapter defaults
-
-`adapter.defaultOptions` sets a baseline for every write. For example, use
-`replace` to avoid adding a history entry for each filter edit:
-
-```ts
-// nuxt.config.ts
-export default defineNuxtConfig({
-  modules: ['@vuqs/nuxt'],
-  vuqs: {
-    adapter: { defaultOptions: { history: 'replace', clearOnDefault: true } },
-  },
-})
-```
-
-Adapter defaults sit at the bottom of the
-[precedence chain](/guide/essentials/navigation-options#precedence): a per-call or
-per-composable option still wins. They are also exposed through
-`runtimeConfig.public.vuqs.adapter`, so they can be overridden per environment like
-any public runtime config.
+Configure navigation defaults through [adapter.defaultOptions](/nuxt/configuration#adapter).
 
 ## Bring your own adapter
 
-Set `adapter: false` to provide a non-router query source or configure `qs` for
-[nested keys](#nested-keys):
+Set `adapter: false` when replacing the installed adapter with your own implementation:
 
 ```ts
 // nuxt.config.ts
@@ -47,6 +27,7 @@ export default defineNuxtConfig({
 
 ```ts
 // plugins/vuqs.ts
+import { installQueryAdapter } from '@vuqs/core'
 import { createVueRouterAdapter } from '@vuqs/core/adapters/vue-router'
 
 export default defineNuxtPlugin((nuxtApp) => {
@@ -54,15 +35,11 @@ export default defineNuxtPlugin((nuxtApp) => {
 })
 ```
 
-`installQueryAdapter` is the app-level counterpart to `provideQueryAdapter`: it
-provides the adapter on the Vue app rather than a component instance, which is why a
-plugin can register it.
-
 ## Nested keys
 
 vue-router's default query parser is flat, so dotted keys like `filters.sort` do
-not round-trip ([more](/guide/going-further/defining-params#nested-keys)). To use
-them, configure the router with `qs` in `app/router.options.ts`:
+not round-trip ([more](/guide/query-state/defining-params#nested-keys)). To use
+them in an app using Vue Router, configure the router with `qs` in `app/router.options.ts`. The installed vuqs adapter uses that router; keep `adapter` enabled:
 
 ```ts
 // app/router.options.ts
@@ -77,3 +54,5 @@ export default {
 
 Flat, top-level keys and repeated-key arrays (`?tags=a&tags=b`) work with the
 default parser. Nested objects require the custom parser and stringifier.
+
+The minimal router does not use Vue Router configuration. For custom parsing without pages, disable the installed adapter and provide one that supports your format.

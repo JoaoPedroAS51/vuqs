@@ -10,9 +10,6 @@ hero:
       text: Get started
       link: /guide/getting-started/installation
     - theme: alt
-      text: Why vuqs?
-      link: /guide/going-further/about
-    - theme: alt
       text: View on GitHub
       link: https://github.com/JoaoPedroAS51/vuqs
 
@@ -62,6 +59,6 @@ const page = useQueryState('page', codecs.integer.withDefault(1))
 
 > [!TIP]
 > New here? Start with **[Installation](/guide/getting-started/installation)**, then
-> read **[Concepts](/guide/essentials/concepts)** for codecs, params, schemas, and writes.
+> read **[Concepts](/guide/query-state/concepts)** for codecs, params, schemas, and writes.
 
 </div>

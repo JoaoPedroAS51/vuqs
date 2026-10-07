@@ -116,7 +116,7 @@ and `values`/`resolved` re-resolve. Only defined values participate, so a layer
 never clobbers a lower one with `undefined`.
 
 Registering a layer also moves
-[`clearOnDefault`](/guide/essentials/navigation-options#clearondefault): a write
+[`clearOnDefault`](/guide/query-state/navigation-options#clearondefault): a write
 clears when it equals the *resolved* default, not just the codec default. Reads and
 writes share the resolved default, so `withRuntimeDefaults` can persist a write of
 the codec default while a differing runtime default exists.
@@ -267,7 +267,7 @@ useQueryState('q').use(withScope({ label: 'x', include: true })) // single
 
 `withContext` is the canonical example. Its `withContext(schema, options)` and
 `withContext(param, options)` forms build a module outside a `.use` chain, checking
-keys against the given schema or binding to the given param.
+keys against a normalized schema or selecting the single-param option shape.
 
 ## Lifecycle and cleanup
 
@@ -342,222 +342,12 @@ isAllowed('status') // false → `status` is filtered out of `values` and the UR
 It reads only `core` (`pickBy` on the pipeline, `emit` on the hooks bus) and
 neither imports nor calls another module.
 
-## Authoring types <Badge type="info" text="@vuqs/core" />
-
-The public authoring types are exported from `@vuqs/core`. The
-[`@vuqs/core/shared`](#vuqs-core-shared-helpers) helpers below use their own subpath.
-
-```ts
-type QueryStatesModule<TSchema extends QueryStateSchema, TApi> = (core: QueryCore<TSchema>) => TApi
-
-type QueryStateModule<TSchema extends QueryStateSchema, TApi> = (
-  core: QueryCore<TSchema>,
-  key: keyof TSchema & string,
-) => TApi
-
-type DefinedQueryStatesModule<TSchema extends QueryStateSchema, TApi> = QueryStatesModule<TSchema, TApi>
-
-type DefinedQueryModule<
-  TSchema extends QueryStateSchema,
-  TQueryStatesApi,
-  TQueryStateApi,
-> = DefinedQueryStatesModule<TSchema, TQueryStatesApi> & DefinedQueryStateModule<TQueryStateApi>
-
-type QueryModuleFacade = 'state' | 'states'
-
-interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {}
-
-type QueryModuleName = keyof QueryModuleRegistry<QueryStateSchema, string>
-```
-
-`DefinedQueryStateModule` packages a single projection under an internal symbol.
-`QueryStatesFacadeModule`, `QueryStateFacadeModule`, and `QueryFacadeModule` carry
-a type-only facade marker. Their complete declarations, including the supporting
-internal types used by `.use()`, appear in [Composable types](/api/types#composable-types).
-
-`defineQueryModule` returns a factory, not the module value. Its overloads are:
-
-```ts
-function defineQueryModule<TName extends QueryModuleName>(
-  definition: {
-    name: TName
-    queryStates?: undefined
-    queryState: <TSchema extends QueryStateSchema, TKey extends keyof TSchema & string>(
-      core: QueryCore<TSchema>,
-      key: TKey,
-      options: QueryModuleStateOptions<TName, TSchema, string>,
-    ) => QueryModuleStateApi<TName, TSchema, string>
-  },
-): QueryStateNameModuleFactory<TName>
-
-function defineQueryModule<TName extends QueryModuleName>(
-  definition: {
-    name: TName
-    queryStates: <TSchema extends QueryStateSchema>(
-      core: QueryCore<TSchema>,
-      options: QueryModuleStatesOptions<TName, TSchema, string>,
-    ) => QueryModuleStatesApi<TName, TSchema, string>
-    queryState?: <TSchema extends QueryStateSchema, TKey extends keyof TSchema & string>(
-      core: QueryCore<TSchema>,
-      key: TKey,
-      options: QueryModuleStateOptions<TName, TSchema, string>,
-    ) => QueryModuleStateApi<TName, TSchema, string>
-  },
-): QueryModuleFactory<TName>
-
-function defineQueryModule<TStatesApi, TStateApi, TOptions = void>(
-  definition: {
-    name?: undefined
-    queryStates: (core: QueryCore<any>, options: TOptions) => TStatesApi
-    queryState: <TSchema extends QueryStateSchema, TKey extends keyof TSchema & string>(
-      core: QueryCore<TSchema>,
-      key: TKey,
-      options: TOptions,
-    ) => TStateApi
-  },
-): PlainQueryModuleFactory<TStatesApi, TStateApi, TOptions, true, true>
-
-function defineQueryModule<TStatesApi, TOptions = void>(
-  definition: {
-    name?: undefined
-    queryStates: (core: QueryCore<any>, options: TOptions) => TStatesApi
-    queryState?: undefined
-  },
-): PlainQueryModuleFactory<TStatesApi, object, TOptions, true, false>
-
-function defineQueryModule<TStateApi, TOptions = void>(
-  definition: {
-    name?: undefined
-    queryStates?: undefined
-    queryState: <TSchema extends QueryStateSchema, TKey extends keyof TSchema & string>(
-      core: QueryCore<TSchema>,
-      key: TKey,
-      options: TOptions,
-    ) => TStateApi
-  },
-): PlainQueryModuleFactory<object, TStateApi, TOptions, false, true>
-```
-
-`QueryModuleStateOptions`, `QueryModuleStatesOptions`, `QueryModuleStateApi`,
-and `QueryModuleStatesApi` are internal aliases that select the options and API
-from the registry's `state` or `states` facet. `QueryModuleFactory`,
-`QueryStateNameModuleFactory`, and `PlainQueryModuleFactory` name the inferred
-factory return types. These aliases and factory types are not exports from
-`@vuqs/core`. Call the returned factory
-with options, with `(schema, options)` for grouped state, or with
-`(param, options)` / `(path, options)` for single state. The adaptive call resolves
-its facade through `.use()`.
-
-### The core <Badge type="info" text="@vuqs/core" />
-
-```ts
-interface QueryCore<TSchema extends QueryStateSchema> {
-  schema: TSchema
-  state: QueryStateReads<TSchema>
-  defaults: QueryDefaultsBus<TSchema>
-  options: ResolvedQueryStateOptions
-  pipeline: QueryPipelineBus
-  hooks: QueryHookBus
-  debug: DebugChannelHandle
-  query: {
-    current: () => ParsedQuery
-    transact: (request: QueryTransactionRequest<TSchema>) => void
-    transactions: QueryTransactionBus<TSchema>
-  }
-}
-```
-
-`transact` is the only module write primitive. A `patch` preserves omitted params
-and clears explicit `undefined`; a `replace` clears absent or `undefined` entries.
-Both apply their full key set to the optimistic state before emitting one
-transaction start. Its `defaultPolicy` is `'binding'` by default, which applies
-`clearOnDefault`.
-Use `'preserve-explicit'` only for exact selection replay: an explicitly supplied
-value remains present even when it equals the resolved default. Codecs, the write
-pipeline, replacement clears, navigation, and transaction observation still apply.
-
-An empty patch creates no transaction. An explicitly touched
-key emits a start even when it serializes to a no-op, because observers consume the
-write intent rather than only URL differences; it still follows normal navigation
-scheduling. The complete request is validated and serialized before the optimistic
-overlay changes, so an unknown key or a codec/write-pipeline error throws
-synchronously without a partial write or start.
-
-`transactions.observe({ start })` receives starts from the same adapter when raw
-query paths overlap the module schema. The snapshot is frozen and projected to
-the observer's local `keys`. Starts run synchronously in causal transaction id
-order, including writes triggered by synchronous reactive watchers. Pass an
-`origin` symbol to `transact` when the module must ignore its own writes. Register
-the returned disposer with `onScopeDispose`. A throwing observer is logged and
-isolated: it never aborts the producer or the remaining observers.
-
-```ts
-const origin = Symbol('my-module')
-const stop = core.query.transactions.observe({
-  start: transaction => {
-    if (transaction.origin !== origin) {
-      // React to an external write.
-    }
-  },
-})
-
-onScopeDispose(stop)
-
-core.query.transact({
-  mode: 'patch',
-  values: { page: 1 },
-  origin,
-})
-```
-
-### Hooks
-
-`QueryHooks` is empty in the core; a module declares its event via
-`declare module '@vuqs/core'`. Handlers run synchronously, in an unspecified order,
-and must be commutative; a throwing handler is isolated and logged.
-
-```ts
-interface QueryHooks {} // augment to add typed events, e.g. 'context:change'
-
-interface QueryHookBus {
-  on: <E extends keyof QueryHooks>(event: E, handler: QueryHooks[E]) => () => void
-  emit: <E extends keyof QueryHooks>(event: E, ...args: Parameters<QueryHooks[E]>) => void
-}
-```
-
-### Pipeline
-
-Stages are core-owned and closed; transforms must be pure.
-
-```ts
-interface QueryPipeline {
-  read: (values: QueryValues) => QueryValues
-  write: (values: QueryValues) => QueryValues
-  navigate: (query: ParsedQueryRaw) => ParsedQueryRaw
-}
-type QueryPipelineStage = keyof QueryPipeline // 'read' | 'write' | 'navigate'
-
-interface QueryPipelineBus {
-  tap: <S extends QueryPipelineStage>(stage: S | S[], transform: QueryPipeline[S], options?: { enforce?: 'pre' | 'default' | 'post' }) => () => void
-  run: <S extends QueryPipelineStage>(stage: S, value: Parameters<QueryPipeline[S]>[0]) => ReturnType<QueryPipeline[S]>
-}
-```
-
-### `@vuqs/core/shared` helpers <Badge type="tip" text="@vuqs/core/shared" />
-
-```ts
-function pickBy(predicate: (key: string) => boolean): <T extends object>(values: T) => Partial<T>
-function omitBy(predicate: (key: string) => boolean): <T extends object>(values: T) => Partial<T>
-function definedOnly<T extends object>(values: T): T
-function toReadonlyState<T extends object>(source: ComputedRef<T>): Readonly<T>
-```
-
-- `pickBy` / `omitBy`: build a pipeline transform that keeps / drops matching keys.
-- `definedOnly`: copy without `undefined`-valued keys (a cleared param reads as absent).
-- `toReadonlyState`: expose a `ComputedRef<record>` as a readonly reactive object.
+For complete contracts, consult [defineQueryModule](/api/authoring/define-query-module),
+[QueryCore](/api/authoring/query-core), [QueryModuleRegistry](/api/authoring/query-module-registry),
+[QueryHookBus](/api/authoring/query-hook-bus), and [QueryPipelineBus](/api/authoring/query-pipeline-bus).
 
 ## Nuxt
 
 Auto-imports cover the published modules and `defineQueryModule`. Import an app
 module directly, or register it under Nuxt's `imports` alongside the
-[`@vuqs/core/modules` group](/nuxt/auto-imports).
+[`@vuqs/core/modules` group](/nuxt/configuration#autoimports).

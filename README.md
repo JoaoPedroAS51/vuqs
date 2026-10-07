@@ -40,7 +40,7 @@ const page = useQueryState('page', codecs.integer.withDefault(1))
 📚 **[vuqs.dev](https://vuqs.dev)** has the full guide, module docs, and API reference.
 
 - [Getting started](https://vuqs.dev/guide/getting-started/installation)
-- [Concepts](https://vuqs.dev/guide/essentials/concepts)
+- [Concepts](https://vuqs.dev/guide/query-state/concepts)
 - [Codecs](https://vuqs.dev/guide/codecs/built-in)
 - [Modules](https://vuqs.dev/modules/)
 - [API reference](https://vuqs.dev/api/)
