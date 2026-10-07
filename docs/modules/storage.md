@@ -47,11 +47,19 @@ await search.storage.ready
 `withStorage(options)` contributes the same `StorageApi` to `useQueryStates` and
 `useQueryState`.
 
+```ts
+interface StorageApi {
+  storage: StorageControls
+}
+```
+
 ### Storage controls
 
 ```ts
+type StorageStatus = 'restoring' | 'ready' | 'error'
+
 interface StorageControls {
-  status: ComputedRef<'restoring' | 'ready' | 'error'>
+  status: ComputedRef<StorageStatus>
   error: ShallowRef<unknown | undefined>
   ready: Promise<void>
   flush: () => Promise<void>
@@ -92,10 +100,12 @@ SSR-safe.
 ## Options
 
 ```ts
+type StorageRestorePolicy = 'if-empty' | 'never'
+
 interface StorageOptions {
   key: string
   storage: QueryStorage
-  restore?: 'if-empty' | 'never'
+  restore?: StorageRestorePolicy
   version?: string
 }
 ```

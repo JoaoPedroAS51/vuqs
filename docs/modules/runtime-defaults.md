@@ -42,14 +42,23 @@ perPage.value // the selection if present, else 20
 
 ### On `useQueryStates`
 
-`RuntimeDefaultsStatesApi` contributes:
+```ts
+interface RuntimeDefaultsStatesApi<TSchema extends QueryStateSchema> {
+  selected: Readonly<QueryStateValues<TSchema>>
+  defaults: Readonly<QueryStateValues<TSchema>>
+  setDefaults: (values: QueryStateValues<TSchema>) => void
+  clearDefaults: () => void
+}
+```
 
-- `selected: Readonly<…>`
+`RuntimeDefaultsStatesApi<TSchema>` contributes:
+
+- `selected: Readonly<QueryStateValues<TSchema>>`
   - The explicit URL selections, a readonly reactive map, with no runtime or codec
     defaults applied.
-- `defaults: Readonly<…>`
+- `defaults: Readonly<QueryStateValues<TSchema>>`
   - The fallback values: runtime defaults from `setDefaults` over codec defaults.
-- `setDefaults(values): void`
+- `setDefaults(values: QueryStateValues<TSchema>): void`
   - **Replaces** the runtime defaults with a snapshot. It does not merge. These
     feed `defaults` and the resolved `values`, but are never written to the URL.
 - `clearDefaults(): void`
@@ -57,13 +66,22 @@ perPage.value // the selection if present, else 20
 
 ### On `useQueryState`
 
-`RuntimeDefaultsStateApi` is merged onto the ref:
+```ts
+interface RuntimeDefaultsStateApi<TValue> {
+  selectedValue: ComputedRef<TValue | undefined>
+  defaultValue: ComputedRef<TValue | undefined>
+  setDefault: (value: TValue) => void
+  clearDefault: () => void
+}
+```
 
-- `selectedValue: ComputedRef<T | undefined>`
+`RuntimeDefaultsStateApi<TValue>` is merged onto the ref:
+
+- `selectedValue: ComputedRef<TValue | undefined>`
   - The explicit URL selection for this param.
-- `defaultValue: ComputedRef<T | undefined>`
+- `defaultValue: ComputedRef<TValue | undefined>`
   - The fallback for this param: runtime default over codec default.
-- `setDefault(value): void` / `clearDefault(): void`
+- `setDefault(value: TValue): void` / `clearDefault(): void`
   - Set or drop the runtime default for this one param.
 
 The effective read is the base `values` map (grouped) or the ref's `.value`

@@ -1,8 +1,8 @@
 # API: testing
 
-Utilities for testing code that uses vuqs. Both subpaths are dev-only: they are
-never imported by your app code. See the [Testing guide](/guide/going-further/testing)
-for examples.
+Utilities for testing code that uses vuqs. The testing APIs are
+separate entry points, imported explicitly by tests. See the
+[Testing guide](/guide/going-further/testing) for examples.
 
 ## createTestingAdapter <Badge type="tip" text="@vuqs/core/adapters/testing" />
 
@@ -26,7 +26,8 @@ function createTestingAdapter(options?: TestingAdapterOptions): TestingAdapter
     callback. Wire it to a spy to assert on URL changes.
   - `hasMemory?: boolean`: default `false`. When `true`, each navigation updates
     `query` so later reads build on it. When `false`, `query` stays frozen at
-    `searchParams` and each navigation is independent.
+    `searchParams`; completed writes remain visible to composables in a read layer,
+    but are not reapplied to later navigation requests.
   - `defaultOptions?: QueryAdapterDefaultOptions`: app-wide defaults at the bottom of
     the [precedence chain](/guide/essentials/navigation-options#precedence).
 
@@ -34,10 +35,11 @@ function createTestingAdapter(options?: TestingAdapterOptions): TestingAdapter
 
 - `adapter: TestingAdapter`
   - A [`QueryAdapter`](/api/adapters#queryadapter) whose `query` is exposed as a
-    `Ref<ParsedQuery>`, so a test can read `adapter.query.value` to assert the URL
-    state directly.
-  - `resetQueue(): void` discards this adapter's pending optimistic writes and
-    scheduled navigation. Fresh adapter instances are isolated automatically.
+    `ShallowRef<ParsedQuery>`. Replace `adapter.query.value` to simulate an external
+    update; mutating its nested properties does not notify composables.
+  - `resetQueue(): void` discards this adapter's pending optimistic writes,
+    scheduled navigation, and simulated values without memory. Fresh adapter
+    instances are isolated automatically.
   - Pass it to [`installQueryAdapter`](/api/composables#installqueryadapter) or
     [`provideQueryAdapter`](/api/composables#providequeryadapter).
 
@@ -46,6 +48,7 @@ function createTestingAdapter(options?: TestingAdapterOptions): TestingAdapter
 ```ts
 import { codecs, installQueryAdapter, useQueryState } from '@vuqs/core'
 import { createTestingAdapter } from '@vuqs/core/adapters/testing'
+import { expect } from 'vitest'
 import { createApp } from 'vue'
 
 const adapter = createTestingAdapter({ searchParams: '?count=42' })
@@ -82,6 +85,7 @@ function withVuqsTestingAdapter(options?: TestingAdapterOptions): (app: App) => 
 ```ts
 import { mount } from '@vue/test-utils'
 import { withVuqsTestingAdapter } from '@vuqs/core/adapters/testing'
+import MyComponent from './MyComponent.vue'
 
 mount(MyComponent, {
   global: { plugins: [withVuqsTestingAdapter({ searchParams: '?count=42' })] },
@@ -95,10 +99,21 @@ adapter and needs to discard a scheduled navigation. A new adapter owns a fresh
 runtime and needs no global cleanup.
 
 ```ts
-interface TestingAdapter {
-  resetQueue(): void
+interface TestingAdapter extends QueryAdapter {
+  readonly query: ShallowRef<ParsedQuery>
+  readonly resetQueue: () => void
 }
 ```
+
+**Parameters**
+
+None.
+
+**Returns**
+
+- `void`
+  - Discards pending writes and cancels scheduled navigation for this adapter.
+    Without memory, it also clears simulated values.
 
 **Example**
 
@@ -121,6 +136,13 @@ interface UrlUpdateEvent {
 type OnUrlUpdateFunction = (event: UrlUpdateEvent) => void
 ```
 
+**Properties**
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `query` | `ParsedQueryRaw` | The query the adapter would write. |
+| `options` | `NavigateOptions` | The resolved navigation options. |
+
 ## isCodecBijective <Badge type="tip" text="@vuqs/core/testing" />
 
 The full bijectivity check for a [custom codec](/guide/codecs/custom): both
@@ -142,7 +164,7 @@ function isCodecBijective<T>(codec: Codec<T>, serialized: ParsedQueryValue, inpu
 
 **Returns**
 
-- `boolean`
+- `valid: boolean`
   - `true` when `serialize(input)` equals `serialized`, `parse(serialized)` equals
     `input`, and both directions round-trip. Otherwise **throws**, naming the side
     that broke.
@@ -150,7 +172,9 @@ function isCodecBijective<T>(codec: Codec<T>, serialized: ParsedQueryValue, inpu
 **Example**
 
 ```ts
+import { codecs } from '@vuqs/core'
 import { isCodecBijective } from '@vuqs/core/testing'
+import { expect } from 'vitest'
 
 expect(isCodecBijective(codecs.integer, '42', 42)).toBe(true)
 expect(() => isCodecBijective(codecs.integer, '42', 47)).toThrow()
@@ -173,14 +197,16 @@ function testSerializeThenParse<T>(codec: Codec<T>, input: T): boolean
 
 **Returns**
 
-- `boolean`
+- `valid: boolean`
   - `true` when the round-trip succeeds. **Throws** if the codec rejects its own serialized
     output, or if the round-tripped value differs.
 
 **Example**
 
 ```ts
+import { codecs } from '@vuqs/core'
 import { testSerializeThenParse } from '@vuqs/core/testing'
+import { expect } from 'vitest'
 
 expect(testSerializeThenParse(codecs.integer, 42)).toBe(true)
 expect(() => testSerializeThenParse(codecs.integer, Number.NaN)).toThrow()
@@ -205,14 +231,16 @@ function testParseThenSerialize<T>(codec: Codec<T>, serialized: ParsedQueryValue
 
 **Returns**
 
-- `boolean`
+- `valid: boolean`
   - `true` when the round-trip succeeds. **Throws** if `parse` rejects the input, or if the
     re-serialized value differs.
 
 **Example**
 
 ```ts
+import { codecs } from '@vuqs/core'
 import { testParseThenSerialize } from '@vuqs/core/testing'
+import { expect } from 'vitest'
 
 expect(testParseThenSerialize(codecs.integer, '42')).toBe(true)
 expect(() => testParseThenSerialize(codecs.integer, 'not-a-number')).toThrow()

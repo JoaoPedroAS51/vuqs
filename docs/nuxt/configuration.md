@@ -27,7 +27,7 @@ export default defineNuxtConfig({
 interface ModuleOptions {
   autoImports?: boolean | AutoImportsOptions // default: true
   adapter?: boolean | AdapterOptions // default: true
-  debug?: boolean | 'force' | DebugOptions // shorthand targets the client
+  debug?: DebugTargetOption | DebugOptions // shorthand targets the client
 }
 
 interface AutoImportsOptions {
@@ -40,9 +40,11 @@ interface AdapterOptions {
   defaultOptions?: QueryAdapterDefaultOptions
 }
 
+type DebugTargetOption = boolean | 'force'
+
 interface DebugOptions {
-  client?: boolean | 'force'
-  server?: boolean | 'force'
+  client?: DebugTargetOption
+  server?: DebugTargetOption
 }
 ```
 

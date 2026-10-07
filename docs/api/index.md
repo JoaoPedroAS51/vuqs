@@ -9,6 +9,7 @@ Reference for every entry point. For usage guides, see the
 | Entry point | Import | Purpose |
 | --- | --- | --- |
 | `@vuqs/core` | `import { … } from '@vuqs/core'` | The core: codecs, composables, adapters, serializer. |
+| `@vuqs/core/adapters/browser-history` | `import { … } from '@vuqs/core/adapters/browser-history'` | The [browser History API adapter](/api/adapters#createbrowserhistoryadapter). |
 | `@vuqs/core/adapters/vue-router` | `import { … } from '@vuqs/core/adapters/vue-router'` | The vue-router adapter. |
 | `@vuqs/core/modules` | `import { … } from '@vuqs/core/modules'` | [Composable modules](/modules/) applied with `.use()`. |
 | `@vuqs/core/shared` | `import { … } from '@vuqs/core/shared'` | Helpers for [writing your own module](/modules/authoring). |
@@ -23,7 +24,7 @@ Reference for every entry point. For usage guides, see the
 
 - **[Codecs](/api/codecs):** every built-in codec, `createCodec`, `.withDefault`.
 - **[Composables](/api/composables):** `useQueryState`, `useQueryStates`, `queryParam`, the adapter.
-- **[Adapters](/api/adapters):** `createVueRouterAdapter`, `provideVueRouterAdapter`, `QueryAdapter`.
+- **[Adapters](/api/adapters):** Vue Router, browser History API, and the `QueryAdapter` contract.
 - **[Serializer & pure functions](/api/serializer):** `createSerializer` and the framework-free helpers.
 - **[Testing](/api/testing):** `createTestingAdapter`, `withVuqsTestingAdapter`, and codec bijectivity helpers.
 - **[Debug events](/api/debug-events):** all structured event codes, summary policies, trace messages, and payload fields.
@@ -128,7 +129,9 @@ export {
   readStoredConsoleDebugConfig, VUQS_DEBUG_CONFIG_VERSION, VUQS_DEBUG_STORAGE_KEY,
 }
 export type {
-  EnableDebugOptions, ConsoleReporterOptions, PerformanceReporterOptions,
+  EnableDebugOptions, AddConsoleDebugReporterOptions, ConsoleReporterOptions,
+  ConsoleDebugPreset, DebugEventFilter, DebugEventSelector, DebugPayloadMode,
+  PerformanceDebugReporter, PerformanceReporterOptions,
   StoredDebugConfigV1, StoredConsoleDebugConfig, StoredConsoleDebugResolution,
   StoredConsoleReporterOptions,
   StoredDebugEventFilter, StoredDebugEventSelector, StoredDebugPayloadMode,
@@ -144,7 +147,9 @@ export {
   readStoredConsoleDebugConfig, VUQS_DEBUG_CONFIG_VERSION, VUQS_DEBUG_STORAGE_KEY,
 }
 export type {
-  AddConsoleDebugReporterOptions, ConsoleReporterOptions, PerformanceReporterOptions,
+  AddConsoleDebugReporterOptions, ConsoleReporterOptions,
+  ConsoleDebugPreset, DebugEventFilter, DebugEventSelector, DebugPayloadMode,
+  PerformanceDebugReporter, PerformanceReporterOptions,
   StoredDebugConfigV1, StoredConsoleDebugConfig, StoredConsoleDebugResolution,
   StoredConsoleReporterOptions,
   StoredDebugEventFilter, StoredDebugEventSelector, StoredDebugPayloadMode,
@@ -158,7 +163,7 @@ export type {
 // governed by DEBUG_PROTOCOL_VERSION (from @vuqs/core), not by normal semver.
 export type {
   DebugEventMap, DebugEventCode, DebugScope, LogDebugCode, WarnDebugCode,
-  KnownDebugEvent, DebugSnapshot, DebugSnapshotByKind,
+  KnownDebugEvent, DebugSnapshot, DebugSnapshotByKind, DebugSnapshotKind,
   EngineSnapshot, QueueSnapshot, StorageSnapshot,
 }
 ```
@@ -168,6 +173,13 @@ export type {
 ```ts
 export { createVueRouterAdapter, provideVueRouterAdapter }
 export type { VueRouterAdapterOptions }
+```
+
+### `@vuqs/core/adapters/browser-history`
+
+```ts
+export { createBrowserHistoryAdapter, provideBrowserHistoryAdapter }
+export type { BrowserHistoryAdapter, BrowserHistoryAdapterOptions }
 ```
 
 ### `@vuqs/core/modules`
@@ -209,5 +221,5 @@ export { isCodecBijective, testSerializeThenParse, testParseThenSerialize }
 
 ```ts
 // Registered in nuxt.config: modules: ['@vuqs/nuxt']
-export type { AdapterOptions, AutoImportsOptions, ModuleOptions }
+export type { AdapterOptions, AutoImportsOptions, DebugOptions, DebugTargetOption, ModuleOptions }
 ```

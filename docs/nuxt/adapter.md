@@ -75,5 +75,5 @@ export default {
 } satisfies RouterConfig
 ```
 
-Flat, top-level keys work without this. Repeated-key arrays (`?tags=a&tags=b`) and
-nesting both rely on it.
+Flat, top-level keys and repeated-key arrays (`?tags=a&tags=b`) work with the
+default parser. Nested objects require the custom parser and stringifier.

@@ -189,8 +189,9 @@ const ids = useQueryState('ids', codecs.arrayOf(codecs.integer))
 ```
 
 ::: tip Arrays in the URL
-`arrayOf` uses repeated keys (`?tags=a&tags=b`), which requires the adapter to
-parse repeated keys into an array. `qs` does this; see
+`arrayOf` uses repeated keys (`?tags=a&tags=b`), which the default `vue-router`
+parser and the browser History API adapter parse into an array. For nested
+objects, see
 [Adapters](/guide/getting-started/adapters).
 :::
 

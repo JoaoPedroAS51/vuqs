@@ -22,12 +22,17 @@ or a builder modifier.
 ## Return value
 
 ```ts
-interface UseQueryStatesApi {
-  values: { q: string, sort: 'asc' | 'desc', page: number } // reactive, writable
-  patch: (values: QueryStateWriteValues, options?: NavigateOptions) => void // partial write
-  replace: (values: QueryStateValues, options?: NavigateOptions) => void // whole-state write
-  clear: (options?: NavigateOptions) => void // reset all
-}
+import type { UseQueryStatesReturn } from '@vuqs/core'
+import { codecs, defineQuerySchema, useQueryStates } from '@vuqs/core'
+
+const schema = defineQuerySchema({
+  q: codecs.string.withDefault(''),
+  sort: codecs.literal(['asc', 'desc'] as const).withDefault('asc'),
+  page: codecs.integer.withDefault(1),
+})
+
+const query = useQueryStates(schema)
+type QueryApi = UseQueryStatesReturn<typeof schema>
 ```
 
 ### `values`: a reactive value map

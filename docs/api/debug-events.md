@@ -17,27 +17,43 @@ is a human-facing projection and may improve without changing the protocol versi
 For activation, filtering, payload safety, SSR isolation, and reporter examples, start
 with the [debugging guide](/guide/going-further/debugging).
 
-## Event shape
+## Event shape <Badge type="info" text="@vuqs/core" />
 
-Every reporter receives the same envelope:
+Every reporter receives the same frozen envelope. `DebugEvent`, `DebugContext`,
+and `DebugLevel` are exported from `@vuqs/core`:
 
 ```ts
+interface DebugContext {
+  readonly runtimeId?: string
+  readonly bindingId?: string
+  readonly transactionIds?: readonly number[]
+  readonly batchId?: number
+}
+
 interface DebugEvent {
-  code: string
-  scope: string
-  level: 'debug' | 'warn'
-  seq: number
-  timestamp: number
-  monotonicTime?: number
-  context?: {
-    runtimeId?: string
-    bindingId?: string
-    transactionIds?: readonly number[]
-    batchId?: number
-  }
-  data: unknown
+  readonly code: string
+  readonly scope: string
+  readonly level: DebugLevel
+  readonly seq: number
+  readonly timestamp: number
+  readonly monotonicTime?: number
+  readonly context?: DebugContext
+  readonly data: unknown
 }
 ```
+
+**Properties**
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `code` | `string` | The event code. |
+| `scope` | `string` | The event's scope. |
+| `level` | `'debug' \| 'warn'` | The diagnostic level. |
+| `seq` | `number` | The global monotonic event sequence. |
+| `timestamp` | `number` | Epoch milliseconds from `Date.now()`. |
+| `monotonicTime` | `number` | Optional high-resolution time from `performance.now()`. |
+| `context` | `DebugContext` | Optional runtime, binding, transaction and batch identifiers. |
+| `data` | `unknown` | The payload for the event code. |
 
 The strict `KnownDebugEvent` union narrows `data` from `code`. Import it and the complete
 `DebugEventMap` from `@vuqs/core/debug-protocol` when building protocol-aware tooling.

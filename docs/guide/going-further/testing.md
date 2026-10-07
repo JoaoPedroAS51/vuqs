@@ -3,7 +3,7 @@
 The **testing adapter** supplies initial query state and records navigation requests
 without a router mock. **Codec helpers** verify custom codec round trips.
 
-Both live at dedicated subpaths, so they are never pulled into your app bundle:
+Both live at dedicated subpaths; import them explicitly in tests:
 
 ```ts
 import { createTestingAdapter, withVuqsTestingAdapter } from '@vuqs/core/adapters/testing'

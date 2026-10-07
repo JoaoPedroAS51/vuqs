@@ -71,7 +71,7 @@ Assigning several `values.*` in a row coalesces into **one** navigation, so a
 
 ::: tip
 `values` is a reactive map. To work with params as individual refs, convert it
-with [`toQueryRefs`](/guide/essentials/use-query-states#per-field-refs).
+with [`toQueryRefs`](/guide/essentials/use-query-states#per-field-refs-with-toqueryrefs).
 :::
 
 ## Next steps

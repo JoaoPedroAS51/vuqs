@@ -12,8 +12,10 @@ A module contributes API to `useQueryStates` through a `queryStates` projection
 into a factory you call to compose the module:
 
 ```ts
-import { defineQueryModule } from '@vuqs/core'
+import { codecs, defineQueryModule, useQueryState, useQueryStates } from '@vuqs/core'
 import { computed } from 'vue'
+
+const schema = { q: codecs.string }
 
 export const withPresence = defineQueryModule({
   queryStates: core => ({
@@ -43,7 +45,10 @@ The factory reads the facade from how you call it:
 
 - `withPresence(options?)`: adaptive, the surrounding `.use` pins the facade and schema.
 - `withPresence(schema, options)`: grouped, with the schema's keys checked.
-- `withPresence(param, options)` / `withPresence('path', options)`: single-param, bound to that param.
+- `withPresence(param, options)` / `withPresence('path', options)`: single-param form.
+
+These arguments select the facade and provide type information. The composable
+that calls `.use()` supplies the actual core and bound key.
 
 ::: tip Bare grouped shorthand
 A group-only projection can also be a plain `(core) => api` function passed straight
@@ -68,6 +73,7 @@ members are grouped into facets:
 | `options` | | The resolved behavior baseline (`history`/`scroll`/`throttleMs`/`clearOnDefault`), so a query you build matches the engine's write behavior. |
 | `pipeline` | | The transform pipeline for reshaping reads and writes. |
 | `hooks` | | The notification bus for module-to-module coordination. |
+| `debug` | | The observation channel for this adapter runtime. |
 
 Treat `core` as the authoring surface: it is not app-facing state.
 
@@ -192,6 +198,7 @@ then pass that `name` to `defineQueryModule`:
 
 ```ts
 import type { QueryStateSchema, QueryStateValueAt } from '@vuqs/core'
+import type { ComputedRef } from 'vue'
 import { defineQueryModule } from '@vuqs/core'
 import { computed } from 'vue'
 
@@ -211,8 +218,8 @@ export const withSelection = defineQueryModule({
 })
 ```
 
-`useQueryState` resolves the registered `state` facet against the param the factory
-binds, so `ref.selection` is typed as the bound param's value. Read the bound value
+`useQueryState` resolves the registered `state` facet against its bound param,
+so `ref.selection` is typed as that param's value. Read the bound value
 with `QueryStateValueAt<TSchema, 'value'>`: inside a `state` facet `TSchema` is the
 single-schema `{ value: … }`, not the composable's schema. `withRuntimeDefaults`
 uses this mechanism to expose `selectedValue`/`defaultValue` on a single ref.
@@ -337,46 +344,121 @@ neither imports nor calls another module.
 
 ## Authoring types <Badge type="info" text="@vuqs/core" />
 
-The exact shapes a module works with, exported from `@vuqs/core` (the
-[`@vuqs/core/shared`](#vuqs-core-shared-helpers) helpers below come from their own
-subpath).
+The public authoring types are exported from `@vuqs/core`. The
+[`@vuqs/core/shared`](#vuqs-core-shared-helpers) helpers below use their own subpath.
 
 ```ts
-// Projections
-type QueryStatesModule<TSchema, TApi> = (core: QueryCore<TSchema>) => TApi
-type QueryStateModule<TSchema, TApi> = (core: QueryCore<TSchema>, key: keyof TSchema & string) => TApi
+type QueryStatesModule<TSchema extends QueryStateSchema, TApi> = (core: QueryCore<TSchema>) => TApi
 
-// Packaged modules, from defineQueryModule
-type DefinedQueryStatesModule<TSchema, TApi> // grouped-only
-type DefinedQueryStateModule<TApi> // single-only
-type DefinedQueryModule<TSchema, TStatesApi, TStateApi> // both
+type QueryStateModule<TSchema extends QueryStateSchema, TApi> = (
+  core: QueryCore<TSchema>,
+  key: keyof TSchema & string,
+) => TApi
 
-// Facade-tagged modules, for factories with per-facade options
+type DefinedQueryStatesModule<TSchema extends QueryStateSchema, TApi> = QueryStatesModule<TSchema, TApi>
+
+type DefinedQueryModule<
+  TSchema extends QueryStateSchema,
+  TQueryStatesApi,
+  TQueryStateApi,
+> = DefinedQueryStatesModule<TSchema, TQueryStatesApi> & DefinedQueryStateModule<TQueryStateApi>
+
 type QueryModuleFacade = 'state' | 'states'
-type QueryStatesFacadeModule<TFacade, TSchema, TApi> // grouped
-type QueryStateFacadeModule<TFacade, TApi> // single
-type QueryFacadeModule<TFacade, TSchema, TStatesApi, TStateApi> // adaptive/dual
 
-// Registry for schema-, value-, or facade-dependent options and APIs
-interface QueryModuleRegistry<TSchema, TParam extends string> {} // augment per module name
+interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {}
+
 type QueryModuleName = keyof QueryModuleRegistry<QueryStateSchema, string>
-
-// Plain form (no name): options/APIs fixed by the projections
-function defineQueryModule(definition: { queryStates?, queryState? }): …
-// Registry form (with name): options/APIs from the registry entry
-function defineQueryModule(definition: { name, queryStates?, queryState? }): …
 ```
+
+`DefinedQueryStateModule` packages a single projection under an internal symbol.
+`QueryStatesFacadeModule`, `QueryStateFacadeModule`, and `QueryFacadeModule` carry
+a type-only facade marker. Their complete declarations, including the supporting
+internal types used by `.use()`, appear in [Composable types](/api/types#composable-types).
+
+`defineQueryModule` returns a factory, not the module value. Its overloads are:
+
+```ts
+function defineQueryModule<TName extends QueryModuleName>(
+  definition: {
+    name: TName
+    queryStates?: undefined
+    queryState: <TSchema extends QueryStateSchema, TKey extends keyof TSchema & string>(
+      core: QueryCore<TSchema>,
+      key: TKey,
+      options: QueryModuleStateOptions<TName, TSchema, string>,
+    ) => QueryModuleStateApi<TName, TSchema, string>
+  },
+): QueryStateNameModuleFactory<TName>
+
+function defineQueryModule<TName extends QueryModuleName>(
+  definition: {
+    name: TName
+    queryStates: <TSchema extends QueryStateSchema>(
+      core: QueryCore<TSchema>,
+      options: QueryModuleStatesOptions<TName, TSchema, string>,
+    ) => QueryModuleStatesApi<TName, TSchema, string>
+    queryState?: <TSchema extends QueryStateSchema, TKey extends keyof TSchema & string>(
+      core: QueryCore<TSchema>,
+      key: TKey,
+      options: QueryModuleStateOptions<TName, TSchema, string>,
+    ) => QueryModuleStateApi<TName, TSchema, string>
+  },
+): QueryModuleFactory<TName>
+
+function defineQueryModule<TStatesApi, TStateApi, TOptions = void>(
+  definition: {
+    name?: undefined
+    queryStates: (core: QueryCore<any>, options: TOptions) => TStatesApi
+    queryState: <TSchema extends QueryStateSchema, TKey extends keyof TSchema & string>(
+      core: QueryCore<TSchema>,
+      key: TKey,
+      options: TOptions,
+    ) => TStateApi
+  },
+): PlainQueryModuleFactory<TStatesApi, TStateApi, TOptions, true, true>
+
+function defineQueryModule<TStatesApi, TOptions = void>(
+  definition: {
+    name?: undefined
+    queryStates: (core: QueryCore<any>, options: TOptions) => TStatesApi
+    queryState?: undefined
+  },
+): PlainQueryModuleFactory<TStatesApi, object, TOptions, true, false>
+
+function defineQueryModule<TStateApi, TOptions = void>(
+  definition: {
+    name?: undefined
+    queryStates?: undefined
+    queryState: <TSchema extends QueryStateSchema, TKey extends keyof TSchema & string>(
+      core: QueryCore<TSchema>,
+      key: TKey,
+      options: TOptions,
+    ) => TStateApi
+  },
+): PlainQueryModuleFactory<object, TStateApi, TOptions, false, true>
+```
+
+`QueryModuleStateOptions`, `QueryModuleStatesOptions`, `QueryModuleStateApi`,
+and `QueryModuleStatesApi` are internal aliases that select the options and API
+from the registry's `state` or `states` facet. `QueryModuleFactory`,
+`QueryStateNameModuleFactory`, and `PlainQueryModuleFactory` name the inferred
+factory return types. These aliases and factory types are not exports from
+`@vuqs/core`. Call the returned factory
+with options, with `(schema, options)` for grouped state, or with
+`(param, options)` / `(path, options)` for single state. The adaptive call resolves
+its facade through `.use()`.
 
 ### The core <Badge type="info" text="@vuqs/core" />
 
 ```ts
-interface QueryCore<TSchema> {
+interface QueryCore<TSchema extends QueryStateSchema> {
   schema: TSchema
-  state: { selected: ComputedRef<…>, values: ComputedRef<…> }
-  defaults: { resolved: ComputedRef<…>, register: (source) => () => void }
-  options: ResolvedQueryStateOptions // resolved history/scroll/throttleMs/clearOnDefault
-  pipeline: QueryPipelineBus // tap, run
-  hooks: QueryHookBus // on, emit
+  state: QueryStateReads<TSchema>
+  defaults: QueryDefaultsBus<TSchema>
+  options: ResolvedQueryStateOptions
+  pipeline: QueryPipelineBus
+  hooks: QueryHookBus
+  debug: DebugChannelHandle
   query: {
     current: () => ParsedQuery
     transact: (request: QueryTransactionRequest<TSchema>) => void
@@ -464,10 +546,10 @@ interface QueryPipelineBus {
 ### `@vuqs/core/shared` helpers <Badge type="tip" text="@vuqs/core/shared" />
 
 ```ts
-function pickBy(predicate: (key: string) => boolean): <T>(values: T) => Partial<T>
-function omitBy(predicate: (key: string) => boolean): <T>(values: T) => Partial<T>
-function definedOnly<T>(values: T): T
-function toReadonlyState<T>(source: ComputedRef<T>): Readonly<T>
+function pickBy(predicate: (key: string) => boolean): <T extends object>(values: T) => Partial<T>
+function omitBy(predicate: (key: string) => boolean): <T extends object>(values: T) => Partial<T>
+function definedOnly<T extends object>(values: T): T
+function toReadonlyState<T extends object>(source: ComputedRef<T>): Readonly<T>
 ```
 
 - `pickBy` / `omitBy`: build a pipeline transform that keeps / drops matching keys.

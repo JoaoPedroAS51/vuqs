@@ -53,7 +53,16 @@ The single-param form takes no options.
 
 `withActiveParams(options?)` contributes `ActiveParamsStatesApi<TSchema>`:
 
-- `activeKeys: ComputedRef<readonly SchemaKey[]>`: active params in schema order.
+```ts
+interface ActiveParamsStatesApi<TSchema extends QueryStateSchema> {
+  activeKeys: ComputedRef<readonly (keyof TSchema & string)[]>
+  activeCount: ComputedRef<number>
+  hasActive: ComputedRef<boolean>
+  isActive: (key: keyof TSchema & string) => boolean
+}
+```
+
+- `activeKeys: ComputedRef<readonly (keyof TSchema & string)[]>`: active params in schema order.
 - `activeCount: ComputedRef<number>`: the number of active params.
 - `hasActive: ComputedRef<boolean>`: whether at least one param is active.
 - `isActive(key): boolean`: whether one schema param is active.
@@ -68,6 +77,12 @@ const hasActiveStatus = computed(() => query.isActive('status'))
 ### `useQueryState`
 
 `withActiveParams()` contributes `ActiveParamsStateApi`:
+
+```ts
+interface ActiveParamsStateApi {
+  isActive: ComputedRef<boolean>
+}
+```
 
 - `isActive: ComputedRef<boolean>`: whether the bound param is active.
 

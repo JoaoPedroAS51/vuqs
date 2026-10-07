@@ -25,7 +25,7 @@ A namespace of built-in codecs and codec factories. Every codec's `parse` return
 | `codecs.enum(enumObject)` | factory | enum members | TS `enum`; outside it → absent. |
 | `codecs.json(options?)` | factory | `T` | JSON text or parsed value; optional `validate`. |
 
-### codecs.arrayOf
+### codecs.arrayOf <Badge type="info" text="@vuqs/core" />
 
 ```ts
 function arrayOf<T>(codec: Codec<T>): Codec<T[]>
@@ -38,17 +38,21 @@ function arrayOf<T>(codec: Codec<T>): Codec<T[]>
 
 **Returns**
 
-- `Codec<T[]>`
+- `codec: Codec<T[]>`
   - A codec for a list over repeated keys. A scalar value is treated as a one-item
     array, items the inner codec rejects are dropped, and an empty result is absent.
     Equality is element-wise.
 
+**Example**
+
 ```ts
+import { codecs, useQueryState } from '@vuqs/core'
+
 const tags = useQueryState('tags', codecs.arrayOf(codecs.string).withDefault([]))
 // ?tags=vue&tags=urls → ['vue', 'urls']
 ```
 
-### codecs.literal
+### codecs.literal <Badge type="info" text="@vuqs/core" />
 
 ```ts
 function literal<const T extends string>(values: readonly T[]): Codec<T>
@@ -62,15 +66,19 @@ function literal<const T extends string>(values: readonly T[]): Codec<T>
 
 **Returns**
 
-- `Codec<T>`
+- `codec: Codec<T>`
   - A codec for the string union.
 
+**Example**
+
 ```ts
+import { codecs, useQueryState } from '@vuqs/core'
+
 const sort = useQueryState('sort', codecs.literal(['asc', 'desc'] as const))
 //    ^? QueryStateRef<'asc' | 'desc' | undefined>
 ```
 
-### codecs.numberLiteral
+### codecs.numberLiteral <Badge type="info" text="@vuqs/core" />
 
 ```ts
 function numberLiteral<const T extends number>(values: readonly T[]): Codec<T>
@@ -83,10 +91,18 @@ function numberLiteral<const T extends number>(values: readonly T[]): Codec<T>
 
 **Returns**
 
-- `Codec<T>`
+- `codec: Codec<T>`
   - A codec for the number union.
 
-### codecs.enum
+**Example**
+
+```ts
+import { codecs, useQueryState } from '@vuqs/core'
+
+const size = useQueryState('size', codecs.numberLiteral([10, 20, 50] as const))
+```
+
+### codecs.enum <Badge type="info" text="@vuqs/core" />
 
 ```ts
 enum<const T extends Record<string, string | number>>(enumObject: T): Codec<T[keyof T]>
@@ -101,12 +117,16 @@ enum<const T extends Record<string, string | number>>(enumObject: T): Codec<T[ke
 
 **Returns**
 
-- `Codec<T[keyof T]>`
+- `codec: Codec<T[keyof T]>`
   - A codec for the enum's member union. String, numeric, and heterogeneous enums
     are supported. A numeric member round-trips through its number rather than its
     key, and any value outside the enum parses as absent.
 
+**Example**
+
 ```ts
+import { codecs, useQueryState } from '@vuqs/core'
+
 enum Status {
   Active = 'active',
   Archived = 'archived',
@@ -116,7 +136,7 @@ const status = useQueryState('status', codecs.enum(Status))
 //    ^? QueryStateRef<Status | undefined>
 ```
 
-### codecs.json
+### codecs.json <Badge type="info" text="@vuqs/core" />
 
 ```ts
 function json<T>(options: { validate: StandardSchemaV1<unknown, T> }): Codec<T>
@@ -134,7 +154,7 @@ function json<T>(options: {
 
 **Returns**
 
-- `Codec<T>`
+- `codec: Codec<T>`
   - A codec that reads JSON text or an already-parsed value and serializes with
     `JSON.stringify`. Incoming arrays are read in full. Nullish nodes, non-finite
     numeric nodes, invalid JSON text, validation issues, and validator throws
@@ -180,6 +200,8 @@ function createCodec<T>(input: CodecInput<T>): Codec<T>
   - `withDefault(defaultValue: T): CodecWithDefault<T>`: see [`Codec.withDefault`](#codec-withdefault).
   - `nullable(): Codec<T | null>`: see [`Codec.nullable`](#codec-nullable).
 
+**Example**
+
 ```ts
 import { createCodec, getQueryString } from '@vuqs/core'
 
@@ -214,14 +236,16 @@ function withDefault<T>(defaultValue: T): CodecWithDefault<T>
     the default. A written value equal to the default is omitted from the URL
     ([`clearOnDefault`](/guide/essentials/navigation-options#clearondefault)).
 
+**Example**
+
 ```ts
+import { codecs } from '@vuqs/core'
+
 codecs.integer // Codec<number>            → ref is number | undefined
 codecs.integer.withDefault(1) // CodecWithDefault<number> → ref is number
 ```
 
 ## Codec.nullable <Badge type="info" text="@vuqs/core" />
-
-**Signature**
 
 ```ts
 interface Codec<T> {
@@ -239,13 +263,15 @@ None.
 
 **Returns**
 
-- A new codec that serializes `null` as `undefined`, omitting the param from the
-  URL. Other values use the original serializer.
-- Parsing stays unchanged, including absence and invalid-input handling.
-- Equality treats two null values as equal and null versus a non-null value as
-  unequal. Other comparisons use the original equality function.
-- An existing default is preserved. Add `.withDefault(null)` to read absence as
-  `null`.
+- `codec: Codec<T | null> | CodecWithDefault<T | null>`
+  - A new codec accepting `null`. A defaulted codec returns a
+    `CodecWithDefault<T | null>` carrying the same default.
+  - `serialize(null)` returns `undefined`, omitting the param from the URL. Other
+    values use the original serializer.
+  - `parse` is unchanged, including absence and invalid-input handling.
+  - `eq` treats two `null` values as equal and `null` versus a non-null value as
+    unequal. Other comparisons use the original equality function.
+  - Add `.withDefault(null)` to read absence as `null`.
 
 **Example**
 

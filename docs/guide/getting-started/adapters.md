@@ -7,6 +7,7 @@ concerns like stringifying out of your components.
 
 ```ts
 interface QueryAdapter {
+  debugName?: string // optional diagnostic identity
   query: MaybeRefOrGetter<ParsedQuery> // the current parsed query
   navigate: (query, options) => void | Promise<void> // apply the next query
   defaultOptions?: QueryAdapterDefaultOptions // defaults for every write
@@ -102,8 +103,8 @@ export const router = createRouter({
 })
 ```
 
-Flat, top-level keys work without this. Repeated-key arrays (`?tags=a&tags=b`)
-and nesting both rely on it.
+Flat, top-level keys and repeated-key arrays (`?tags=a&tags=b`) work with the
+default parser. Nested objects require the custom parser and stringifier.
 :::
 
 ## Browser History API
