@@ -23,8 +23,8 @@ interface Registered {
   runtimeConfig: unknown
 }
 
-async function registerWith(options: ModuleOptions, dev = true, runtimeConfig?: NuxtConfig['runtimeConfig']): Promise<Registered> {
-  const nuxt = await loadNuxt({ cwd: rootDir, dev, overrides: { vuqs: options, runtimeConfig } })
+async function registerWith(options: ModuleOptions, dev = true, runtimeConfig?: NuxtConfig['runtimeConfig'], config: NuxtConfig = {}, cwd = rootDir): Promise<Registered> {
+  const nuxt = await loadNuxt({ cwd, dev, overrides: { ...config, vuqs: options, runtimeConfig } })
   try {
     const imports: NuxtImport[] = []
     await nuxt.callHook('imports:extend', imports)
@@ -108,6 +108,47 @@ describe('@vuqs/nuxt module', () => {
     const { runtimePlugins, runtimeConfig } = await registerWith({ adapter: false })
 
     expect(runtimePlugins.map(plugin => plugin.name)).not.toContain('plugin')
+    expect(runtimeConfig).toBeUndefined()
+  })
+
+  it('selects the minimal router adapter without pages', async () => {
+    const cwd = fileURLToPath(new URL('../fixtures/no-pages', import.meta.url))
+    const { runtimePlugins } = await registerWith({}, true, undefined, {}, cwd)
+
+    expect(runtimePlugins).toEqual([{ name: 'plugin-minimal', mode: 'all' }])
+  })
+
+  it.each([false, { enabled: false }] as const)('selects the minimal router adapter when pages are disabled with %j', async (pages) => {
+    const { runtimePlugins } = await registerWith({}, true, undefined, { pages })
+
+    expect(runtimePlugins).toEqual([{ name: 'plugin-minimal', mode: 'all' }])
+  })
+
+  it('selects vue-router when pages are explicitly enabled without a pages directory', async () => {
+    const cwd = fileURLToPath(new URL('../fixtures/no-pages', import.meta.url))
+    const { runtimePlugins } = await registerWith({}, true, undefined, { pages: true }, cwd)
+
+    expect(runtimePlugins).toEqual([{ name: 'plugin', mode: 'all' }])
+  })
+
+  it('selects vue-router for hook-generated pages without a pages directory', async () => {
+    const cwd = fileURLToPath(new URL('../fixtures/no-pages', import.meta.url))
+    const { runtimePlugins } = await registerWith({}, true, undefined, {
+      hooks: {
+        'pages:extend': (pages) => {
+          pages.push({ path: '/', file: fileURLToPath(new URL('../fixtures/basic/app/pages/index.vue', import.meta.url)) })
+        },
+      },
+    }, cwd)
+
+    expect(runtimePlugins).toEqual([{ name: 'plugin', mode: 'all' }])
+  })
+
+  it('skips the minimal router adapter when the built-in adapter is disabled', async () => {
+    const cwd = fileURLToPath(new URL('../fixtures/no-pages', import.meta.url))
+    const { runtimePlugins, runtimeConfig } = await registerWith({ adapter: false }, true, undefined, {}, cwd)
+
+    expect(runtimePlugins).toEqual([])
     expect(runtimeConfig).toBeUndefined()
   })
 

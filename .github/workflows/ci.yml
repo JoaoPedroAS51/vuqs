@@ -31,6 +31,8 @@ jobs:
 
       - run: pnpm test:coverage
 
+      - run: pnpm --filter @vuqs/nuxt exec playwright-core install --with-deps chromium
+
       - run: pnpm --filter @vuqs/nuxt test:run
 
       - run: pnpm build

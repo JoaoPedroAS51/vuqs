@@ -4,12 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   install: vi.fn(),
   createAdapter: vi.fn(),
+  createMinimalAdapter: vi.fn(),
   useRouter: vi.fn(),
   useRuntimeConfig: vi.fn(),
 }))
 
 vi.mock('@vuqs/core', () => ({ installQueryAdapter: mocks.install }))
 vi.mock('@vuqs/core/adapters/vue-router', () => ({ createVueRouterAdapter: mocks.createAdapter }))
+vi.mock('../../src/runtime/adapters/nuxt-minimal', () => ({ createNuxtMinimalRouterAdapter: mocks.createMinimalAdapter }))
 vi.mock('#imports', async importOriginal => ({
   ...await importOriginal<typeof import('../stubs/imports')>(),
   useRouter: mocks.useRouter,
@@ -17,12 +19,16 @@ vi.mock('#imports', async importOriginal => ({
 }))
 
 const { default: adapterPlugin } = await import('../../src/runtime/plugin')
+const { default: minimalAdapterPlugin } = await import('../../src/runtime/plugin-minimal')
 
 beforeEach(() => {
   vi.resetAllMocks()
 })
 
-describe('nuxt adapter runtime', () => {
+describe.each([
+  { name: 'vue-router', plugin: adapterPlugin, createAdapter: mocks.createAdapter },
+  { name: 'minimal router', plugin: minimalAdapterPlugin, createAdapter: mocks.createMinimalAdapter },
+])('nuxt adapter runtime: $name', ({ plugin, createAdapter }) => {
   it.each([
     { name: 'missing vuqs config', config: {} },
     { name: 'missing adapter config', config: { vuqs: {} } },
@@ -33,12 +39,12 @@ describe('nuxt adapter runtime', () => {
     const vueApp = {}
     mocks.useRouter.mockReturnValue(router)
     mocks.useRuntimeConfig.mockReturnValue({ public: config })
-    mocks.createAdapter.mockReturnValue(adapter)
+    createAdapter.mockReturnValue(adapter)
 
-    expect(adapterPlugin.name).toBe('vuqs:adapter')
-    adapterPlugin.setup!({ vueApp } as NuxtApp)
+    expect(plugin.name).toBe('vuqs:adapter')
+    plugin.setup!({ vueApp } as NuxtApp)
 
-    expect(mocks.createAdapter).toHaveBeenCalledExactlyOnceWith({ router, defaultOptions: undefined })
+    expect(createAdapter).toHaveBeenCalledExactlyOnceWith({ router, defaultOptions: undefined })
     expect(mocks.install).toHaveBeenCalledExactlyOnceWith(vueApp, adapter)
   })
 
@@ -49,11 +55,11 @@ describe('nuxt adapter runtime', () => {
     const vueApp = {}
     mocks.useRouter.mockReturnValue(router)
     mocks.useRuntimeConfig.mockReturnValue({ public: { vuqs: { adapter: { defaultOptions } } } })
-    mocks.createAdapter.mockReturnValue(adapter)
+    createAdapter.mockReturnValue(adapter)
 
-    adapterPlugin.setup!({ vueApp } as NuxtApp)
+    plugin.setup!({ vueApp } as NuxtApp)
 
-    expect(mocks.createAdapter).toHaveBeenCalledExactlyOnceWith({ router, defaultOptions })
+    expect(createAdapter).toHaveBeenCalledExactlyOnceWith({ router, defaultOptions })
     expect(mocks.install).toHaveBeenCalledExactlyOnceWith(vueApp, adapter)
   })
 })

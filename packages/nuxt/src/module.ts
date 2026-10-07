@@ -33,7 +33,7 @@ export interface AutoImportsOptions {
 }
 
 /**
- * Options for the registered `vue-router` adapter.
+ * Options for the registered Nuxt router adapter.
  */
 export interface AdapterOptions {
   /**
@@ -68,7 +68,7 @@ export interface ModuleOptions {
    */
   autoImports?: boolean | AutoImportsOptions
   /**
-   * Provide the `vue-router` query adapter app-wide so the composables work
+   * Provide a query adapter for Nuxt's router app-wide so the composables work
    * without a manual provider. `false` disables it; pass an object to set the
    * adapter's default options.
    *
@@ -180,7 +180,12 @@ export default defineNuxtModule<ModuleOptions>({
       }
       nuxt.options.runtimeConfig.public.vuqs = defu(nuxt.options.runtimeConfig.public.vuqs, defaults)
 
-      addPlugin(resolve('./runtime/plugin'))
+      nuxt.hook('modules:done', () => {
+        const pagesEnabled = typeof nuxt.options.pages === 'boolean'
+          ? nuxt.options.pages
+          : nuxt.options.pages?.enabled !== false
+        addPlugin(resolve(pagesEnabled ? './runtime/plugin' : './runtime/plugin-minimal'))
+      })
     }
 
     // Resolve entirely at build time so console prose never enters an unselected target.

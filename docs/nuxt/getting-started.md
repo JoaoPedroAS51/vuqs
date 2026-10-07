@@ -1,7 +1,7 @@
 # Getting started
 
 `@vuqs/nuxt` auto-imports the composables and codecs, and provides the
-[vue-router adapter](/guide/getting-started/adapters#vue-router) app-wide.
+[query adapter](/nuxt/adapter) for Nuxt's router app-wide, including apps without pages.
 
 ## Install
 
@@ -35,7 +35,7 @@ const search = useQueryState('q', codecs.string.withDefault(''))
 
 - **[Auto-imports](/nuxt/auto-imports):** the composables, the `codecs` namespace,
   and the [modules](/modules/).
-- **[The adapter](/nuxt/adapter):** the vue-router adapter, installed on the Vue
+- **[The adapter](/nuxt/adapter):** the adapter for Nuxt's router, installed on the Vue
   app so every composable resolves it.
 
 Use [`vuqs` configuration](/nuxt/configuration) to select auto-import groups, set

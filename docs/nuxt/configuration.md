@@ -18,7 +18,7 @@ export default defineNuxtConfig({
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `autoImports` | `boolean \| { composables?, codecs?, modules? }` | `true` | Register vuqs APIs as [auto-imports](/nuxt/auto-imports). `false` registers none; an object toggles each group. |
-| `adapter` | `boolean \| { defaultOptions? }` | `true` | Provide the [vue-router adapter](/nuxt/adapter) app-wide. `false` disables the built-in adapter. |
+| `adapter` | `boolean \| { defaultOptions? }` | `true` | Provide the [adapter for Nuxt's router](/nuxt/adapter) app-wide. `false` disables the built-in adapter. |
 | `debug` | `boolean \| 'force' \| { client?, server? }` | `false` | Enable [console diagnostics](/guide/going-further/debugging#nuxt). The shorthand targets the browser; server logging is separately opt-in and request-scoped. |
 
 ## Types

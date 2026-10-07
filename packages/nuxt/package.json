@@ -43,9 +43,10 @@
   "scripts": {
     "build": "nuxt-module-build prepare && nuxt-module-build build",
     "dev": "nuxt-module-build build --stub && nuxt-module-build prepare",
-    "test": "vitest run",
-    "test:run": "vitest run",
-    "test:types": "nuxt prepare test/fixtures/basic && vue-tsc --build test/fixtures/basic/tsconfig.json",
+    "prepare:fixtures": "nuxt prepare test/fixtures/basic && nuxt prepare test/fixtures/no-pages",
+    "test": "pnpm prepare:fixtures && vitest run",
+    "test:run": "pnpm test",
+    "test:types": "pnpm prepare:fixtures && vue-tsc --build test/fixtures/basic/tsconfig.json test/fixtures/no-pages/tsconfig.json",
     "typecheck": "nuxt-module-build prepare && vue-tsc --noEmit && pnpm test:types",
     "prepublishOnly": "nuxt-module-build prepare && nuxt-module-build build"
   },
@@ -60,6 +61,7 @@
     "@nuxt/test-utils": "catalog:",
     "@types/node": "catalog:",
     "nuxt": "catalog:",
+    "playwright-core": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
     "vue-tsc": "catalog:"

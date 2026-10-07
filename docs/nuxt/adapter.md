@@ -1,9 +1,15 @@
 # Adapter
 
-The module installs the [vue-router adapter](/guide/getting-started/adapters#vue-router)
-on the Vue app, so every composable resolves it with no per-component setup. A
-plugin provides [`createVueRouterAdapter()`](/api/adapters#createvuerouteradapter)
-through [`installQueryAdapter`](/api/composables#installqueryadapter).
+The module installs a query adapter on the Vue app through
+[`installQueryAdapter`](/api/composables#installqueryadapter), so every composable
+resolves it with no per-component setup.
+
+The module uses the [vue-router adapter](/guide/getting-started/adapters#vue-router)
+by default. For apps without a `pages` directory or with `pages: false`, it
+automatically uses Nuxt's minimal router. No additional configuration is needed.
+
+Both adapters preserve the current path and hash when writing query state and
+support `history: 'push'` and `history: 'replace'`.
 
 ## Adapter defaults
 
