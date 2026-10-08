@@ -1,35 +1,106 @@
 {
   "$schema": "https://turborepo.com/schema.json",
+  "cacheDir": ".turbo/cache",
+  "globalDependencies": ["tsconfig.base.json"],
   "tasks": {
+    // Shared
     "build": {
-      "dependsOn": ["^build"],
       "outputs": ["dist/**"]
-    },
-    "typecheck": {
-      "dependsOn": ["^build"],
-      "outputs": []
-    },
-    "test": {
-      "dependsOn": ["^build"],
-      "cache": false
-    },
-    "test:run": {
-      "dependsOn": ["^build"]
-    },
-    "test:perf": {
-      "dependsOn": ["^build"],
-      "cache": false
-    },
-    "test:coverage": {
-      "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
-    },
-    "test:types": {
-      "dependsOn": ["^build"]
     },
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "dev:prepare": {
+      "dependsOn": ["^dev:prepare"],
+      "cache": false
+    },
+    "test": {
+      "cache": false
+    },
+    "test:watch": {
+      "cache": false,
+      "persistent": true
+    },
+    "test:unit": {},
+    "test:integration": {},
+    "test:e2e": {},
+    "test:types": {},
+    "test:coverage": {
+      "outputs": ["coverage/**"]
+    },
+    "test:perf": {
+      "cache": false
+    },
+    "test:dist": {},
+    "test:types:dist": {},
+    "typecheck": {
+      "outputs": []
+    },
+
+    // Core
+    "@vuqs/core#test:dist": {
+      "dependsOn": ["build"]
+    },
+    "@vuqs/core#test:types:dist": {
+      "dependsOn": ["build"]
+    },
+
+    // Nuxt
+    "@vuqs/nuxt#build": {
+      "dependsOn": ["@vuqs/core#build"],
+      "outputs": ["dist/**"]
+    },
+    "@vuqs/nuxt#prepare:fixtures": {
+      "dependsOn": ["@vuqs/core#build"],
+      "outputs": ["test/fixtures/*/.nuxt/**"]
+    },
+    "@vuqs/nuxt#test": {
+      "dependsOn": ["prepare:fixtures"],
+      "cache": false
+    },
+    "@vuqs/nuxt#test:watch": {
+      "dependsOn": ["prepare:fixtures"],
+      "cache": false,
+      "persistent": true
+    },
+    "@vuqs/nuxt#test:e2e": {
+      "dependsOn": ["prepare:fixtures"]
+    },
+    "@vuqs/nuxt#test:types": {
+      "dependsOn": ["prepare:fixtures"]
+    },
+    "@vuqs/nuxt#typecheck": {
+      "dependsOn": ["test:types"],
+      "outputs": []
+    },
+
+    // Docs
+    "@vuqs/docs#build": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/core/src/**",
+        "$TURBO_ROOT$/packages/core/package.json"
+      ],
+      "outputs": [".vitepress/dist/**"]
+    },
+
+    // Playground
+    "@vuqs/playground#build": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/core/src/**",
+        "$TURBO_ROOT$/packages/core/package.json"
+      ],
+      "outputs": ["dist/**"]
+    },
+    "@vuqs/playground#typecheck": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/core/src/**",
+        "$TURBO_ROOT$/packages/core/package.json"
+      ],
+      "outputs": []
     }
   }
 }

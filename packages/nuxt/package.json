@@ -42,13 +42,15 @@
   },
   "scripts": {
     "build": "nuxt-module-build prepare && nuxt-module-build build",
-    "dev": "nuxt-module-build build --stub && nuxt-module-build prepare",
+    "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare",
     "prepare:fixtures": "nuxt prepare test/fixtures/basic && nuxt prepare test/fixtures/no-pages",
-    "test": "pnpm prepare:fixtures && vitest run",
-    "test:run": "pnpm test",
-    "test:types": "pnpm prepare:fixtures && vue-tsc --build test/fixtures/basic/tsconfig.json test/fixtures/no-pages/tsconfig.json",
-    "typecheck": "nuxt-module-build prepare && vue-tsc --noEmit && pnpm test:types",
-    "prepublishOnly": "nuxt-module-build prepare && nuxt-module-build build"
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:unit": "vitest run --project unit",
+    "test:e2e": "vitest run --project e2e",
+    "test:types": "vue-tsc --build test/fixtures/basic/tsconfig.json test/fixtures/no-pages/tsconfig.json",
+    "typecheck": "vue-tsc --noEmit",
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "@nuxt/kit": "catalog:",
