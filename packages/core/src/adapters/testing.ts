@@ -70,72 +70,6 @@ export interface TestingAdapter extends QueryAdapter {
   readonly resetQueue: () => void
 }
 
-function snapshotQuery(query: ParsedQuery): ParsedQuery {
-  return Object.fromEntries(
-    Object.entries(toRaw(query)).map(([key, value]) => [key, snapshotValue(value)]),
-  )
-}
-
-function snapshotValue(value: ParsedQueryValue): ParsedQueryValue {
-  const raw = toRaw(value)
-
-  if (Array.isArray(raw)) {
-    return raw.map(snapshotValue)
-  }
-
-  if (raw !== null && typeof raw === 'object') {
-    return snapshotQuery(raw)
-  }
-
-  return raw
-}
-
-// Expand each top-level key through setPath so dot-notation keys nest, aligning
-// the initial query with the dot-paths queryParam binds against.
-function nestPaths(flat: Record<string, ParsedQueryRaw[string]>): ParsedQuery {
-  const query: ParsedQueryRaw = {}
-
-  for (const key of Object.keys(flat)) {
-    setPath(query, key, flat[key])
-  }
-
-  return query
-}
-
-function parseSearchParams(input: TestingAdapterOptions['searchParams']): ParsedQuery {
-  if (!input) {
-    return {}
-  }
-
-  if (typeof input !== 'string' && !(input instanceof URLSearchParams)) {
-    return nestPaths(snapshotQuery(input))
-  }
-
-  const params = typeof input === 'string'
-    ? new URLSearchParams(input.startsWith('?') ? input.slice(1) : input)
-    : input
-
-  // Repeated keys collapse into an array before nesting, so `tag=a&tag=b` reads
-  // as `['a', 'b']` under one path.
-  const flat: Record<string, string | string[]> = Object.create(null)
-
-  for (const [key, value] of params) {
-    const existing = flat[key]
-
-    if (existing === undefined) {
-      flat[key] = value
-    }
-    else if (Array.isArray(existing)) {
-      existing.push(value)
-    }
-    else {
-      flat[key] = [existing, value]
-    }
-  }
-
-  return nestPaths(flat)
-}
-
 /**
  * Creates a {@link QueryAdapter} backed by an in-memory ref for use in tests.
  *
@@ -219,4 +153,70 @@ export function withVuqsTestingAdapter(options: TestingAdapterOptions = {}): (ap
   return (app: App) => {
     installQueryAdapter(app, createTestingAdapter(options))
   }
+}
+
+function parseSearchParams(input: TestingAdapterOptions['searchParams']): ParsedQuery {
+  if (!input) {
+    return {}
+  }
+
+  if (typeof input !== 'string' && !(input instanceof URLSearchParams)) {
+    return nestPaths(snapshotQuery(input))
+  }
+
+  const params = typeof input === 'string'
+    ? new URLSearchParams(input.startsWith('?') ? input.slice(1) : input)
+    : input
+
+  // Repeated keys collapse into an array before nesting, so `tag=a&tag=b` reads
+  // as `['a', 'b']` under one path.
+  const flat: Record<string, string | string[]> = Object.create(null)
+
+  for (const [key, value] of params) {
+    const existing = flat[key]
+
+    if (existing === undefined) {
+      flat[key] = value
+    }
+    else if (Array.isArray(existing)) {
+      existing.push(value)
+    }
+    else {
+      flat[key] = [existing, value]
+    }
+  }
+
+  return nestPaths(flat)
+}
+
+// Expand each top-level key through setPath so dot-notation keys nest, aligning
+// the initial query with the dot-paths queryParam binds against.
+function nestPaths(flat: Record<string, ParsedQueryRaw[string]>): ParsedQuery {
+  const query: ParsedQueryRaw = {}
+
+  for (const key of Object.keys(flat)) {
+    setPath(query, key, flat[key])
+  }
+
+  return query
+}
+
+function snapshotQuery(query: ParsedQuery): ParsedQuery {
+  return Object.fromEntries(
+    Object.entries(toRaw(query)).map(([key, value]) => [key, snapshotValue(value)]),
+  )
+}
+
+function snapshotValue(value: ParsedQueryValue): ParsedQueryValue {
+  const raw = toRaw(value)
+
+  if (Array.isArray(raw)) {
+    return raw.map(snapshotValue)
+  }
+
+  if (raw !== null && typeof raw === 'object') {
+    return snapshotQuery(raw)
+  }
+
+  return raw
 }

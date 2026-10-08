@@ -80,7 +80,7 @@ useQueryState('color', codecs.hex) // ?color=ff8800 → 16746496
 ### Index
 
 A 1-based index in the URL mapped to a **0-based** value in your state, ideal for
-human-friendly page numbers over a zero-based array:
+one-based page numbers over a zero-based array:
 
 ```ts
 const page = useQueryState('page', codecs.index.withDefault(0))

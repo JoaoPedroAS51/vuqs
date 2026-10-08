@@ -58,7 +58,7 @@ export default defineBuildConfig({
       if (retargeted !== 2)
         throw new Error('[build] expected to retarget QueryModuleRegistry in both modules declaration artifacts.')
 
-      // The console reporter's human-readable labels must ship only through the opt-in
+      // The console reporter's labels must ship only through the opt-in
       // `@vuqs/core/debug` entry. A stray import from any base module would pull them
       // into another bundle; catch that here rather than by eye.
       const consoleSource = join(ctx.options.outDir, '..', 'src', 'debug', 'console-reporter.ts')

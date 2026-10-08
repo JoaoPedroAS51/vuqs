@@ -77,7 +77,7 @@ Filters run before payload normalization and redaction.
 
 ## Summary policies
 
-- **Visible:** produces its own human summary.
+- **Visible:** produces its own summary.
 - **Conditional:** produces a summary only for the configured outcomes.
 - **Aggregated:** contributes to another logical result, such as a committed URL write.
 - **Trace only:** stays out of the default summary but appears in the complete trace.

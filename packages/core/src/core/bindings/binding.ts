@@ -37,8 +37,6 @@ export type QueryStatesValues<TSchema extends QueryStateSchema> = {
   [Key in keyof TSchema]: QueryStateRefValue<TSchema[Key]>
 }
 
-let bindingCounter = 0
-
 /**
  * The single root the reactive lenses derive from: a schema-typed whole-object
  * read plus an atomic transaction writer.
@@ -83,6 +81,8 @@ export interface QueryBindingResult<TSchema extends QueryStateSchema> {
   /** The shared core passed to composed modules. */
   core: QueryCore<TSchema>
 }
+
+let bindingCounter = 0
 
 /**
  * Builds the engine, writable refs, and module core for a schema.
@@ -153,28 +153,6 @@ export function createQueryBinding<TSchema extends QueryStateSchema>(
   return { engine, binding, core }
 }
 
-function resolveSchemaClearOnDefault<TSchema extends QueryStateSchema>(
-  schema: TSchema,
-  instanceClearOnDefault: boolean | undefined,
-  adapterClearOnDefault: boolean | undefined,
-): TSchema {
-  const resolved: QueryStateSchema = {}
-
-  for (const key of Object.keys(schema)) {
-    const definition = schema[key]
-
-    resolved[key] = {
-      ...definition,
-      clearOnDefault: instanceClearOnDefault
-        ?? definition.clearOnDefault
-        ?? adapterClearOnDefault
-        ?? true,
-    }
-  }
-
-  return resolved as TSchema
-}
-
 /**
  * Projects a {@link QueryBinding} into the reactive dot-access value map behind
  * `useQueryStates().values`.
@@ -216,4 +194,26 @@ export function transactQueryKey<TSchema extends QueryStateSchema>(
     values: { [key]: value } as QueryStateWriteValues<TSchema>,
     navigation,
   })
+}
+
+function resolveSchemaClearOnDefault<TSchema extends QueryStateSchema>(
+  schema: TSchema,
+  instanceClearOnDefault: boolean | undefined,
+  adapterClearOnDefault: boolean | undefined,
+): TSchema {
+  const resolved: QueryStateSchema = {}
+
+  for (const key of Object.keys(schema)) {
+    const definition = schema[key]
+
+    resolved[key] = {
+      ...definition,
+      clearOnDefault: instanceClearOnDefault
+        ?? definition.clearOnDefault
+        ?? adapterClearOnDefault
+        ?? true,
+    }
+  }
+
+  return resolved as TSchema
 }

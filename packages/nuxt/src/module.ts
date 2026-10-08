@@ -112,32 +112,6 @@ const CODEC_IMPORTS = ['codecs', 'createCodec'] as const
 
 const MODULE_IMPORTS = ['withRuntimeDefaults', 'withContext', 'withActiveParams', 'withStorage'] as const
 
-function resolveAutoImports(option: ModuleOptions['autoImports']): Required<AutoImportsOptions> {
-  if (option === false) {
-    return { composables: false, codecs: false, modules: false }
-  }
-
-  if (option === true || option === undefined) {
-    return { composables: true, codecs: true, modules: true }
-  }
-
-  return { composables: true, codecs: true, modules: true, ...option }
-}
-
-function resolveDebugTargets(option: ModuleOptions['debug']): Required<DebugOptions> {
-  if (option === true || option === 'force') {
-    return { client: option, server: false }
-  }
-  if (!option) {
-    return { client: false, server: false }
-  }
-  return { client: option.client ?? false, server: option.server ?? false }
-}
-
-function targetEnabled(option: DebugTargetOption, dev: boolean): boolean {
-  return option === 'force' || (option === true && dev)
-}
-
 export default defineNuxtModule<ModuleOptions>({
   meta: {
     name: '@vuqs/nuxt',
@@ -203,3 +177,29 @@ export default defineNuxtModule<ModuleOptions>({
     }
   },
 })
+
+function resolveAutoImports(option: ModuleOptions['autoImports']): Required<AutoImportsOptions> {
+  if (option === false) {
+    return { composables: false, codecs: false, modules: false }
+  }
+
+  if (option === true || option === undefined) {
+    return { composables: true, codecs: true, modules: true }
+  }
+
+  return { composables: true, codecs: true, modules: true, ...option }
+}
+
+function resolveDebugTargets(option: ModuleOptions['debug']): Required<DebugOptions> {
+  if (option === true || option === 'force') {
+    return { client: option, server: false }
+  }
+  if (!option) {
+    return { client: false, server: false }
+  }
+  return { client: option.client ?? false, server: option.server ?? false }
+}
+
+function targetEnabled(option: DebugTargetOption, dev: boolean): boolean {
+  return option === 'force' || (option === true && dev)
+}

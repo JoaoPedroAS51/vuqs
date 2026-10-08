@@ -80,7 +80,7 @@ describe('console reporter: trace and filters', () => {
     expect(log.mock.calls[0]?.[0]).toBe('[vuqs trace] future:event — Observed an unknown debug event.')
   })
 
-  it('prints every selected event with human prose and structured technical details', () => {
+  it('prints each event with a message and structured details', () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
     const channel = withReporter({ preset: 'trace' })
 
@@ -255,7 +255,7 @@ describe('console reporter: trace and filters', () => {
     expect(log.mock.calls[0]?.[0]).toContain('rd:set')
   })
 
-  it('uses lifecycle payloads as human trace labels without exposing ids in the message', () => {
+  it('uses lifecycle payloads as trace labels without exposing ids in the message', () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
     const channel = withReporter({ preset: 'trace' })
 

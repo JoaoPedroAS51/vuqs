@@ -1,10 +1,6 @@
 import type { DebugEventCode, DebugEventMap } from '../../packages/core/src/core/diagnostics/events'
 
-/**
- * Documentation-only sample payloads. The exhaustive map keeps every rendered
- * example aligned with the structured protocol while the catalog remains the
- * single source of truth for its human-readable trace prose.
- */
+/** Sample payloads for every documented debug event. */
 export const DEBUG_EVENT_EXAMPLES = {
   'binding:created': { id: 'b', keys: ['color'], managedPaths: ['color'] },
   'binding:disposed': { id: 'b', keys: ['color'], managedPaths: ['color'] },

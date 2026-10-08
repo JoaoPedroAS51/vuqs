@@ -21,65 +21,6 @@ export interface BrowserHistoryAdapter extends QueryAdapter {
   dispose: () => void
 }
 
-function parseSearch(search: string): ParsedQuery {
-  const flat: Record<string, string | string[]> = Object.create(null)
-
-  for (const [key, value] of new URLSearchParams(search)) {
-    const existing = flat[key]
-
-    if (existing === undefined) {
-      flat[key] = value
-    }
-    else if (Array.isArray(existing)) {
-      existing.push(value)
-    }
-    else {
-      flat[key] = [existing, value]
-    }
-  }
-
-  const query: ParsedQuery = {}
-
-  for (const [key, value] of Object.entries(flat)) {
-    setPath(query, key, value)
-  }
-
-  return query
-}
-
-function stringifyQuery(query: ParsedQuery): string {
-  const params = new URLSearchParams()
-
-  function append(path: string, value: ParsedQueryValue): void {
-    if (value === null || value === undefined) {
-      return
-    }
-
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        if (item !== null && typeof item === 'object') {
-          throw new TypeError(`[vuqs] Browser history arrays must contain scalar values: ${path}`)
-        }
-        append(path, item)
-      }
-    }
-    else if (typeof value === 'object') {
-      for (const [key, child] of Object.entries(value)) {
-        append(`${path}.${key}`, child)
-      }
-    }
-    else {
-      params.append(path, String(value))
-    }
-  }
-
-  for (const [key, value] of Object.entries(query)) {
-    append(key, value)
-  }
-
-  return params.toString()
-}
-
 /**
  * Creates a query adapter backed by the browser History API.
  *
@@ -178,4 +119,63 @@ export function provideBrowserHistoryAdapter(options?: BrowserHistoryAdapterOpti
   onScopeDispose(adapter.dispose)
 
   return adapter
+}
+
+function parseSearch(search: string): ParsedQuery {
+  const flat: Record<string, string | string[]> = Object.create(null)
+
+  for (const [key, value] of new URLSearchParams(search)) {
+    const existing = flat[key]
+
+    if (existing === undefined) {
+      flat[key] = value
+    }
+    else if (Array.isArray(existing)) {
+      existing.push(value)
+    }
+    else {
+      flat[key] = [existing, value]
+    }
+  }
+
+  const query: ParsedQuery = {}
+
+  for (const [key, value] of Object.entries(flat)) {
+    setPath(query, key, value)
+  }
+
+  return query
+}
+
+function stringifyQuery(query: ParsedQuery): string {
+  const params = new URLSearchParams()
+
+  function append(path: string, value: ParsedQueryValue): void {
+    if (value === null || value === undefined) {
+      return
+    }
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item !== null && typeof item === 'object') {
+          throw new TypeError(`[vuqs] Browser history arrays must contain scalar values: ${path}`)
+        }
+        append(path, item)
+      }
+    }
+    else if (typeof value === 'object') {
+      for (const [key, child] of Object.entries(value)) {
+        append(`${path}.${key}`, child)
+      }
+    }
+    else {
+      params.append(path, String(value))
+    }
+  }
+
+  for (const [key, value] of Object.entries(query)) {
+    append(key, value)
+  }
+
+  return params.toString()
 }

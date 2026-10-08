@@ -1,13 +1,6 @@
 import type { ParsedQueryValue } from '../query/types'
 import { structuralEq } from '../../shared/utils/object'
 
-/** @internal */
-export function isCodec<T>(value: unknown): value is Codec<T> {
-  return value !== undefined
-    && typeof (value as Codec<T>).parse === 'function'
-    && typeof (value as Codec<T>).serialize === 'function'
-}
-
 /**
  * A bidirectional, path-agnostic converter between a query value and a typed value.
  *
@@ -124,4 +117,11 @@ export function createCodec<T>(input: CodecInput<T>): Codec<T> {
   }
 
   return codec
+}
+
+/** @internal */
+export function isCodec<T>(value: unknown): value is Codec<T> {
+  return value !== undefined
+    && typeof (value as Codec<T>).parse === 'function'
+    && typeof (value as Codec<T>).serialize === 'function'
 }

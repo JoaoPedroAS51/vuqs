@@ -4,6 +4,8 @@ import type { DebugSnapshotByKind, DebugSnapshotKind } from './snapshot'
 import { DEFAULT_HISTORY_LIMIT, HistoryBuffer } from './history'
 import { deepFreeze, normalizeForHistory } from './normalize'
 
+// Event contracts
+
 /**
  * The version of the structured debug protocol (the {@link DebugEvent} envelope plus
  * the event payload shapes). A consumer such as `@vuqs/devtools` reads it on attach to
@@ -110,6 +112,8 @@ export interface DebugChannelHandle {
   registerSnapshotSource: <Kind extends DebugSnapshotKind>(kind: Kind, describe: () => DebugSnapshotByKind[Kind]) => () => void
 }
 
+// Snapshot sources
+
 interface SnapshotSource {
   readonly kind: DebugSnapshotKind
   readonly describe: () => DebugSnapshotByKind[DebugSnapshotKind]
@@ -125,20 +129,11 @@ export type SnapshotEntry = {
   }
 }[DebugSnapshotKind]
 
-function nowMonotonic(): number | undefined {
-  return typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : undefined
-}
+type EmissionArgs<Code extends DebugEventCode> = DebugEventMap[Code] extends undefined
+  ? [payload?: undefined, context?: DebugEmissionContext]
+  : [payload: DebugEventMap[Code], context?: DebugEmissionContext]
 
-function safeDeliver(reporter: Reporter, event: DebugEvent): void {
-  try {
-    reporter(event)
-  }
-  catch (error) {
-    // A throwing reporter must never break the app or the other reporters.
-
-    console.error(`[vuqs] error in debug reporter for "${event.code}"`, error)
-  }
-}
+// Reporters
 
 // A registry of reporters plus a history buffer, shared by every channel and the hub.
 class ReporterSet {
@@ -170,6 +165,8 @@ class ReporterSet {
     }
   }
 }
+
+// Event delivery
 
 interface EmissionDraft {
   channel: DebugChannel
@@ -300,34 +297,7 @@ class DebugHub {
 
 const hub = new DebugHub()
 
-function buildContext(runtimeId: string | undefined, emission?: DebugEmissionContext): DebugContext | undefined {
-  const context: { -readonly [Key in keyof DebugContext]: DebugContext[Key] } = {}
-
-  if (runtimeId !== undefined) {
-    context.runtimeId = runtimeId
-  }
-
-  if (emission !== undefined) {
-    if (emission.bindingId !== undefined) {
-      context.bindingId = emission.bindingId
-    }
-
-    if (emission.transactionIds !== undefined) {
-      // Clone so a later mutation of the caller's array cannot rewrite retained history.
-      context.transactionIds = Object.freeze([...emission.transactionIds])
-    }
-
-    if (emission.batchId !== undefined) {
-      context.batchId = emission.batchId
-    }
-  }
-
-  return Object.keys(context).length > 0 ? Object.freeze(context) : undefined
-}
-
-type EmissionArgs<Code extends DebugEventCode> = DebugEventMap[Code] extends undefined
-  ? [payload?: undefined, context?: DebugEmissionContext]
-  : [payload: DebugEventMap[Code], context?: DebugEmissionContext]
+// Channels
 
 /**
  * A per-runtime (or the global-fallback) debug channel. Core subsystems hold the
@@ -402,15 +372,6 @@ export class DebugChannel implements DebugChannelHandle {
   }
 }
 
-function emit(channel: DebugChannel | undefined, code: string, level: DebugLevel, payload: unknown, context?: DebugEmissionContext): void {
-  // Fast path: no resolvable channel, or nothing armed on it or the hub, so skip all work.
-  if (channel === undefined || !channel.armed()) {
-    return
-  }
-
-  hub.enqueue({ channel, code, level, payload, context })
-}
-
 // A channel handle with a fixed emission context.
 class DebugTarget implements DebugChannelHandle {
   constructor(readonly channel: DebugChannel, readonly base: DebugEmissionContext) {}
@@ -430,6 +391,57 @@ class DebugTarget implements DebugChannelHandle {
   registerSnapshotSource<Kind extends DebugSnapshotKind>(kind: Kind, describe: () => DebugSnapshotByKind[Kind]): () => void {
     return this.channel.registerSnapshotSource(kind, describe, this.base)
   }
+}
+
+// Channel registry
+
+/**
+ * The fallback channel for diagnostics emitted without a runtime in scope (a standalone
+ * codec, a missing adapter). Events here are not isolated to any request.
+ *
+ * @internal
+ */
+export const globalDebugChannel = new DebugChannel()
+
+const channelsByAdapter = new WeakMap<object, DebugChannel>()
+
+let adapterSeq = 0
+
+/**
+ * Creates a debug channel bound to a runtime identity. Each `QueryRuntime` owns one.
+ *
+ * @internal
+ */
+export function createDebugChannel(runtimeId: string): DebugChannel {
+  return new DebugChannel(runtimeId)
+}
+
+/**
+ * Gets or creates an adapter's debug channel.
+ *
+ * @returns The same channel for subsequent calls with the same adapter identity.
+ *
+ * @internal
+ */
+export function debugChannelForAdapter(adapter: object): DebugChannel {
+  let channel = channelsByAdapter.get(adapter)
+
+  if (channel === undefined) {
+    channel = new DebugChannel(`rt${(adapterSeq++).toString(36)}`)
+    channelsByAdapter.set(adapter, channel)
+  }
+
+  return channel
+}
+
+/**
+ * Selects an adapter's debug channel.
+ *
+ * @param adapter - The query adapter whose events to select.
+ * @returns A stable handle for observing the adapter's events and history.
+ */
+export function getDebugChannel(adapter: QueryAdapter): DebugChannelHandle {
+  return debugChannelForAdapter(adapter)
 }
 
 /**
@@ -462,95 +474,7 @@ export function resolveDebugChannel(handle?: DebugChannelHandle): DebugChannel |
   return undefined
 }
 
-function resolveEmit(sink: DebugChannelHandle): { channel: DebugChannel | undefined, base?: DebugEmissionContext } {
-  // Reuse the one handle→channel resolver; only the base context is target-specific.
-  return {
-    channel: resolveDebugChannel(sink),
-    base: sink instanceof DebugTarget ? sink.base : undefined,
-  }
-}
-
-function mergeContext(base: DebugEmissionContext | undefined, context: DebugEmissionContext | undefined): DebugEmissionContext | undefined {
-  if (base === undefined) {
-    return context
-  }
-
-  if (context === undefined) {
-    return base
-  }
-
-  // The base (binding) context is spread last, so a call site cannot override it.
-  return { ...context, ...base }
-}
-
-/**
- * Emits a debug event with the handle's bound context applied.
- *
- * @internal
- */
-export function emitDebug<Code extends LogDebugCode>(channel: DebugChannelHandle, code: Code, ...args: EmissionArgs<Code>): void {
-  const { channel: concrete, base } = resolveEmit(channel)
-  emit(concrete, code, 'debug', args[0], mergeContext(base, args[1]))
-}
-
-/**
- * The warn-level counterpart of {@link emitDebug}.
- *
- * @internal
- */
-export function emitWarn<Code extends WarnDebugCode>(channel: DebugChannelHandle, code: Code, ...args: EmissionArgs<Code>): void {
-  const { channel: concrete, base } = resolveEmit(channel)
-  emit(concrete, code, 'warn', args[0], mergeContext(base, args[1]))
-}
-
-/**
- * The fallback channel for diagnostics emitted without a runtime in scope (a standalone
- * codec, a missing adapter). Events here are not isolated to any request.
- *
- * @internal
- */
-export const globalDebugChannel = new DebugChannel()
-
-/**
- * Creates a debug channel bound to a runtime identity. Each `QueryRuntime` owns one.
- *
- * @internal
- */
-export function createDebugChannel(runtimeId: string): DebugChannel {
-  return new DebugChannel(runtimeId)
-}
-
-const channelsByAdapter = new WeakMap<object, DebugChannel>()
-
-let adapterSeq = 0
-
-/**
- * Gets or creates an adapter's debug channel.
- *
- * @returns The same channel for subsequent calls with the same adapter identity.
- *
- * @internal
- */
-export function debugChannelForAdapter(adapter: object): DebugChannel {
-  let channel = channelsByAdapter.get(adapter)
-
-  if (channel === undefined) {
-    channel = new DebugChannel(`rt${(adapterSeq++).toString(36)}`)
-    channelsByAdapter.set(adapter, channel)
-  }
-
-  return channel
-}
-
-/**
- * Selects an adapter's debug channel.
- *
- * @param adapter - The query adapter whose events to select.
- * @returns A stable handle for observing the adapter's events and history.
- */
-export function getDebugChannel(adapter: QueryAdapter): DebugChannelHandle {
-  return debugChannelForAdapter(adapter)
-}
+// Observation
 
 /**
  * Registers a debug event reporter.
@@ -608,4 +532,96 @@ export function isDebugArmed(channel?: DebugChannelHandle): boolean {
  */
 export function liveDebugChannels(): DebugChannel[] {
   return hub.liveChannels()
+}
+
+// Emission
+
+/**
+ * Emits a debug event with the handle's bound context applied.
+ *
+ * @internal
+ */
+export function emitDebug<Code extends LogDebugCode>(channel: DebugChannelHandle, code: Code, ...args: EmissionArgs<Code>): void {
+  const { channel: concrete, base } = resolveEmit(channel)
+  emit(concrete, code, 'debug', args[0], mergeContext(base, args[1]))
+}
+
+/**
+ * The warn-level counterpart of {@link emitDebug}.
+ *
+ * @internal
+ */
+export function emitWarn<Code extends WarnDebugCode>(channel: DebugChannelHandle, code: Code, ...args: EmissionArgs<Code>): void {
+  const { channel: concrete, base } = resolveEmit(channel)
+  emit(concrete, code, 'warn', args[0], mergeContext(base, args[1]))
+}
+
+function emit(channel: DebugChannel | undefined, code: string, level: DebugLevel, payload: unknown, context?: DebugEmissionContext): void {
+  // Fast path: no resolvable channel, or nothing armed on it or the hub, so skip all work.
+  if (channel === undefined || !channel.armed()) {
+    return
+  }
+
+  hub.enqueue({ channel, code, level, payload, context })
+}
+
+function resolveEmit(sink: DebugChannelHandle): { channel: DebugChannel | undefined, base?: DebugEmissionContext } {
+  // Reuse the one handle→channel resolver; only the base context is target-specific.
+  return {
+    channel: resolveDebugChannel(sink),
+    base: sink instanceof DebugTarget ? sink.base : undefined,
+  }
+}
+
+function mergeContext(base: DebugEmissionContext | undefined, context: DebugEmissionContext | undefined): DebugEmissionContext | undefined {
+  if (base === undefined) {
+    return context
+  }
+
+  if (context === undefined) {
+    return base
+  }
+
+  // The base (binding) context is spread last, so a call site cannot override it.
+  return { ...context, ...base }
+}
+
+function buildContext(runtimeId: string | undefined, emission?: DebugEmissionContext): DebugContext | undefined {
+  const context: { -readonly [Key in keyof DebugContext]: DebugContext[Key] } = {}
+
+  if (runtimeId !== undefined) {
+    context.runtimeId = runtimeId
+  }
+
+  if (emission !== undefined) {
+    if (emission.bindingId !== undefined) {
+      context.bindingId = emission.bindingId
+    }
+
+    if (emission.transactionIds !== undefined) {
+      // Clone so a later mutation of the caller's array cannot rewrite retained history.
+      context.transactionIds = Object.freeze([...emission.transactionIds])
+    }
+
+    if (emission.batchId !== undefined) {
+      context.batchId = emission.batchId
+    }
+  }
+
+  return Object.keys(context).length > 0 ? Object.freeze(context) : undefined
+}
+
+function safeDeliver(reporter: Reporter, event: DebugEvent): void {
+  try {
+    reporter(event)
+  }
+  catch (error) {
+    // A throwing reporter must never break the app or the other reporters.
+
+    console.error(`[vuqs] error in debug reporter for "${event.code}"`, error)
+  }
+}
+
+function nowMonotonic(): number | undefined {
+  return typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : undefined
 }

@@ -7,6 +7,15 @@ import { createQueryParamBuilder } from './builder'
 import { codecParamInput } from './definition'
 import { createObjectQueryParamFromArgs } from './object'
 
+export type {
+  PrefixedQueryParamBuilder,
+  QueryParamBuilder,
+  QueryParamBuilderWithDefault,
+  QueryParamObjectBuilder,
+  QueryParamObjectBuilderWithDefault,
+  QueryParamTransform,
+} from './builder-types'
+
 /**
  * Builds a param from a path and codec, or composes one with `object`.
  *
@@ -25,6 +34,14 @@ interface QueryParamFactory {
   object: QueryParamObjectFactory
 }
 
+export const queryParam = Object.assign(queryParamFactory, {
+  object: createObjectQueryParamFromArgs,
+}) as QueryParamFactory
+
+interface QueryParamOptions<T> {
+  defaultValue?: T
+}
+
 function queryParamFactory<T>(
   path: string,
   codecOrOptions?: Codec<T> | QueryParamOptions<string>,
@@ -32,23 +49,6 @@ function queryParamFactory<T>(
   return isCodec<T>(codecOrOptions)
     ? createScalarQueryParam(path, codecOrOptions)
     : createStringQueryParam(path, codecOrOptions)
-}
-
-export const queryParam = Object.assign(queryParamFactory, {
-  object: createObjectQueryParamFromArgs,
-}) as QueryParamFactory
-
-export type {
-  PrefixedQueryParamBuilder,
-  QueryParamBuilder,
-  QueryParamBuilderWithDefault,
-  QueryParamObjectBuilder,
-  QueryParamObjectBuilderWithDefault,
-  QueryParamTransform,
-} from './builder-types'
-
-interface QueryParamOptions<T> {
-  defaultValue?: T
 }
 
 function createScalarQueryParam<T>(

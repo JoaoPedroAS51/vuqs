@@ -3,7 +3,7 @@ import { createConsoleReporter } from '../../../../src/debug/console-reporter'
 import { emitCommittedWrite, TRACE_PAYLOADS, withReporter } from '../helpers'
 
 describe('console reporter: summary', () => {
-  it('aggregates a complete write lifecycle into one human result', () => {
+  it('aggregates a complete write lifecycle into one summary', () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
     const channel = withReporter()
     const context = { bindingId: '7', transactionIds: [2], batchId: 3 }

@@ -13,53 +13,6 @@ export type QueryStateSchema = Record<string, DefinedQueryParam<any>>
 export type QueryStateSchemaInput = Record<string, Codec<any> | DefinedQueryParam<any>>
 
 /**
- * Normalizes a public schema input into executable defined query params.
- *
- * @typeParam TSchema - The input schema to normalize.
- * @param schema - The schema input.
- * @returns A schema whose values are all defined query params.
- */
-export function normalizeQueryStateSchema<TSchema extends QueryStateSchemaInput>(
-  schema: TSchema,
-): NormalizeQueryStateSchema<TSchema> {
-  const normalized: QueryStateSchema = {}
-
-  for (const key of Object.keys(schema)) {
-    const value = schema[key]
-
-    normalized[key] = isDefinedQueryParam(value)
-      ? value
-      : defineCodecQueryParam(key, value)
-  }
-
-  return normalized as NormalizeQueryStateSchema<TSchema>
-}
-
-/**
- * Defines a reusable query-state schema, normalized to its canonical form.
- *
- * @typeParam TSchema - The schema input, keyed by logical param name.
- * @param schema - The params, each a `queryParam` definition or a bare {@link Codec}.
- * @returns The schema, normalized to {@link DefinedQueryParam} entries.
- *
- * @example
- * ```ts
- * export const filters = defineQuerySchema({
- *   q: codecs.string,
- *   status: queryParam('status', codecs.literal(['open', 'closed'] as const)),
- * })
- *
- * const { values } = useQueryStates(filters)
- * type Filters = QueryStateValues<typeof filters>
- * ```
- */
-export function defineQuerySchema<const TSchema extends QueryStateSchemaInput>(
-  schema: TSchema,
-): NormalizeQueryStateSchema<TSchema> {
-  return normalizeQueryStateSchema(schema)
-}
-
-/**
  * The normalized schema type produced from a public schema input.
  */
 export type NormalizeQueryStateSchema<TSchema extends QueryStateSchemaInput> = {
@@ -119,6 +72,53 @@ export type QueryStateValues<TSchema extends QueryStateSchema> = {
  */
 export type QueryStateWriteValues<TSchema extends QueryStateSchema> = {
   [Key in keyof TSchema]?: QueryStateValueOf<TSchema[Key]> | undefined
+}
+
+/**
+ * Defines a reusable query-state schema, normalized to its canonical form.
+ *
+ * @typeParam TSchema - The schema input, keyed by logical param name.
+ * @param schema - The params, each a `queryParam` definition or a bare {@link Codec}.
+ * @returns The schema, normalized to {@link DefinedQueryParam} entries.
+ *
+ * @example
+ * ```ts
+ * export const filters = defineQuerySchema({
+ *   q: codecs.string,
+ *   status: queryParam('status', codecs.literal(['open', 'closed'] as const)),
+ * })
+ *
+ * const { values } = useQueryStates(filters)
+ * type Filters = QueryStateValues<typeof filters>
+ * ```
+ */
+export function defineQuerySchema<const TSchema extends QueryStateSchemaInput>(
+  schema: TSchema,
+): NormalizeQueryStateSchema<TSchema> {
+  return normalizeQueryStateSchema(schema)
+}
+
+/**
+ * Normalizes a public schema input into executable defined query params.
+ *
+ * @typeParam TSchema - The input schema to normalize.
+ * @param schema - The schema input.
+ * @returns A schema whose values are all defined query params.
+ */
+export function normalizeQueryStateSchema<TSchema extends QueryStateSchemaInput>(
+  schema: TSchema,
+): NormalizeQueryStateSchema<TSchema> {
+  const normalized: QueryStateSchema = {}
+
+  for (const key of Object.keys(schema)) {
+    const value = schema[key]
+
+    normalized[key] = isDefinedQueryParam(value)
+      ? value
+      : defineCodecQueryParam(key, value)
+  }
+
+  return normalized as NormalizeQueryStateSchema<TSchema>
 }
 
 /**

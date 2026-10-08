@@ -36,7 +36,7 @@ export interface QueryAdapterDefaultOptions extends NavigateOptions {
  * @see https://vuqs.dev/guide/getting-started/adapters
  */
 export interface QueryAdapter {
-  /** Human-readable adapter identity used only by opt-in diagnostics. */
+  /** Adapter label used by opt-in diagnostics. */
   debugName?: string
   /** The current parsed query, as a ref, getter, or plain value. */
   query: MaybeRefOrGetter<ParsedQuery>

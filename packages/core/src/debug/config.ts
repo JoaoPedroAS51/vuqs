@@ -31,7 +31,7 @@ export interface StoredDebugEventFilter {
 
 /** Serializable safe subset of the console reporter options. */
 export interface StoredConsoleReporterOptions {
-  /** Human summary or complete event trace. */
+  /** Summary or complete event trace. */
   preset?: ConsoleDebugPreset
   /** Bounded preview or prose without payload details. */
   payload?: StoredDebugPayloadMode

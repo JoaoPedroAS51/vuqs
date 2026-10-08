@@ -9,10 +9,12 @@ import { DEBUG_EVENT_CATALOG } from './event-catalog'
 import { formatDebugLabelList, projectedDebugObjectKeys } from './labels'
 import { createDebugPreview, resolvePreviewLimits } from './payload'
 
-// This file is reachable only from opt-in debug entries. Human-readable prose and
-// presentation policy must never be imported by the base package.
+// Console reporter
+
+// Keep console formatting isolated from the base package through opt-in debug entries.
 
 export type ConsoleDebugPreset = 'summary' | 'trace'
+
 export type DebugPayloadMode = 'preview' | 'full' | 'hidden'
 
 export interface DebugEventSelector {
@@ -29,7 +31,7 @@ export interface DebugEventFilter {
 }
 
 export interface ConsoleReporterOptions {
-  /** Human-oriented `summary`, or the complete event stream. @default 'summary' */
+  /** Concise `summary`, or the complete event stream. @default 'summary' */
   preset?: ConsoleDebugPreset
   /** Stable bounded preview, raw live references, or no payload. @default 'preview' */
   payload?: DebugPayloadMode
@@ -40,6 +42,19 @@ export interface ConsoleReporterOptions {
   /** Overrides the bounded preview limits. */
   previewLimits?: Partial<NormalizeLimits>
 }
+
+/** Creates a console reporter for the structured debug stream. */
+export function createConsoleReporter(options: ConsoleReporterOptions = {}): Reporter {
+  const resolved: ConsoleReporterOptions = {
+    ...options,
+    preset: options.preset ?? 'summary',
+    payload: options.payload ?? 'preview',
+  }
+  const projection = new ConsoleProjection(resolved, resolvePreviewLimits(options.previewLimits))
+  return event => projection.report(event)
+}
+
+// Projection
 
 type Rendered = readonly [method: 'log' | 'warn', message: string, ...args: unknown[]]
 
@@ -69,170 +84,6 @@ interface WriteSummaryDetails {
 }
 
 const REMOVED = '[Removed]'
-
-function selectorMatches(selector: DebugEventSelector, event: DebugEvent): boolean {
-  const context = event.context
-
-  return matches(selector.levels, event.level)
-    && matches(selector.scopes, event.scope)
-    && matches(selector.codes, event.code)
-    && matches(selector.runtimeIds, context?.runtimeId)
-    && matches(selector.bindingIds, context?.bindingId)
-}
-
-function matches(values: readonly string[] | undefined, value: string | undefined): boolean {
-  return values === undefined || (value !== undefined && values.includes(value))
-}
-
-function filterAllows(filter: DebugEventFilter | undefined, event: DebugEvent): boolean {
-  if (filter?.include !== undefined && !selectorMatches(filter.include, event)) {
-    return false
-  }
-
-  return !filterExcludes(filter, event)
-}
-
-function filterExcludes(filter: DebugEventFilter | undefined, event: DebugEvent): boolean {
-  return filter?.exclude !== undefined && selectorMatches(filter.exclude, event)
-}
-
-function projectedPayload(
-  event: DebugEvent,
-  data: unknown,
-  options: ConsoleReporterOptions,
-  limits: NormalizeLimits,
-): unknown {
-  if (options.payload === 'hidden') {
-    return undefined
-  }
-
-  if (options.payload === 'full') {
-    return data
-  }
-
-  return createDebugPreview({ ...event, data }, limits, options.redact)
-}
-
-function eventDetails(event: DebugEvent, data: unknown = event.data): Record<string, unknown> {
-  return {
-    sequence: event.seq,
-    timestamp: event.timestamp,
-    monotonicTime: event.monotonicTime,
-    scope: event.scope,
-    context: event.context,
-    data,
-  }
-}
-
-function traceProse(event: DebugEvent, data: unknown): string {
-  const reference = DEBUG_EVENT_CATALOG[event.code as DebugEventCode]
-  if (reference === undefined) {
-    return 'Observed an unknown debug event.'
-  }
-  if (!traceProjectionMatches(event.data, data)) {
-    return 'Observed this debug event; its labels were hidden by the payload policy.'
-  }
-
-  try {
-    return (reference.formatTrace as (data: unknown, raw: unknown) => string)(data, event.data)
-  }
-  /* v8 ignore start -- catalog formatters are exhaustive and projected shapes are validated above */
-  catch {
-    return 'Observed this debug event; its labels were hidden by the payload policy.'
-  }
-  /* v8 ignore stop */
-}
-
-function traceProjectionMatches(raw: unknown, projected: unknown): boolean {
-  if (raw === undefined) {
-    return projected === undefined
-  }
-  const rawRecord = asRecord(raw)
-  const projectedRecord = asRecord(projected)
-  if (rawRecord === undefined || projectedRecord === undefined) {
-    return valueKind(raw) === valueKind(projected)
-  }
-
-  return Object.entries(rawRecord).every(([key, rawValue]) => rawValue === undefined
-    || (Object.hasOwn(projectedRecord, key) && valueKind(rawValue) === valueKind(projectedRecord[key])))
-}
-
-function valueKind(value: unknown): string {
-  if (value === null) {
-    return 'null'
-  }
-  return Array.isArray(value) ? 'array' : typeof value
-}
-
-function quoted(value: string): string {
-  return JSON.stringify(value)
-}
-
-function naturalList(values: readonly string[]): string {
-  if (values.length === 1) {
-    return values[0]!
-  }
-  if (values.length === 2) {
-    return `${values[0]} and ${values[1]}`
-  }
-  return `${values.slice(0, -1).join(', ')}, and ${values.at(-1)}`
-}
-
-function formatInline(value: unknown): string | undefined {
-  if (typeof value === 'string') {
-    return value === '[Redacted]' ? value : JSON.stringify(value)
-  }
-  if (typeof value === 'number' || typeof value === 'boolean' || value === null) {
-    return String(value)
-  }
-  if (Array.isArray(value)) {
-    if (value.length > 3 || !value.every(item => ['string', 'number', 'boolean'].includes(typeof item) || item === null)) {
-      return undefined
-    }
-    return `[${value.map(item => formatInline(item)).join(', ')}]`
-  }
-  return undefined
-}
-
-function previewRecord(value: unknown, key: string): Record<string, unknown> | undefined {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-    return undefined
-  }
-  const nested = (value as Record<string, unknown>)[key]
-  return nested !== null && typeof nested === 'object' && !Array.isArray(nested)
-    ? nested as Record<string, unknown>
-    : undefined
-}
-
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : undefined
-}
-
-function recordValue(value: unknown, key: string): unknown {
-  return asRecord(value)?.[key]
-}
-
-function stringValue(value: unknown, key: string): string | undefined {
-  const field = recordValue(value, key)
-  return typeof field === 'string' ? field : undefined
-}
-
-function stringList(value: unknown, key: string): string[] {
-  const field = recordValue(value, key)
-  return Array.isArray(field) && field.every(item => typeof item === 'string')
-    ? field
-    : []
-}
-
-function countLabel(count: number, singular: string, plural = `${singular}s`): string {
-  return `${count} ${count === 1 ? singular : plural}`
-}
-
-function clearOnDefaultLabel(decision: ClearOnDefaultDecision): string {
-  return decision.key === 'value' && decision.paths.length === 1 ? decision.paths[0]! : decision.key
-}
 
 class ConsoleProjection {
   private readonly pendingWrites = new Map<string, PendingWriteSummary>()
@@ -712,13 +563,172 @@ class ConsoleProjection {
   }
 }
 
-/** Creates the human-facing projection of the structured debug stream. */
-export function createConsoleReporter(options: ConsoleReporterOptions = {}): Reporter {
-  const resolved: ConsoleReporterOptions = {
-    ...options,
-    preset: options.preset ?? 'summary',
-    payload: options.payload ?? 'preview',
+// Event filtering
+
+function filterAllows(filter: DebugEventFilter | undefined, event: DebugEvent): boolean {
+  if (filter?.include !== undefined && !selectorMatches(filter.include, event)) {
+    return false
   }
-  const projection = new ConsoleProjection(resolved, resolvePreviewLimits(options.previewLimits))
-  return event => projection.report(event)
+
+  return !filterExcludes(filter, event)
+}
+
+function filterExcludes(filter: DebugEventFilter | undefined, event: DebugEvent): boolean {
+  return filter?.exclude !== undefined && selectorMatches(filter.exclude, event)
+}
+
+function selectorMatches(selector: DebugEventSelector, event: DebugEvent): boolean {
+  const context = event.context
+
+  return matches(selector.levels, event.level)
+    && matches(selector.scopes, event.scope)
+    && matches(selector.codes, event.code)
+    && matches(selector.runtimeIds, context?.runtimeId)
+    && matches(selector.bindingIds, context?.bindingId)
+}
+
+function matches(values: readonly string[] | undefined, value: string | undefined): boolean {
+  return values === undefined || (value !== undefined && values.includes(value))
+}
+
+// Payloads
+
+function projectedPayload(
+  event: DebugEvent,
+  data: unknown,
+  options: ConsoleReporterOptions,
+  limits: NormalizeLimits,
+): unknown {
+  if (options.payload === 'hidden') {
+    return undefined
+  }
+
+  if (options.payload === 'full') {
+    return data
+  }
+
+  return createDebugPreview({ ...event, data }, limits, options.redact)
+}
+
+function eventDetails(event: DebugEvent, data: unknown = event.data): Record<string, unknown> {
+  return {
+    sequence: event.seq,
+    timestamp: event.timestamp,
+    monotonicTime: event.monotonicTime,
+    scope: event.scope,
+    context: event.context,
+    data,
+  }
+}
+
+function traceProse(event: DebugEvent, data: unknown): string {
+  const reference = DEBUG_EVENT_CATALOG[event.code as DebugEventCode]
+  if (reference === undefined) {
+    return 'Observed an unknown debug event.'
+  }
+  if (!traceProjectionMatches(event.data, data)) {
+    return 'Observed this debug event; its labels were hidden by the payload policy.'
+  }
+
+  try {
+    return (reference.formatTrace as (data: unknown, raw: unknown) => string)(data, event.data)
+  }
+  /* v8 ignore start -- catalog formatters are exhaustive and projected shapes are validated above */
+  catch {
+    return 'Observed this debug event; its labels were hidden by the payload policy.'
+  }
+  /* v8 ignore stop */
+}
+
+function traceProjectionMatches(raw: unknown, projected: unknown): boolean {
+  if (raw === undefined) {
+    return projected === undefined
+  }
+  const rawRecord = asRecord(raw)
+  const projectedRecord = asRecord(projected)
+  if (rawRecord === undefined || projectedRecord === undefined) {
+    return valueKind(raw) === valueKind(projected)
+  }
+
+  return Object.entries(rawRecord).every(([key, rawValue]) => rawValue === undefined
+    || (Object.hasOwn(projectedRecord, key) && valueKind(rawValue) === valueKind(projectedRecord[key])))
+}
+
+// Formatting
+
+function valueKind(value: unknown): string {
+  if (value === null) {
+    return 'null'
+  }
+  return Array.isArray(value) ? 'array' : typeof value
+}
+
+function quoted(value: string): string {
+  return JSON.stringify(value)
+}
+
+function naturalList(values: readonly string[]): string {
+  if (values.length === 1) {
+    return values[0]!
+  }
+  if (values.length === 2) {
+    return `${values[0]} and ${values[1]}`
+  }
+  return `${values.slice(0, -1).join(', ')}, and ${values.at(-1)}`
+}
+
+function formatInline(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    return value === '[Redacted]' ? value : JSON.stringify(value)
+  }
+  if (typeof value === 'number' || typeof value === 'boolean' || value === null) {
+    return String(value)
+  }
+  if (Array.isArray(value)) {
+    if (value.length > 3 || !value.every(item => ['string', 'number', 'boolean'].includes(typeof item) || item === null)) {
+      return undefined
+    }
+    return `[${value.map(item => formatInline(item)).join(', ')}]`
+  }
+  return undefined
+}
+
+function previewRecord(value: unknown, key: string): Record<string, unknown> | undefined {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined
+  }
+  const nested = (value as Record<string, unknown>)[key]
+  return nested !== null && typeof nested === 'object' && !Array.isArray(nested)
+    ? nested as Record<string, unknown>
+    : undefined
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined
+}
+
+function recordValue(value: unknown, key: string): unknown {
+  return asRecord(value)?.[key]
+}
+
+function stringValue(value: unknown, key: string): string | undefined {
+  const field = recordValue(value, key)
+  return typeof field === 'string' ? field : undefined
+}
+
+function stringList(value: unknown, key: string): string[] {
+  const field = recordValue(value, key)
+  return Array.isArray(field) && field.every(item => typeof item === 'string')
+    ? field
+    : []
+}
+
+function countLabel(count: number, singular: string, plural = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : plural}`
+}
+
+function clearOnDefaultLabel(decision: ClearOnDefaultDecision): string {
+  return decision.key === 'value' && decision.paths.length === 1 ? decision.paths[0]! : decision.key
 }

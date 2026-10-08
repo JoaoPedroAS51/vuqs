@@ -3,20 +3,6 @@ import { getQueryString } from '../../query/value'
 import { createCodec } from '../codec'
 import { fromQueryScalar } from './utils'
 
-// Numeric enums also expose a reverse mapping (value to key) at runtime, so
-// filter those entries out and keep only the forward members.
-function enumValues(enumObject: Record<string, string | number>): (string | number)[] {
-  const values: (string | number)[] = []
-
-  for (const key of Object.keys(enumObject)) {
-    if (typeof enumObject[enumObject[key] as string] !== 'number') {
-      values.push(enumObject[key])
-    }
-  }
-
-  return values
-}
-
 /**
  * Builds a codec for a TypeScript `enum`, accepting any of its members.
  *
@@ -55,4 +41,18 @@ export function enumCodec<const T extends Record<string, string | number>>(enumO
     }),
     serialize: value => String(value),
   })
+}
+
+// Numeric enums also expose a reverse mapping (value to key) at runtime, so
+// filter those entries out and keep only the forward members.
+function enumValues(enumObject: Record<string, string | number>): (string | number)[] {
+  const values: (string | number)[] = []
+
+  for (const key of Object.keys(enumObject)) {
+    if (typeof enumObject[enumObject[key] as string] !== 'number') {
+      values.push(enumObject[key])
+    }
+  }
+
+  return values
 }
