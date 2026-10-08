@@ -107,25 +107,23 @@ function bucket(entry: SnapshotEntry, runtimeId: string | undefined, engines: En
   //
   // Spreading a proxy or getter can throw outside describeSources()'s catch.
   // Isolate that failure to the affected source.
-  let value: Record<string, unknown>
   try {
-    value = {
-      ...(entry.value as Record<string, unknown>),
+    const context = {
       runtimeId,
       ...(entry.context?.bindingId === undefined ? {} : { bindingId: entry.context.bindingId }),
     }
+
+    if (entry.kind === 'engine') {
+      engines.push({ ...entry.value, ...context })
+    }
+    else if (entry.kind === 'queue') {
+      queues.push({ ...entry.value, ...context })
+    }
+    else {
+      storage.push({ ...entry.value, ...context })
+    }
   }
   catch {
-    return
-  }
-
-  if (entry.kind === 'engine') {
-    engines.push(value as unknown as EngineSnapshot)
-  }
-  else if (entry.kind === 'queue') {
-    queues.push(value as unknown as QueueSnapshot)
-  }
-  else {
-    storage.push(value as unknown as StorageSnapshot)
+    // A failing source must not prevent the remaining snapshots from being collected.
   }
 }

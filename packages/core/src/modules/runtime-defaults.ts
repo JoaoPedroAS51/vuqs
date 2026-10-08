@@ -104,7 +104,9 @@ function createRuntimeDefaultsStateApi<
       if (isDebugArmed(core.debug)) {
         emitDebug(core.debug, 'rd:set', { defaults: { [key]: value } })
       }
-      provided.value = { [key]: value } as unknown as QueryStateValues<TSchema>
+      const defaults: QueryStateValues<TSchema> = {}
+      defaults[key] = value
+      provided.value = defaults
     },
     clearDefault: () => {
       emitDebug(core.debug, 'rd:clear')

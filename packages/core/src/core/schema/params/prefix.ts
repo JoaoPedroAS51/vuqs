@@ -90,17 +90,19 @@ export function createPrefixedQueryParam<TParam extends AnyDefinedQueryParam>(
   // Modifiers delegate to the wrapped builder and re-prefix, so the wrapped
   // param's own semantics (an object's partial default merge, its presence
   // gating) survive prefixing instead of degrading to plain replacement.
-  const prefixed: Record<string, unknown> = {
+  const { withDefaultsWhenPresent } = param as Partial<
+    Pick<QueryParamObjectBuilder<unknown>, 'withDefaultsWhenPresent'>
+  >
+
+  const prefixed = {
     ...base,
     withDefault: (defaultValue: unknown) => createPrefixedQueryParam(prefix, param.withDefault(defaultValue)),
     withEquality: (eq: (a: unknown, b: unknown) => boolean) => createPrefixedQueryParam(prefix, param.withEquality(eq)),
     keepOnDefault: () => createPrefixedQueryParam(prefix, param.keepOnDefault()),
-  }
-  const withDefaultsWhenPresent = (param as unknown as Partial<QueryParamObjectBuilder<unknown>>).withDefaultsWhenPresent
-
-  if (typeof withDefaultsWhenPresent === 'function') {
-    prefixed.withDefaultsWhenPresent = () => createPrefixedQueryParam(prefix, withDefaultsWhenPresent())
+    ...(typeof withDefaultsWhenPresent === 'function'
+      ? { withDefaultsWhenPresent: () => createPrefixedQueryParam(prefix, withDefaultsWhenPresent()) }
+      : {}),
   }
 
-  return prefixed as unknown as PrefixedQueryParamBuilder<TParam>
+  return prefixed as PrefixedQueryParamBuilder<TParam>
 }

@@ -166,7 +166,7 @@ export function useQueryState<T>(
   pathOrDefinition: string | DefinedQueryParam<T>,
   codecOrOptions?: Codec<T> | (UseQueryStatesOptions & { defaultValue?: string }),
   maybeOptions?: UseQueryStatesOptions,
-): UseQueryStateReturn<T | undefined, object, T> {
+): UseQueryStateReturn<T | undefined, object, T> | UseQueryStateReturn<string | undefined, object, string> {
   if (typeof pathOrDefinition !== 'string') {
     return toQueryStateRef(pathOrDefinition, (codecOrOptions as UseQueryStatesOptions | undefined) ?? {})
   }
@@ -180,7 +180,7 @@ export function useQueryState<T>(
   const { defaultValue, ...navigateOptions } = codecOrOptions ?? {}
   const codec = defaultValue === undefined ? codecs.string : codecs.string.withDefault(defaultValue)
 
-  return toQueryStateRef(queryParam(path, codec), navigateOptions) as unknown as UseQueryStateReturn<T | undefined, object, T>
+  return toQueryStateRef(queryParam(path, codec), navigateOptions)
 }
 
 function toQueryStateRef<T>(

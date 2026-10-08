@@ -112,16 +112,18 @@ export interface DebugChannelHandle {
 
 interface SnapshotSource {
   readonly kind: DebugSnapshotKind
-  readonly describe: () => unknown
+  readonly describe: () => DebugSnapshotByKind[DebugSnapshotKind]
   readonly context?: DebugEmissionContext
 }
 
 /** A described subsystem, kept typed by its kind even when its source throws. */
-export interface SnapshotEntry {
-  readonly kind: DebugSnapshotKind
-  readonly value: unknown
-  readonly context?: DebugEmissionContext
-}
+export type SnapshotEntry = {
+  [Kind in DebugSnapshotKind]: {
+    readonly kind: Kind
+    readonly value: DebugSnapshotByKind[Kind] | undefined
+    readonly context?: DebugEmissionContext
+  }
+}[DebugSnapshotKind]
 
 function nowMonotonic(): number | undefined {
   return typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : undefined
@@ -389,7 +391,7 @@ export class DebugChannel implements DebugChannelHandle {
 
     for (const { kind, describe, context } of this.snapshotSources) {
       try {
-        entries.push({ kind, value: describe(), context })
+        entries.push({ kind, value: describe(), context } as SnapshotEntry)
       }
       catch {
         entries.push({ kind, value: undefined, context })
