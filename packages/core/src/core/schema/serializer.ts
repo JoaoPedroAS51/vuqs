@@ -11,18 +11,32 @@ import { normalizeQueryStateSchema } from './schema'
 export interface CreateSerializerOptions {
   /** Drop a value equal to its codec default. Defaults to `true`. */
   clearOnDefault?: boolean
-  /** Turns the built query object into a string, for example `q => qs.stringify(q)`. Enables string output. */
+  /**
+   * Formats the built query as a string.
+   *
+   * @example
+   * ```ts
+   * stringify: query => qs.stringify(query)
+   * ```
+   */
   stringify?: (query: ParsedQueryRaw) => string
-  /** Parses a base query string into an object, for example `s => qs.parse(s)`. Enables a string base. */
+  /**
+   * Parses a base query string.
+   *
+   * @example
+   * ```ts
+   * parse: search => qs.parse(search)
+   * ```
+   */
   parse?: (search: string) => ParsedQuery
 }
 
 type SerializerSchema<TSchema extends QueryStateSchemaInput> = NormalizeQueryStateSchema<TSchema>
 
-/** Renders a built query object into a string, for example via `qs.stringify`. */
+/** Formats a built query object as a string. */
 export type SerializerStringify = (query: ParsedQueryRaw) => string
 
-/** Parses a base query string into an object, for example via `qs.parse`. */
+/** Parses a base query string into an object. */
 export type SerializerParse = (search: string) => ParsedQuery
 
 /**
@@ -34,9 +48,17 @@ export type SerializerParse = (search: string) => ParsedQuery
  * @typeParam TOutput - The returned type: `ParsedQueryRaw`, or `string` when `stringify` is set.
  */
 export interface Serializer<TSchema extends QueryStateSchema, TBase, TOutput> {
-  /** Serializes `values` into a fresh query. */
+  /**
+   * Serializes `values`.
+   *
+   * @returns A new query object, or its string representation when `stringify` is configured.
+   */
   (values: QueryStateWriteValues<TSchema>): TOutput
-  /** Merges `values` over `base`: untouched managed params and unmanaged params are kept. */
+  /**
+   * Merges `values` over `base`, preserving untouched params.
+   *
+   * @returns A new merged query object, or its string representation when `stringify` is configured.
+   */
   (base: TBase, values: QueryStateWriteValues<TSchema>): TOutput
 }
 
@@ -50,7 +72,6 @@ export interface Serializer<TSchema extends QueryStateSchema, TBase, TOutput> {
  * @returns A {@link Serializer} for the schema.
  * @throws {Error} When a string base is passed but no `parse` option was provided.
  *
- * @see https://vuqs.dev/guide/query-state/building-urls
  * @example
  * ```ts
  * const serialize = createSerializer(schema)
@@ -61,6 +82,8 @@ export interface Serializer<TSchema extends QueryStateSchema, TBase, TOutput> {
  * const toUrl = createSerializer(schema, { stringify: q => qs.stringify(q, { addQueryPrefix: true }) })
  * toUrl({ q: 'phone', page: 2 })                   // '?q=phone&page=2'
  * ```
+ *
+ * @see https://vuqs.dev/guide/query-state/building-urls
  */
 export function createSerializer<TSchema extends QueryStateSchemaInput>(
   schema: TSchema,

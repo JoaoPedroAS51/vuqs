@@ -103,13 +103,13 @@ export function buildQuery<TSchema extends QueryStateSchema>(
 }
 
 /**
- * Drops params whose value equals their codec default, so a default never
- * reaches the URL.
+ * Filters selections according to each param's default-clearing policy.
  *
  * @typeParam TSchema - The schema describing the params.
  * @param schema - The param definitions, used for per-param equality and defaults.
  * @param values - The values to filter.
- * @returns A new value map without absent or default-valued params.
+ * @returns A new map without undefined selections or values matching a declared
+ * default, unless the param disables `clearOnDefault`.
  */
 export function dropDefaults<TSchema extends QueryStateSchema>(
   schema: TSchema,
@@ -140,11 +140,6 @@ export function dropDefaults<TSchema extends QueryStateSchema>(
   return result
 }
 
-/**
- * Returns a schema's param names typed as a string-key array.
- *
- * @internal
- */
 function keysOf<TSchema extends QueryStateSchema>(schema: TSchema): Array<keyof TSchema & string> {
   return Object.keys(schema) as Array<keyof TSchema & string>
 }

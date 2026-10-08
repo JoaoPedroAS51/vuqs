@@ -161,6 +161,7 @@ export interface QueryFacadeModule<TFacade, TSchema extends QueryStateSchema, TS
  *
  * @typeParam TSchema - The schema the module is applied to (the single schema in a `state` facet).
  * @typeParam TParam - The module's inferred extra, constrained to `string`.
+ *
  * @example
  * ```ts
  * declare module '@vuqs/core' {

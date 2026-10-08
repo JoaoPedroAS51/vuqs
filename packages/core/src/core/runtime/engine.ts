@@ -80,7 +80,11 @@ export interface QueryStateReads<TSchema extends QueryStateSchema> {
 export interface QueryDefaultsBus<TSchema extends QueryStateSchema> {
   /** The merged default layers (codec base + registered), read pipeline applied. */
   resolved: ComputedRef<QueryStateValues<TSchema>>
-  /** Registers a reactive default layer above the codec base; later registrations win. Returns a disposer. */
+  /**
+   * Registers a reactive default layer above codec defaults. Later registrations win.
+   *
+   * @returns A function that removes the layer.
+   */
   register: (source: MaybeRefOrGetter<QueryStateValues<TSchema>>) => () => void
 }
 
@@ -158,7 +162,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
 
   const codecDefaults = getStaticQueryDefaults(schema, keys)
 
-  // Registrable default layers stacked above the codec base; later layers win.
+  // Later layers override defaults without clearing earlier values with undefined.
   const layers = shallowRef<Array<MaybeRefOrGetter<QueryStateValues<TSchema>>>>([])
 
   function register(source: MaybeRefOrGetter<QueryStateValues<TSchema>>): () => void {
@@ -169,9 +173,6 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     }
   }
 
-  // The merged defaults before the read pipeline: the codec base, then each
-  // layer's defined values (later layers win). Feeds value resolution before the
-  // read pipeline is applied to the complete map.
   const mergedDefaults = computed<Record<string, unknown>>(() => {
     const merged: Record<string, unknown> = { ...codecDefaults }
 
@@ -192,12 +193,10 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     const query = toValue(adapter.query)
     const current = readOverlay.value
 
-    // Adapter queries and the shared overlay are object-level reactive sources, so any
-    // path change invalidates every engine. Preserve the previous projection when none
-    // of this engine's raw paths changed: Vue can then stop the invalidation here instead
-    // of re-running codecs, pipelines, defaults, and component effects for unrelated
-    // bindings. The projection may keep stale *unmanaged* paths, which is safe because a
-    // definition's declared paths are the complete read boundary for this engine.
+    // Reuse the projection when managed paths are unchanged to avoid invalidating
+    // codecs, pipelines, and consumers for unrelated query changes.
+    //
+    // Unmanaged paths may be stale: definitions read only their declared paths.
     if (previous !== undefined) {
       const unchanged = managedPaths.every((path) => {
         const effective = Object.hasOwn(current, path)
@@ -233,11 +232,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     return next
   })
 
-  // The explicit selection before the read pipeline: each param's decoded URL
-  // value, with absent or invalid params omitted (`read` is a selection, so it
-  // returns `undefined` for both). Defined-only, so layering it over the defaults
-  // never clobbers one with `undefined`, and an invalid value never masquerades as
-  // its default.
+  // Omit absent selections so they cannot overwrite defaults with undefined.
   const rawSelection = computed<Record<string, unknown>>(() => {
     const invalid = new Set<string>()
     const context: QueryParamReadContext = {
@@ -266,10 +261,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     () => definedOnly(pipeline.run('read', { ...rawSelection.value })) as QueryStateValues<TSchema>,
   )
 
-  // The effective read: each param's selection composed over its resolved default.
-  // An absent param takes the default; a present composite param composes per child
-  // through `resolve`, so a runtime default reaches a missing child of a present
-  // object instead of the selection shadowing the whole default entry.
+  // Resolve present objects per child so partial selections preserve layered defaults.
   const values = computed<QueryStateValues<TSchema>>(() => {
     const resolved = resolveQueryStateValues(schema, keys, rawSelection.value, mergedDefaults.value)
 
@@ -376,10 +368,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     })
   }
 
-  // Describe this engine's live state for a devtools snapshot. Registered regardless of
-  // whether debug is armed (so a late-attaching consumer sees engines created earlier),
-  // and removed with the owning effect scope so it does not accumulate on the long-lived
-  // per-adapter channel. Resolved values only, never raw default layers.
+  // Register even when debug is disarmed so late observers can inspect existing engines.
   const stopSnapshot = registerSnapshotSource(debug, 'engine', () => ({
     id,
     keys: [...keys],

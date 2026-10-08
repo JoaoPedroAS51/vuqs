@@ -45,16 +45,14 @@ export interface QueryParamObjectFactory {
   ): PrefixedQueryParamBuilder<TParam>
 }
 
+/** @internal */
 export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
   options: ObjectBuilderOptions<TChildren>,
 ): QueryParamObjectBuilderFor<TChildren> {
   const children = prefixChildren(options.prefix, normalizeQueryStateSchema(options.children) as TChildren)
   const paths = Object.values(children).flatMap(child => child.paths)
   const mergedDefault = buildObjectDefault(children, options.defaultValue)
-  // With defaultsWhenPresent and no object-level default, the object is presence
-  // gated: it materializes only while present in the URL, so an absent object stays
-  // absent even under a default layer (codec or a registered runtime default),
-  // instead of resolving to its child defaults.
+  // An explicit object default disables presence gating.
   const presenceGated = Boolean(options.defaultsWhenPresent) && options.defaultValue === undefined
   const defaultValue = presenceGated ? undefined : mergedDefault
 
@@ -62,8 +60,7 @@ export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
 
   const builder = createQueryParamBuilder<ObjectValue<TChildren>, QueryParamObjectDefault<ObjectValue<TChildren>>>({
     paths,
-    // A pure selection: only the URL-present children, no default fill. Defaults
-    // resolve in `resolve`, in the engine's default layer.
+    // Leave missing children absent so resolution can apply layered defaults.
     read(query, context) {
       const hasUrlPresence = paths.some(path => getPath(query, path) !== undefined)
 
@@ -99,10 +96,10 @@ export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
       return compactQuery(query)
     },
     eq: options.eq,
-    // Composes a present object over its resolved default: each child takes its
-    // selection, else the layered default (a runtime default reaches the gap), else
-    // the object's own static child/object-level default, cloned so a mutation cannot
-    // corrupt the shared default. Absence is handled by the engine.
+    // Missing children fall back to layered defaults, then static defaults.
+    // Present children resolve recursively; absent presence-gated children stay absent.
+    //
+    // Clone fallback values so consumers cannot mutate shared defaults.
     resolve(selection, defaults) {
       const value: Record<string, unknown> = {}
 
@@ -191,8 +188,7 @@ function prefixChildren<TChildren extends AnyObjectChildren>(
   return prefixed as TChildren
 }
 
-// Child defaults win over the object-level default, so the merged result is the
-// same object `read` resolves when the URL holds no child key.
+// Child defaults take precedence over the object-level default.
 function buildObjectDefault<TChildren extends AnyObjectChildren>(
   children: TChildren,
   defaultValue: Partial<ObjectValue<TChildren>> | undefined,

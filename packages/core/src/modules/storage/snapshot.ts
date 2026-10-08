@@ -16,6 +16,15 @@ export type SnapshotResult
   = | { snapshot: StoredQuerySnapshot, error?: never }
     | { snapshot?: never, error: Error }
 
+/**
+ * Checks a stored snapshot's envelope and optional expected version.
+ * The query's contents are not validated recursively.
+ *
+ * @returns The snapshot on success, or an `error` describing invalid data
+ * or an incompatible version.
+ *
+ * @internal
+ */
 export function validateSnapshot(value: unknown, version: string | undefined): SnapshotResult {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return { error: new Error('[vuqs] withStorage: stored snapshot is invalid') }

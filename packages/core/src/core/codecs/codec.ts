@@ -1,6 +1,7 @@
 import type { ParsedQueryValue } from '../query/types'
 import { structuralEq } from '../../shared/utils/object'
 
+/** @internal */
 export function isCodec<T>(value: unknown): value is Codec<T> {
   return value !== undefined
     && typeof (value as Codec<T>).parse === 'function'
@@ -13,20 +14,33 @@ export function isCodec<T>(value: unknown): value is Codec<T> {
  * @typeParam T - The decoded value type the codec reads and writes.
  */
 export interface Codec<T> {
-  /** Decodes a typed value from a query node, or `undefined` when the node is absent or invalid. */
+  /**
+   * Decodes a query node.
+   *
+   * @returns The decoded value, or `undefined` when absent or invalid.
+   */
   parse: (raw: ParsedQueryValue) => T | undefined
-  /** Encodes a typed value back into a query node. */
+  /**
+   * Encodes a typed value for the query.
+   *
+   * @returns The encoded query value, or `undefined` to omit it.
+   */
   serialize: (value: T) => ParsedQueryValue
   /** Compares two values to detect when one equals the default. Defaults to {@link structuralEq}. */
   eq: (a: T, b: T) => boolean
   /** The fallback value, present only on codecs produced by {@link Codec.withDefault}. */
   readonly defaultValue?: T
-  /** Returns a variant carrying `defaultValue`, which the param layer applies when the value is absent. */
+  /**
+   * Adds a default for absent values.
+   *
+   * @returns A codec variant carrying `defaultValue`.
+   */
   withDefault: (defaultValue: T) => CodecWithDefault<T>
   /**
-   * Returns a variant that serializes `null` as absence.
+   * Allows `null` values.
    *
-   * @returns A codec accepting `T | null`.
+   * @returns A codec variant that serializes `null` as absence.
+   *
    * @example
    * ```ts
    * const state = codecs.string.nullable().withDefault(null)
@@ -43,7 +57,11 @@ export interface Codec<T> {
  */
 export interface CodecWithDefault<T> extends Codec<T> {
   readonly defaultValue: T
-  /** Returns a nullable variant carrying the same default. */
+  /**
+   * Allows `null` values.
+   *
+   * @returns A nullable codec variant preserving the current default.
+   */
   nullable: () => CodecWithDefault<T | null>
 }
 
@@ -51,9 +69,17 @@ export interface CodecWithDefault<T> extends Codec<T> {
  * The parse/serialize pair passed to {@link createCodec}.
  */
 export interface CodecInput<T> {
-  /** Decodes a typed value from a query node, or `undefined` when absent or invalid. */
+  /**
+   * Decodes a query node.
+   *
+   * @returns The decoded value, or `undefined` when absent or invalid.
+   */
   parse: (raw: ParsedQueryValue) => T | undefined
-  /** Encodes a typed value back into a query node. */
+  /**
+   * Encodes a typed value for the query.
+   *
+   * @returns The encoded query value, or `undefined` to omit it.
+   */
   serialize: (value: T) => ParsedQueryValue
   /** Optional equality, defaulting to {@link structuralEq}. */
   eq?: (a: T, b: T) => boolean
@@ -66,7 +92,6 @@ export interface CodecInput<T> {
  * @param input - The parse, serialize, and optional equality functions.
  * @returns A codec with `withDefault` and `nullable` modifiers.
  *
- * @see https://vuqs.dev/guide/codecs/custom
  * @example
  * ```ts
  * const sorting = createCodec<SortingState>({
@@ -74,6 +99,8 @@ export interface CodecInput<T> {
  *   serialize: value => encodeSorting(value),
  * })
  * ```
+ *
+ * @see https://vuqs.dev/guide/codecs/custom
  */
 export function createCodec<T>(input: CodecInput<T>): Codec<T> {
   const codec: Codec<T> = {

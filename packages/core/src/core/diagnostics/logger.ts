@@ -16,6 +16,7 @@ export interface DebugLogger {
  *
  * @param namespace - The tag identifying this logger's source, for example `my-module`.
  * @returns A logger whose `debug`/`warn` methods emit namespaced events.
+ *
  * @example
  * ```ts
  * import { createDebugLogger } from '@vuqs/core'

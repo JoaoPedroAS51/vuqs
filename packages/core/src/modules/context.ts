@@ -51,9 +51,8 @@ export interface ContextBaseOptions<TContext extends string> {
   /** The active context as a ref, getter, or plain value. The module never derives it. */
   active: MaybeRefOrGetter<TContext>
   /**
-   * How to navigate to a context. The module reconciles the query and passes it
-   * here with the target context, so the consumer issues one navigation that
-   * carries both the path and the query. Required to call `switchTo`.
+   * Navigates to the supplied context with its reconciled query and navigation options.
+   * Required by `switchTo`.
    */
   navigate?: ContextNavigate<TContext>
 }
@@ -125,9 +124,10 @@ interface ContextControls<TContext extends string> {
   /** The active context. */
   activeContext: ComputedRef<TContext>
   /**
-   * Builds the reconciled query for switching to `nextContext` without
-   * navigating: preserved params valid in the target are kept, everything else
-   * is dropped. Use it to render a link or for SSR.
+   * Builds a query for `nextContext` without navigating.
+   *
+   * @returns A query retaining unmanaged params and preserved selections valid
+   * in the target context, with the remaining managed params removed.
    */
   buildContextQuery: (currentQuery: ParsedQuery, nextContext: TContext) => ParsedQueryRaw
   /**
@@ -140,7 +140,6 @@ interface ContextControls<TContext extends string> {
 /**
  * Creates a context module that binds to whichever facade composes it.
  *
- * @see https://vuqs.dev/modules/context
  * @example
  * ```ts
  * const { switchTo } = useQueryStates(schema)
@@ -153,6 +152,8 @@ interface ContextControls<TContext extends string> {
  *
  * switchTo('orders') // one navigation: preserved params kept, the rest reset
  * ```
+ *
+ * @see https://vuqs.dev/modules/context
  */
 export const withContext = /* @__PURE__ */ defineQueryModule({
   name: 'vuqs:context',

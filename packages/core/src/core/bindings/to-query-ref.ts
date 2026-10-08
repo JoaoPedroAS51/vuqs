@@ -28,6 +28,7 @@ export interface QueryRef<TSchema extends QueryStateSchema>
  * @typeParam TSchema - The schema the binding exposes.
  * @param query - The {@link useQueryStates} composable to bind.
  * @returns A writable ref over the whole object, plus `.set`/`.clear`.
+ *
  * @example
  * ```ts
  * const query = useQueryStates(schema)

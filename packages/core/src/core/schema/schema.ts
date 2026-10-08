@@ -41,6 +41,7 @@ export function normalizeQueryStateSchema<TSchema extends QueryStateSchemaInput>
  * @typeParam TSchema - The schema input, keyed by logical param name.
  * @param schema - The params, each a `queryParam` definition or a bare {@link Codec}.
  * @returns The schema, normalized to {@link DefinedQueryParam} entries.
+ *
  * @example
  * ```ts
  * export const filters = defineQuerySchema({

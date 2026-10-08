@@ -32,7 +32,11 @@ interface Budget {
 }
 
 /**
- * Produces a plain, bounded, cycle-free snapshot of a payload for the history buffer.
+ * Normalizes a payload for retained history.
+ *
+ * @returns A bounded snapshot without cycles; objects use a plain representation.
+ *
+ * @internal
  */
 export function normalizeForHistory(value: unknown, limits: NormalizeLimits = DEFAULT_NORMALIZE_LIMITS): unknown {
   return walk(value, limits, 0, new WeakSet<object>(), { remaining: limits.maxNodes })
@@ -40,6 +44,8 @@ export function normalizeForHistory(value: unknown, limits: NormalizeLimits = DE
 
 /**
  * Recursively freezes a normalized value so a retained record cannot be mutated in place.
+ *
+ * @internal
  */
 export function deepFreeze<T>(value: T): T {
   if (value === null || typeof value !== 'object' || Object.isFrozen(value)) {

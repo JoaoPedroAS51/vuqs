@@ -42,11 +42,7 @@ export interface DebugSnapshotByKind {
   storage: StorageSnapshot
 }
 
-/**
- * The current state of the live subsystems, hydrated on demand (e.g. by a devtools
- * panel that attaches after the app has started, which the event stream alone cannot
- * reconstruct).
- */
+/** Current state of the live subsystems, collected on demand. */
 export interface DebugSnapshot {
   readonly engines: EngineSnapshot[]
   readonly queues: QueueSnapshot[]
@@ -54,12 +50,14 @@ export interface DebugSnapshot {
 }
 
 /**
- * Registers a source that describes a subsystem's current state, returning a disposer.
+ * Registers a source that describes a subsystem's current state.
  *
  * @param channel - The channel that owns the subsystem.
  * @param kind - Which bucket the described value belongs to.
  * @param describe - Produces the current state on demand.
  * @returns A function that unregisters the source.
+ *
+ * @internal
  */
 export function registerSnapshotSource<Kind extends DebugSnapshotKind>(
   channel: DebugChannelHandle,
@@ -105,10 +103,10 @@ function bucket(entry: SnapshotEntry, runtimeId: string | undefined, engines: En
     return
   }
 
-  // Stamp the owning runtime centrally so every kind carries it, and a source cannot
-  // spoof another runtime's id. A Proxy or getter can still throw during the spread,
-  // after describeSources() leaves its own try/catch. Isolate that failure so it drops
-  // only the affected source from the snapshot.
+  // Assign runtimeId centrally so a source cannot spoof another runtime.
+  //
+  // Spreading a proxy or getter can throw outside describeSources()'s catch.
+  // Isolate that failure to the affected source.
   let value: Record<string, unknown>
   try {
     value = {

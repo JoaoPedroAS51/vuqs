@@ -2,6 +2,7 @@ import type { QueryParamBuilder, QueryParamBuilderOptions, QueryParamBuilderWith
 import { structuralEq } from '../../../shared/utils/object'
 import { createDefinedQueryParam } from './definition'
 
+/** @internal */
 export function createQueryParamBuilder<T, TDefaultInput = T>(
   options: QueryParamBuilderOptions<T>,
 ): QueryParamBuilder<T, TDefaultInput> | QueryParamBuilderWithDefault<T, TDefaultInput> {
@@ -42,11 +43,8 @@ export function createQueryParamBuilder<T, TDefaultInput = T>(
       return createQueryParamBuilder<TOutput>({
         paths: options.paths,
         read(query, context) {
-          // Read the raw input selection (undefined when absent), so the transformed
-          // param's own default resolves in the engine's default layer. A present
-          // composite input still resolves its child defaults statically here (the
-          // runtime layer is not in scope through a transform), so `transform.read`
-          // sees a filled value.
+          // Preserve absence so the transformed param can resolve its own default.
+          // Present objects need static defaults before the transform reads them.
           const selection = options.read(query, context)
 
           if (selection === undefined) {

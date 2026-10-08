@@ -5,6 +5,14 @@ const INTEGER_PATTERN = /^[+-]?\d+$/
 
 export type QueryScalar = string | number | boolean
 
+/**
+ * Wraps a scalar decoder for query input, using the first item of arrays.
+ *
+ * @returns A parser that skips the decoder and returns `undefined` for
+ * nullish values or objects.
+ *
+ * @internal
+ */
 export function fromQueryScalar<T>(decode: (value: QueryScalar) => T | undefined): (raw: ParsedQueryValue) => T | undefined {
   return (raw) => {
     const value = Array.isArray(raw) ? raw[0] : raw
@@ -17,6 +25,14 @@ export function fromQueryScalar<T>(decode: (value: QueryScalar) => T | undefined
   }
 }
 
+/**
+ * Wraps a string decoder for query input, using the first item of arrays.
+ *
+ * @returns A parser that decodes non-blank strings without coercing other types;
+ * unsupported input returns `undefined`.
+ *
+ * @internal
+ */
 export function fromQueryString<T>(decode: (text: string) => T | undefined): (raw: ParsedQueryValue) => T | undefined {
   return (raw) => {
     const text = getQueryString(raw)
@@ -25,6 +41,13 @@ export function fromQueryString<T>(decode: (text: string) => T | undefined): (ra
   }
 }
 
+/**
+ * Parses a finite number from a number or numeric string.
+ *
+ * @returns The parsed number, or `undefined` for booleans or invalid input.
+ *
+ * @internal
+ */
 export function parseNumber(value: QueryScalar): number | undefined {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : undefined
@@ -40,6 +63,14 @@ export function parseNumber(value: QueryScalar): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined
 }
 
+/**
+ * Parses a finite integer from a number or signed decimal string.
+ *
+ * @returns The parsed integer, or `undefined` for invalid input. Decimal-point
+ * and exponent notation are rejected in strings.
+ *
+ * @internal
+ */
 export function parseInteger(value: QueryScalar): number | undefined {
   if (typeof value === 'string' && !INTEGER_PATTERN.test(value)) {
     return undefined

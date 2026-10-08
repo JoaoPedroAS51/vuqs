@@ -9,6 +9,7 @@ const UNSAFE_PATH_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype'])
  * @param query - The parsed query object to read from.
  * @param path - A dot-path, for example `'filters.sort'`.
  * @returns The value at `path`, or `undefined` when the path does not resolve.
+ *
  * @example
  * ```ts
  * getPath({ filters: { sort: 'name' } }, 'filters.sort') // 'name'
@@ -35,6 +36,7 @@ export function getPath(query: ParsedQuery, path: string): ParsedQueryValue {
  * @param path - A dot-path, for example `'filters.sort'`.
  * @param value - The value to set at `path`.
  * @returns The same `target` reference, for chaining.
+ *
  * @example
  * ```ts
  * setPath({}, 'filters.sort', 'name') // { filters: { sort: 'name' } }
@@ -97,6 +99,7 @@ export function deletePath(target: ParsedQueryRaw, path: string): void {
  *
  * @param target - The object to prune.
  * @param path - The dot-path whose now-empty ancestors should be removed.
+ *
  * @internal
  */
 export function pruneEmptyAncestors(target: ParsedQueryRaw, path: string): void {
@@ -120,6 +123,7 @@ export function pruneEmptyAncestors(target: ParsedQueryRaw, path: string): void 
  * @param value - The query value to walk.
  * @param prefix - The accumulated dot-path prefix, used during recursion.
  * @returns The leaf dot-paths, for example `['filters.sort', 'page']`.
+ *
  * @internal
  */
 export function collectLeafPaths(value: ParsedQueryValue, prefix = ''): string[] {

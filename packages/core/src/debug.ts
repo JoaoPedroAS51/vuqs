@@ -39,11 +39,11 @@ const host = globalThis as typeof globalThis & { [STATE_KEY]?: ConsoleDebugState
 const state = host[STATE_KEY] ??= { generation: 0 }
 
 /**
- * Enables or reconfigures the official console projection.
+ * Enables or replaces the official console projection.
+ * External reporters are unaffected.
  *
- * Calling it again atomically replaces the previous projection. The returned disposer
- * is generation-safe: an old owner cannot later detach a newer configuration. External
- * reporters are never affected.
+ * @returns A function that disables this projection without affecting
+ * a configuration enabled by a later call.
  */
 export function enableDebug(options: EnableDebugOptions = {}): () => void {
   state.stop?.()

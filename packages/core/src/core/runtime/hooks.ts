@@ -27,9 +27,9 @@ type HookArgs<Event extends keyof QueryHooks> = QueryHooks[Event] extends (...ar
  */
 export interface QueryHookBus {
   /**
-   * Subscribes `handler` to `event` and returns a function that unsubscribes it.
-   * Pair the returned function with `onScopeDispose` so the subscription is
-   * cleaned up with its effect scope.
+   * Subscribes `handler` to `event`.
+   *
+   * @returns A function that unsubscribes the handler.
    */
   on: <Event extends keyof QueryHooks>(event: Event, handler: QueryHooks[Event]) => () => void
   /** Synchronously invokes every handler subscribed to `event`. */

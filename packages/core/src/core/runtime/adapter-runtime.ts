@@ -143,7 +143,13 @@ export class QueryRuntime {
 
 const runtimes = new WeakMap<QueryAdapter, QueryRuntime>()
 
-/** Returns the stable runtime owned by an adapter identity. */
+/**
+ * Gets or creates an adapter's runtime.
+ *
+ * @returns The same runtime for subsequent calls with the same adapter identity.
+ *
+ * @internal
+ */
 export function getQueryRuntime(adapter: QueryAdapter): QueryRuntime {
   const existing = runtimes.get(adapter)
 
@@ -157,7 +163,11 @@ export function getQueryRuntime(adapter: QueryAdapter): QueryRuntime {
   return runtime
 }
 
-/** Creates the schema-projected transaction bus for one binding. */
+/**
+ * Creates the schema-projected transaction bus for one binding.
+ *
+ * @internal
+ */
 export function createQueryTransactionBus<TSchema extends QueryStateSchema>(
   runtime: QueryRuntime,
   schema: TSchema,
@@ -167,7 +177,11 @@ export function createQueryTransactionBus<TSchema extends QueryStateSchema>(
   }
 }
 
-/** Resets one adapter runtime without affecting any other adapter. */
+/**
+ * Resets one adapter runtime without affecting any other adapter.
+ *
+ * @internal
+ */
 export function resetQueryRuntime(adapter: QueryAdapter): void {
   runtimes.get(adapter)?.queue.reset()
 }

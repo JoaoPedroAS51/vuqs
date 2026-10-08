@@ -64,7 +64,6 @@ export interface UseQueryStatesReturn<TSchema extends QueryStateSchema>
  * @throws {Error} When two params declare the same query path.
  * @throws {Error} When no adapter has been provided.
  *
- * @see https://vuqs.dev/guide/query-state/use-query-states
  * @example
  * ```ts
  * // Provide the adapter once (e.g. in your app root):
@@ -78,6 +77,8 @@ export interface UseQueryStatesReturn<TSchema extends QueryStateSchema>
  * values.q = 'sale'
  * patch({ q: 'phone', sort: undefined }, { history: 'push' })
  * ```
+ *
+ * @see https://vuqs.dev/guide/query-state/use-query-states
  */
 export function useQueryStates<TSchema extends QueryStateSchemaInput>(
   schema: TSchema,

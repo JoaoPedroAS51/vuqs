@@ -22,13 +22,16 @@ export interface UseQueryStatesOptions extends NavigateOptions {
 }
 
 /**
- * The reactive value map returned by {@link useQueryStates}: each param is a
- * value, not a ref. Read `values.page`; assign `values.page = x` to write with
- * the default navigation options, or `values.page = undefined` to clear a
- * param whose type includes `undefined`. Use Vue's `toRefs` to obtain individual
- * refs.
+ * A reactive param map whose assignments write to the URL.
+ * Use Vue's `toRefs` to obtain individual refs.
  *
  * @typeParam TSchema - The schema bound to the URL.
+ *
+ * @example
+ * ```ts
+ * values.page = 2
+ * values.q = undefined // Clear a param whose type includes `undefined`.
+ * ```
  */
 export type QueryStatesValues<TSchema extends QueryStateSchema> = {
   [Key in keyof TSchema]: QueryStateRefValue<TSchema[Key]>
@@ -179,6 +182,7 @@ function resolveSchemaClearOnDefault<TSchema extends QueryStateSchema>(
  * @typeParam TSchema - The schema the binding exposes.
  * @param binding - The root binding to project.
  * @returns The reactive, writable value map, one entry per param.
+ *
  * @internal
  */
 export function toReactiveQuery<TSchema extends QueryStateSchema>(
@@ -196,7 +200,11 @@ export function toReactiveQuery<TSchema extends QueryStateSchema>(
   return reactive(refs) as QueryStatesValues<TSchema>
 }
 
-/** Writes one reactive field, where assigning `undefined` explicitly clears it. */
+/**
+ * Writes one reactive field, where assigning `undefined` explicitly clears it.
+ *
+ * @internal
+ */
 export function transactQueryKey<TSchema extends QueryStateSchema>(
   binding: QueryBinding<TSchema>,
   key: keyof TSchema & string,

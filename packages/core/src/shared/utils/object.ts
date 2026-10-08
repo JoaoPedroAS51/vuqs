@@ -4,6 +4,7 @@
  * @param a - The first value.
  * @param b - The second value.
  * @returns `true` when the values are structurally equal.
+ *
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/is | `Object.is`}
  */
 export function structuralEq(a: unknown, b: unknown): boolean {
@@ -45,6 +46,8 @@ export function structuralEq(a: unknown, b: unknown): boolean {
  * @typeParam T - The value type to clone.
  * @param value - The value to copy.
  * @returns A structurally independent copy of `value`.
+ *
+ * @internal
  */
 export function structuralClone<T>(value: T): T {
   if (typeof value !== 'object' || value === null) {
@@ -81,8 +84,7 @@ function filterByKey<T extends object>(values: T, keep: (key: string) => boolean
 }
 
 /**
- * Returns a copy without `undefined`-valued keys, so a cleared param reads as
- * absent rather than overwriting a default when layered.
+ * Filters out properties whose values are `undefined`.
  *
  * @typeParam T - The object's type, preserved on the result.
  * @param values - The object to copy.
@@ -103,14 +105,16 @@ export function definedOnly<T extends object>(values: T): T {
 }
 
 /**
- * Builds a function that returns a copy of an object keeping only the keys for
- * which `predicate` returns `true`.
+ * Creates a property filter using `predicate`.
  *
  * @param predicate - Returns `true` for a key to keep.
- * @returns A function that filters an object's keys.
+ * @returns A function that copies an object's own enumerable string-keyed properties
+ * whose keys satisfy `predicate`.
+ *
  * @example
  * ```ts
- * core.pipeline.tap(['read', 'write'], pickBy(key => isValidIn(key, active.value)))
+ * const pickName = pickBy(key => key === 'name')
+ * pickName({ name: 'Ada', age: 36 }) // { name: 'Ada' }
  * ```
  */
 export function pickBy(predicate: (key: string) => boolean): <T extends object>(values: T) => Partial<T> {
@@ -118,11 +122,11 @@ export function pickBy(predicate: (key: string) => boolean): <T extends object>(
 }
 
 /**
- * Builds a function that returns a copy of an object dropping the keys for which
- * `predicate` returns `true`. The inverse of {@link pickBy}.
+ * Creates a property filter with the inverse selection of {@link pickBy}.
  *
  * @param predicate - Returns `true` for a key to drop.
- * @returns A function that filters an object's keys.
+ * @returns A function that copies an object's own enumerable string-keyed properties
+ * whose keys do not satisfy `predicate`.
  */
 export function omitBy(predicate: (key: string) => boolean): <T extends object>(values: T) => Partial<T> {
   return values => filterByKey(values, key => !predicate(key))

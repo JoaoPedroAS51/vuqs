@@ -26,7 +26,7 @@ export interface ActiveParamsStatesApi<TSchema extends QueryStateSchema> {
   activeCount: ComputedRef<number>
   /** Whether at least one param is active. */
   hasActive: ComputedRef<boolean>
-  /** Returns whether `key` is active. Tracks reactively when called inside a reactive effect. */
+  /** Checks whether `key` is active. Tracks reactively when called inside a reactive effect. */
   isActive: (key: keyof TSchema & string) => boolean
 }
 
@@ -54,9 +54,9 @@ declare module '../core/module-system/contract' {
 /**
  * Adds reactive views over params explicitly selected away from their resolved defaults.
  *
- * @see https://vuqs.dev/modules/active-params
  * @returns A module that contributes {@link ActiveParamsStatesApi} to
  * {@link useQueryStates} and {@link ActiveParamsStateApi} to {@link useQueryState}.
+ *
  * @example
  * ```ts
  * const query = useQueryStates(schema)
@@ -65,6 +65,8 @@ declare module '../core/module-system/contract' {
  * query.activeCount.value
  * query.isActive('status')
  * ```
+ *
+ * @see https://vuqs.dev/modules/active-params
  */
 export const withActiveParams = /* @__PURE__ */ defineQueryModule({
   name: 'vuqs:active-params',

@@ -21,6 +21,7 @@ export type ToQueryRefs<TSchema extends QueryStateSchema> = {
  * @typeParam TSchema - The schema the binding exposes.
  * @param query - The {@link useQueryStates} composable to explode.
  * @returns One writable {@link QueryStateRef} per param.
+ *
  * @example
  * ```ts
  * const query = useQueryStates(schema)

@@ -123,9 +123,9 @@ export class ThrottledQueue {
   }
 
   /**
-   * Reserves the observed batch before a transaction mutates the queue, allowing the
-   * true `tx:start` and `binding:set` events to carry the same batch as enqueue/flush.
-   * Returns `undefined` without retaining transaction metadata when debug is disarmed.
+   * Reserves a batch context for transaction diagnostics.
+   *
+   * @returns The batch context, or `undefined` when debug is disarmed.
    *
    * @internal
    */
@@ -154,10 +154,8 @@ export class ThrottledQueue {
       // still needs observation until it commits.
       this.ensureAdapterObserver()
     }
-    // Keep one canonical object and notify once after the whole transaction is applied.
-    // Re-spreading an overlay that grows one path at a time makes a burst of T writes
-    // copy O(T²) keys. `triggerRef` preserves the same atomic reactive boundary without
-    // copying paths that this write did not touch.
+    // Copying the growing overlay for each write makes a burst of T writes O(T²).
+    // Keep its identity and notify once to preserve transaction atomicity.
     for (const [path, delta] of entries) {
       if (!Object.hasOwn(this.overlay.value, path)) {
         this.overlaySize++
@@ -433,10 +431,8 @@ export class ThrottledQueue {
   private flush(): void {
     this.scheduled = false
 
-    // A router is allowed to complete asynchronously. Serializing navigations prevents
-    // an older commit from landing after a newer one and regressing the URL. Writes made
-    // while a navigation is pending stay optimistic in the overlay and flush as soon as
-    // that navigation settles.
+    // Serialize navigations so an older completion cannot overwrite a newer URL.
+    // Pending writes stay optimistic until they can flush after the current navigation.
     if (this.navigationPending) {
       this.flushAfterNavigation = true
       return

@@ -17,37 +17,33 @@ export interface DefinedQueryParam<T> {
   /** The query keys this param owns. */
   readonly paths: readonly string[]
   /**
-   * Reads the param's URL selection: the decoded value, or `undefined` when the
-   * value is absent or invalid. A pure selection, with no default of any kind: a
-   * present object returns only its URL-present children. Defaults are resolved by
-   * {@link DefinedQueryParam.resolve} in the engine's default layer.
+   * Reads the param's decoded URL selection.
+   *
+   * @returns The decoded value, or `undefined` when absent or invalid.
    */
   read: (query: ParsedQuery, context?: QueryParamReadContext) => T | undefined
-  /** Writes the param's value into a fresh query object covering only `paths`. */
+  /**
+   * Encodes the param's value for the query.
+   *
+   * @returns A new query object containing only declared `paths`.
+   */
   write: (value: T) => ParsedQueryRaw
   /** Compares two values to detect when one equals the default. */
   eq: (a: T, b: T) => boolean
   /**
-   * Composes a present selection over its resolved default. Only composite
-   * params define it: an object deep-merges per child (`selection` child, else the
-   * `defaults` child, else its own child default), so a layered default (for example
-   * a runtime default) reaches a missing child of a present object. Absence and
-   * scalars are resolved by the engine directly: a defined selection wins over
-   * the default.
-   * Present object children use their own resolver. Missing presence-gated
-   * children remain absent.
+   * Resolves a present selection against its defaults.
+   *
+   * Called only when `read` returns a value. Without this resolver,
+   * the selection is used unchanged.
+   *
+   * @returns The selection resolved against the supplied defaults.
    */
   resolve?: (selection: T, defaults: T | undefined) => T
   /** The param's default value, if the codec or builder declared one. */
   readonly defaultValue?: T
   /** Param-level `clearOnDefault` override. */
   readonly clearOnDefault?: boolean
-  /**
-   * When set, the param resolves to a value only while it is present in the URL: an
-   * absent param stays absent even if a default layer (codec or runtime) would
-   * otherwise materialize it. Set by `withDefaultsWhenPresent()` without an
-   * object-level default.
-   */
+  /** Prevents default fallback when `read` returns `undefined`. */
   readonly presenceGated?: boolean
 }
 
@@ -135,6 +131,7 @@ export function defineCodecQueryParam<T>(path: string, codec: Codec<T>): Defined
  * within the declared paths.
  *
  * @throws {Error} When the wrapped write function writes outside `paths`.
+ *
  * @internal
  */
 export function guardWrite<T>(
@@ -158,6 +155,7 @@ export function guardWrite<T>(
   }
 }
 
+/** @internal */
 export function isDefinedQueryParam(value: unknown): value is DefinedQueryParam<any> {
   return value !== null
     && typeof value === 'object'

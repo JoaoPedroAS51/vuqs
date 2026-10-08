@@ -17,7 +17,11 @@ const SENSITIVE_KEYS = new Set([
   'session',
 ])
 
-/** Returns whether a key or dot-path segment is covered by the built-in preview denylist. */
+/**
+ * Checks whether a key or dot-path segment is covered by the built-in preview denylist.
+ *
+ * @internal
+ */
 export function isSensitiveDebugKey(key: string): boolean {
   return key.split(/[.[\]]/).some((segment) => {
     const canonicalKey = segment.toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -25,6 +29,14 @@ export function isSensitiveDebugKey(key: string): boolean {
   })
 }
 
+/**
+ * Resolves preview limits against their defaults.
+ *
+ * @returns Non-negative integer limits, rounding fractions down and mapping
+ * non-finite values to zero.
+ *
+ * @internal
+ */
 export function resolvePreviewLimits(partial: Partial<NormalizeLimits> | undefined): NormalizeLimits {
   const merged = { ...DEFAULT_NORMALIZE_LIMITS, ...partial }
 
@@ -37,6 +49,13 @@ export function resolvePreviewLimits(partial: Partial<NormalizeLimits> | undefin
   }
 }
 
+/**
+ * Creates a bounded event preview with built-in and optional custom redaction.
+ *
+ * @returns The redacted preview, or `'[Preview unavailable]'` if preview creation fails.
+ *
+ * @internal
+ */
 export function createDebugPreview(event: DebugEvent, limits: NormalizeLimits, redact?: DebugRedactor): unknown {
   try {
     let preview = applyBuiltInRedaction(normalizeForHistory(event.data, limits), event)

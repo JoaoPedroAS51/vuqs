@@ -55,68 +55,118 @@ export interface QueryParamTransform<TInput, TOutput> {
 }
 
 /**
- * A param definition with chainable modifiers.
+ * A param definition with immutable, chainable modifiers.
  *
  * @typeParam T - The param's value type.
  * @typeParam TDefaultInput - The type accepted by `withDefault`.
  */
 export interface QueryParamBuilder<T, TDefaultInput = T> extends DefinedQueryParam<T> {
-  /** Sets the param's default, layered over the codec default. */
+  /**
+   * Sets the param's default, layered over the codec default.
+   *
+   * @returns A new builder with this default.
+   */
   withDefault: (defaultValue: TDefaultInput) => QueryParamBuilderWithDefault<T, TDefaultInput>
-  /** Sets how the value is compared, which drives `clearOnDefault`. */
+  /**
+   * Sets how the value is compared, which drives `clearOnDefault`.
+   *
+   * @returns A new builder using `eq`.
+   */
   withEquality: (eq: (a: T, b: T) => boolean) => QueryParamBuilder<T, TDefaultInput>
-  /** Keeps a default-valued write in the URL: param-level `clearOnDefault: false`. */
+  /**
+   * Keeps a default-valued write in the URL: param-level `clearOnDefault: false`.
+   *
+   * @returns A new builder that retains default-valued writes.
+   */
   keepOnDefault: () => QueryParamBuilder<T, TDefaultInput>
   /**
    * Maps the param to a different public shape, deriving its default and equality
    * from the source unless overridden.
+   *
+   * @returns A new builder for the transformed value.
    */
   transform: <TOutput>(transformer: QueryParamTransform<T, TOutput>) => QueryParamBuilder<TOutput>
 }
 
 /**
  * A {@link QueryParamBuilder} whose definition carries a default.
+ * Modifiers return new builders without changing the original.
  *
  * @typeParam T - The param's value type.
  * @typeParam TDefaultInput - The type accepted by `withDefault`.
  */
 export interface QueryParamBuilderWithDefault<T, TDefaultInput = T>
   extends DefinedQueryParamWithDefault<T> {
-  /** Replaces the current default. */
+  /**
+   * Replaces the current default.
+   *
+   * @returns A new builder with this default.
+   */
   withDefault: (defaultValue: TDefaultInput) => QueryParamBuilderWithDefault<T, TDefaultInput>
-  /** Sets how the value is compared, which drives `clearOnDefault`. */
+  /**
+   * Sets how the value is compared, which drives `clearOnDefault`.
+   *
+   * @returns A new builder using `eq`.
+   */
   withEquality: (eq: (a: T, b: T) => boolean) => QueryParamBuilderWithDefault<T, TDefaultInput>
-  /** Keeps a default-valued write in the URL: param-level `clearOnDefault: false`. */
+  /**
+   * Keeps a default-valued write in the URL: param-level `clearOnDefault: false`.
+   *
+   * @returns A new builder that retains default-valued writes.
+   */
   keepOnDefault: () => QueryParamBuilderWithDefault<T, TDefaultInput>
   /**
    * Maps the param to a different public shape, deriving its default and equality
    * from the source unless overridden.
+   *
+   * @returns A new builder for the transformed value.
    */
   transform: <TOutput>(transformer: QueryParamTransform<T, TOutput>) => QueryParamBuilder<TOutput>
 }
 
 /**
- * A builder for a composed object param, produced by `queryParam.object`.
+ * An immutable builder for a composed object param, produced by `queryParam.object`.
  *
  * @typeParam T - The object value type.
  * @typeParam TDefaultInput - The type accepted by `withDefault`, a partial fill.
  */
 export interface QueryParamObjectBuilder<T, TDefaultInput = QueryParamObjectDefault<T>>
   extends DefinedQueryParam<T> {
-  /** Sets a partial object default, layered under the child defaults. */
+  /**
+   * Sets a partial object default, layered under the child defaults.
+   *
+   * @returns A new builder with this default.
+   */
   withDefault: (defaultValue: TDefaultInput) => QueryParamObjectBuilderWithDefault<T, TDefaultInput>
-  /** Sets how the object value is compared, which drives `clearOnDefault`. */
+  /**
+   * Sets how the object value is compared, which drives `clearOnDefault`.
+   *
+   * @returns A new builder using `eq`.
+   */
   withEquality: (eq: (a: T, b: T) => boolean) => QueryParamObjectBuilder<T, TDefaultInput>
-  /** Keeps a default-valued write in the URL: param-level `clearOnDefault: false`. */
+  /**
+   * Keeps a default-valued write in the URL: param-level `clearOnDefault: false`.
+   *
+   * @returns A new builder that retains default-valued writes.
+   */
   keepOnDefault: () => QueryParamObjectBuilder<T, TDefaultInput>
-  /** Applies child defaults only when the object is present in the URL or carries its own default. */
+  /**
+   * Applies child defaults only when the object is present in the URL or carries its own default.
+   *
+   * @returns A new builder with presence-gated child defaults.
+   */
   withDefaultsWhenPresent: () => QueryParamObjectBuilder<T, TDefaultInput>
-  /** Maps the object to a different public shape, deriving its default and equality from the source unless overridden. */
+  /**
+   * Maps the object to a different public shape, deriving its default and equality from the source unless overridden.
+   *
+   * @returns A new builder for the transformed value.
+   */
   transform: <TOutput>(transformer: QueryParamTransform<T, TOutput>) => QueryParamBuilder<TOutput>
 }
 
 /**
  * A {@link QueryParamObjectBuilder} whose resolved value carries a default.
+ * Modifiers return new builders without changing the original.
  *
  * @typeParam T - The object value type.
  * @typeParam TDefaultInput - The type accepted by `withDefault`, a partial fill.
@@ -128,17 +178,37 @@ export interface QueryParamObjectBuilderWithDefault<
   TDefaultInput = QueryParamObjectDefault<T>,
   THasOwnDefault extends boolean = true,
 > extends DefinedQueryParamWithDefault<T> {
-  /** Sets a partial object default, marking the object as owning its default. */
+  /**
+   * Sets a partial object default, marking the object as owning its default.
+   *
+   * @returns A new builder with this default.
+   */
   withDefault: (defaultValue: TDefaultInput) => QueryParamObjectBuilderWithDefault<T, TDefaultInput, true>
-  /** Sets how the object value is compared, which drives `clearOnDefault`. */
+  /**
+   * Sets how the object value is compared, which drives `clearOnDefault`.
+   *
+   * @returns A new builder using `eq`.
+   */
   withEquality: (eq: (a: T, b: T) => boolean) => QueryParamObjectBuilderWithDefault<T, TDefaultInput, THasOwnDefault>
-  /** Keeps a default-valued write in the URL: param-level `clearOnDefault: false`. */
+  /**
+   * Keeps a default-valued write in the URL: param-level `clearOnDefault: false`.
+   *
+   * @returns A new builder that retains default-valued writes.
+   */
   keepOnDefault: () => QueryParamObjectBuilderWithDefault<T, TDefaultInput, THasOwnDefault>
-  /** Applies child defaults only on presence; stays defaulted only if an object-level default was set. */
+  /**
+   * Applies child defaults only on presence; stays defaulted only if an object-level default was set.
+   *
+   * @returns A new builder with presence-gated child defaults.
+   */
   withDefaultsWhenPresent: () => THasOwnDefault extends true
     ? QueryParamObjectBuilderWithDefault<T, TDefaultInput, true>
     : QueryParamObjectBuilder<T, TDefaultInput>
-  /** Maps the object to a different public shape, deriving its default and equality from the source unless overridden. */
+  /**
+   * Maps the object to a different public shape, deriving its default and equality from the source unless overridden.
+   *
+   * @returns A new builder for the transformed value.
+   */
   transform: <TOutput>(transformer: QueryParamTransform<T, TOutput>) => QueryParamBuilder<TOutput>
 }
 

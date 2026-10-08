@@ -9,10 +9,18 @@ function isQueryParamBuilder(value: DefinedQueryParam<any>): value is QueryParam
     && typeof (value as QueryParamBuilder<any, any>).withEquality === 'function'
 }
 
+/** @internal */
 export function joinPath(prefix: string, path: string): string {
   return path ? `${prefix}.${path}` : prefix
 }
 
+/**
+ * Extracts the requested paths from a prefixed query.
+ *
+ * @returns A new query using unprefixed paths, omitting undefined values.
+ *
+ * @internal
+ */
 export function unprefixQuery(query: ParsedQuery, prefix: string, paths: readonly string[]): ParsedQueryRaw {
   const result: ParsedQueryRaw = {}
 
@@ -27,6 +35,7 @@ export function unprefixQuery(query: ParsedQuery, prefix: string, paths: readonl
   return result
 }
 
+/** @internal */
 export function prefixQuery(query: ParsedQueryRaw, prefix: string): ParsedQueryRaw {
   let result: ParsedQueryRaw = {}
 
@@ -41,6 +50,13 @@ export function prefixQuery(query: ParsedQueryRaw, prefix: string): ParsedQueryR
   return result
 }
 
+/**
+ * Prefixes a param's query paths.
+ *
+ * @returns A new builder preserving the wrapped param's value and modifier semantics.
+ *
+ * @internal
+ */
 export function createPrefixedQueryParam<TParam extends AnyDefinedQueryParam>(
   prefix: string,
   param: TParam,

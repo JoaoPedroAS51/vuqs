@@ -50,13 +50,7 @@ function bindingLabels(data: { keys: readonly string[], managedPaths: readonly s
   return data.keys.length === 1 && data.keys[0] === 'value' ? data.managedPaths : values
 }
 
-/**
- * Exhaustive presentation and documentation metadata for the structured debug protocol.
- *
- * This module is reachable only from opt-in debug entries and the documentation site.
- * Keeping the map typed by `DebugEventCode` makes a new protocol event fail compilation
- * until its console and reference policy are deliberately chosen.
- */
+/** Presentation and documentation metadata for every structured debug event. */
 export const DEBUG_EVENT_CATALOG = defineDebugEventCatalog({
   'binding:created': {
     level: 'debug',

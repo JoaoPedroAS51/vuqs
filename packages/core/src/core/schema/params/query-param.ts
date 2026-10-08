@@ -51,9 +51,6 @@ interface QueryParamOptions<T> {
   defaultValue?: T
 }
 
-// The read stays raw (codec.parse returns undefined when absent); the default is
-// applied once by the builder from `defaultValue`, so `.withDefault` and
-// `.transform` compose over the raw read instead of a default-baked one.
 function createScalarQueryParam<T>(
   path: string,
   codec: Codec<T>,

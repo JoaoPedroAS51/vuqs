@@ -1,7 +1,13 @@
 import type { QueryStateSchema, QueryStateValues } from './schema'
 import { structuralClone } from '../../shared/utils/object'
 
-/** Returns the static defaults for the captured schema keys. @internal */
+/**
+ * Collects static defaults for the captured schema keys.
+ *
+ * @returns A map containing only defaults that are not `undefined`.
+ *
+ * @internal
+ */
 export function getStaticQueryDefaults<TSchema extends QueryStateSchema>(
   schema: TSchema,
   keys: readonly (keyof TSchema & string)[],

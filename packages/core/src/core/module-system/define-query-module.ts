@@ -26,7 +26,7 @@ import { QUERY_STATE_MODULE } from './contract'
  * @param definition.queryStates - The projection used by {@link useQueryStates}.
  * @param definition.queryState - The projection used by {@link useQueryState}.
  * @returns A factory producing a module for the resolved facade.
- * @see https://vuqs.dev/modules/authoring
+ *
  * @example
  * ```ts
  * declare module '@vuqs/core' {
@@ -45,6 +45,8 @@ import { QUERY_STATE_MODULE } from './contract'
  *   }),
  * })
  * ```
+ *
+ * @see https://vuqs.dev/modules/authoring
  */
 export function defineQueryModule<TName extends QueryModuleName>(
   definition: {
@@ -95,6 +97,7 @@ export function defineQueryModule<TName extends QueryModuleName>(
  * @param definition.queryStates - The projection used by {@link useQueryStates}.
  * @param definition.queryState - The projection used by {@link useQueryState}.
  * @returns A factory producing a module for the resolved facade.
+ *
  * @example
  * ```ts
  * const withGrouped = defineQueryModule({

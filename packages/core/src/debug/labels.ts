@@ -1,11 +1,19 @@
 const TRUNCATION_MARKER = /^\[\+(\d+) more\]$/
 
-/** Quotes a dynamic console label without allowing control characters to alter the line. */
+/**
+ * Quotes a dynamic console label without allowing control characters to alter the line.
+ *
+ * @internal
+ */
 export function quoteDebugLabel(value: string): string {
   return JSON.stringify(value)
 }
 
-/** Formats a bounded, escaped list and understands the normalizer's final truncation marker. */
+/**
+ * Formats a bounded, escaped list and understands the normalizer's final truncation marker.
+ *
+ * @internal
+ */
 export function formatDebugLabelList(
   values: readonly string[],
   limit = 3,
@@ -38,7 +46,13 @@ export function formatDebugLabelList(
   return `${visible.slice(0, -1).join(', ')}, and ${visible.at(-1)}`
 }
 
-/** Returns projected object keys without presenting the normalizer's sentinel as user data. */
+/**
+ * Lists the keys of a projected object.
+ *
+ * @returns The projected keys, excluding a synthetic truncation marker.
+ *
+ * @internal
+ */
 export function projectedDebugObjectKeys(
   projected: Record<string, unknown>,
   raw: Record<string, unknown>,

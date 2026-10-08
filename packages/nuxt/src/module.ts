@@ -17,16 +17,13 @@ export interface AutoImportsOptions {
    */
   composables?: boolean
   /**
-   * The `codecs` namespace and `createCodec`. `codecs` is a single namespace
-   * object (`codecs.string`, `codecs.integer`, and so on), so this adds one
-   * global name rather than one per codec.
+   * Auto-imports the `codecs` namespace and `createCodec`.
    *
    * @default true
    */
   codecs?: boolean
   /**
-   * The composable modules from `@vuqs/core/modules`. Each module adds one global
-   * name, so the set grows as new modules ship.
+   * Auto-imports the composable modules from `@vuqs/core/modules`.
    *
    * @default true
    */
@@ -38,8 +35,12 @@ export interface AutoImportsOptions {
  */
 export interface AdapterOptions {
   /**
-   * Default navigation and write options carried by the adapter, for example
-   * `{ history: 'replace' }`. A per-call or per-composable option overrides them.
+   * Adapter defaults overridden by per-composable or per-call options where supported.
+   *
+   * @example
+   * ```ts
+   * defaultOptions: { history: 'replace' }
+   * ```
    */
   defaultOptions?: QueryAdapterDefaultOptions
 }

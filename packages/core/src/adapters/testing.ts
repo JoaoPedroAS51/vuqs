@@ -29,12 +29,9 @@ export type OnUrlUpdateFunction = (event: UrlUpdateEvent) => void
  */
 export interface TestingAdapterOptions {
   /**
-   * The initial query. A query string (with or without a leading `?`), a
-   * `URLSearchParams`, or a query object. Dot-notation keys nest into objects
-   * the way the core resolves paths, so `'filters.sort=name'` and
-   * `{ 'filters.sort': 'name' }` both read as `{ filters: { sort: 'name' } }`,
-   * matching what a router adapter delivers.
-   * Query objects are copied recursively, unwrapping Vue reactive proxies.
+   * Initial query as text, `URLSearchParams`, or a query object.
+   * Dot-notation keys expand into nested objects. Query objects are copied
+   * recursively, unwrapping Vue reactive proxies.
    *
    * @example
    * ```ts
@@ -49,11 +46,10 @@ export interface TestingAdapterOptions {
   onUrlUpdate?: OnUrlUpdateFunction
 
   /**
-   * When `true`, each navigation updates the adapter's query so subsequent reads
-   * reflect it, matching router adapter behavior. When `false` (default), the query
-   * stays frozen at `searchParams`, keeping each test focused on one navigation.
-   * Without memory, completed writes remain visible in composables but are not
-   * reapplied to later navigations.
+   * When `true`, completed navigations update the adapter's query.
+   *
+   * When `false`, navigations leave the query unchanged. Completed writes remain
+   * visible in composables but are not reapplied to later navigations.
    *
    * @default false
    */
@@ -143,6 +139,9 @@ function parseSearchParams(input: TestingAdapterOptions['searchParams']): Parsed
 /**
  * Creates a {@link QueryAdapter} backed by an in-memory ref for use in tests.
  *
+ * @param options - Initial query, update callback, and memory behavior.
+ * @returns A {@link TestingAdapter} with the reactive query exposed for assertions.
+ *
  * @example
  * ```ts
  * import { createApp } from 'vue'
@@ -158,8 +157,7 @@ function parseSearchParams(input: TestingAdapterOptions['searchParams']): Parsed
  * const count = app.runWithContext(() => useQueryState('count', codecs.integer.withDefault(0)))
  * expect(count.value).toBe(42)
  * ```
- * @param options - Initial query, update callback, and memory behavior.
- * @returns A {@link TestingAdapter} with the reactive query exposed for assertions.
+ *
  * @see https://vuqs.dev/guide/testing
  */
 export function createTestingAdapter(options: TestingAdapterOptions = {}): TestingAdapter {
@@ -202,8 +200,10 @@ export function createTestingAdapter(options: TestingAdapterOptions = {}): Testi
 }
 
 /**
- * Returns a Vue plugin that installs a testing adapter on an app, for use with
- * `@vue/test-utils`.
+ * Creates a testing-adapter plugin for Vue applications.
+ *
+ * @param options - Forwarded to {@link createTestingAdapter}.
+ * @returns A function that installs the testing adapter on the given Vue app.
  *
  * @example
  * ```ts
@@ -214,8 +214,6 @@ export function createTestingAdapter(options: TestingAdapterOptions = {}): Testi
  *   global: { plugins: [withVuqsTestingAdapter({ searchParams: '?count=42', onUrlUpdate })] },
  * })
  * ```
- * @param options - Forwarded to {@link createTestingAdapter}.
- * @returns A function that installs the testing adapter on the given Vue app.
  */
 export function withVuqsTestingAdapter(options: TestingAdapterOptions = {}): (app: App) => void {
   return (app: App) => {

@@ -3,11 +3,8 @@ import { defineConfig } from 'vite'
 
 const src = (path: string) => new URL(path, import.meta.url).pathname
 
-// Resolve the workspace packages to their TypeScript source (antfu/unjs playground
-// convention): editing the library reflects instantly via HMR, no rebuild needed.
-// The `dist` stubs (`unbuild --stub`) are jiti-backed and run in Node only, so a
-// browser playground aliases to `src` instead. The more specific subpath alias
-// must come before the bare `@vuqs/core` alias so it matches first.
+// Source aliases enable browser HMR; unbuild stubs require Node.
+// Match specific subpaths before the bare package alias.
 export default defineConfig({
   plugins: [vue()],
   resolve: {

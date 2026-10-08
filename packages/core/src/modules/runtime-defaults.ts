@@ -51,10 +51,10 @@ export interface RuntimeDefaultsStateApi<TValue> {
 /**
  * Creates a module that layers runtime defaults under the bound query state.
  *
- * @see https://vuqs.dev/modules/runtime-defaults
  * @returns A module that contributes {@link RuntimeDefaultsStatesApi} to
  * {@link useQueryStates} and {@link RuntimeDefaultsStateApi} to
  * {@link useQueryState}.
+ *
  * @example
  * ```ts
  * const { values, setDefaults } = useQueryStates(schema)
@@ -63,6 +63,8 @@ export interface RuntimeDefaultsStateApi<TValue> {
  * setDefaults(await loadSavedPreferences())
  * values.currency // selection over the runtime default over the codec default
  * ```
+ *
+ * @see https://vuqs.dev/modules/runtime-defaults
  */
 export const withRuntimeDefaults = /* @__PURE__ */ defineQueryModule({
   name: 'vuqs:runtime-defaults',

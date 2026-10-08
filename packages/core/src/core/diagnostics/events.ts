@@ -72,8 +72,7 @@ export interface DebugEventMap {
 export type DebugEventCode = keyof DebugEventMap
 
 /**
- * Codes emitted at the `warn` level. Kept as an explicit union so the emit API can
- * refuse a warning code where a log is expected, and vice versa.
+ * Codes emitted at the `warn` level.
  *
  * @experimental
  */

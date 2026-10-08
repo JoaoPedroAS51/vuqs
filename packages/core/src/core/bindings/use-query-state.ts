@@ -19,8 +19,9 @@ interface SingleQueryStateSchema<T> extends QueryStateSchema {
 /**
  * A writable ref bound to one query param, returned by {@link useQueryState}.
  *
- * @see https://vuqs.dev/guide/query-state/use-query-state
  * @typeParam T - The param's value type.
+ *
+ * @see https://vuqs.dev/guide/query-state/use-query-state
  */
 export interface QueryStateRef<T> extends WritableComputedRef<T> {
   /** Writes `value`, optionally overriding the navigation options for this write. */
@@ -85,6 +86,7 @@ export function useQueryState<T>(
  * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
  * The query source and URL writer come from the provided adapter.
  * @returns A writable ref holding the value, or `undefined` when the key is absent.
+ *
  * @example
  * ```ts
  * const q = useQueryState('q', codecs.string)
@@ -103,6 +105,7 @@ export function useQueryState<T>(
  * @param options - Behavior options plus the `defaultValue` string. The query
  * source and URL writer come from the provided adapter.
  * @returns A writable ref that always holds a string.
+ *
  * @example
  * ```ts
  * const q = useQueryState('q', { defaultValue: '' })
@@ -120,6 +123,7 @@ export function useQueryState(
  * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
  * The query source and URL writer come from the provided adapter.
  * @returns A writable ref holding the string, or `undefined` when the key is absent.
+ *
  * @example
  * ```ts
  * const q = useQueryState('q') // string | undefined, query and navigate from the adapter
@@ -179,13 +183,6 @@ export function useQueryState<T>(
   return toQueryStateRef(queryParam(path, codec), navigateOptions) as unknown as UseQueryStateReturn<T | undefined, object, T>
 }
 
-/**
- * Wires a single definition into a {@link QueryStateRef} (a writable ref plus
- * `set`/`clear`), reusing the shared engine setup. `undefined` clears, matching
- * `.value = undefined`.
- *
- * @internal
- */
 function toQueryStateRef<T>(
   definition: DefinedQueryParam<T>,
   options: UseQueryStatesOptions,

@@ -53,8 +53,10 @@ export function mergeQueries(base: ParsedQuery, next: ParsedQuery): ParsedQueryR
 }
 
 /**
- * Returns a copy of a query with nullish values, blank strings, and empty arrays
- * and objects removed recursively.
+ * Compacts a query recursively.
+ *
+ * @returns A new query with nullish values, blank strings, and empty
+ * arrays and objects removed.
  *
  * @internal
  */

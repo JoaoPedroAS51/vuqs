@@ -21,6 +21,7 @@ export interface VueRouterAdapterOptions {
  *
  * @param options - The router (defaults to `useRouter()`) and adapter defaults.
  * @returns A query adapter to pass to {@link provideQueryAdapter} or a composable.
+ *
  * @see https://vuqs.dev/guide/getting-started/adapters
  * @see {@link https://router.vuejs.org/ | vue-router}
  */

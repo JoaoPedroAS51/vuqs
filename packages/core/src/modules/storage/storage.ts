@@ -19,7 +19,12 @@ export type Awaitable<T> = T | PromiseLike<T>
 
 /** Async-first persistence boundary consumed by {@link withStorage}. */
 export interface QueryStorage {
-  /** Loads one snapshot, or `undefined` when the key is absent. */
+  /**
+   * Loads a stored snapshot.
+   *
+   * @returns The snapshot, or `undefined` when the key is absent,
+   * directly or through a promise-like operation.
+   */
   load: (key: string) => Awaitable<StoredQuerySnapshot | undefined>
   /** Saves one non-empty snapshot. */
   save: (key: string, snapshot: StoredQuerySnapshot) => Awaitable<void>
@@ -78,6 +83,7 @@ declare module '../../core/module-system/contract' {
  *
  * @param options - Storage key, implementation, restore policy, and optional version.
  * @returns A dual module that contributes {@link StorageApi}.
+ *
  * @see https://vuqs.dev/modules/storage
  */
 export const withStorage = /* @__PURE__ */ defineQueryModule({
@@ -447,9 +453,8 @@ function createStorageApi<TSchema extends QueryStateSchema>(
   const status = computed(() => statusState.value)
   const controls: StorageControls = { status, error, ready, flush }
 
-  // Describe this storage instance for a devtools snapshot. Registered before the SSR
-  // branch so it exists on both the server and the client, and removed on scope dispose
-  // so it does not accumulate on the long-lived per-adapter channel.
+  // SSR instances also need snapshots.
+  // Scope cleanup prevents retaining disposed instances on the adapter channel.
   const stopSnapshot = registerSnapshotSource(core.debug, 'storage', () => ({
     key: storageOptions.key,
     status: statusState.value,

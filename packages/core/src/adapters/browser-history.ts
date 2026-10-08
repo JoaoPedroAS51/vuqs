@@ -85,6 +85,7 @@ function stringifyQuery(query: ParsedQuery): string {
  *
  * @param options - Default navigation and write options.
  * @returns An adapter to pass to `installQueryAdapter` or `provideQueryAdapter`.
+ *
  * @see https://vuqs.dev/guide/getting-started/adapters
  */
 export function createBrowserHistoryAdapter(options: BrowserHistoryAdapterOptions = {}): BrowserHistoryAdapter {

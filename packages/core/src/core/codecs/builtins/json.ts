@@ -8,6 +8,7 @@ import { createCodec } from '../codec'
  * @param options - Optional callback or Standard Schema validator.
  * @param options.validate - The synchronous validator for the decoded value.
  * @returns A JSON codec whose value type is inferred from the validator output.
+ *
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse | `JSON.parse`}
  */
 export function createJsonCodec<T>(options: { validate: StandardSchemaV1<unknown, T> }): Codec<T>

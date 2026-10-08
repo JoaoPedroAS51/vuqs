@@ -33,8 +33,10 @@ export type Enforce = 'pre' | 'default' | 'post'
  */
 export interface QueryPipelineBus {
   /**
-   * Registers a transform at one or more stages and returns a function that
-   * removes it. `enforce` orders it relative to other taps in the same stage.
+   * Registers a transform at one or more stages.
+   * `enforce` orders it relative to other taps in the same stage.
+   *
+   * @returns A function that removes the registered transform.
    */
   tap: <Stage extends QueryPipelineStage>(
     stage: Stage | Stage[],
@@ -42,8 +44,10 @@ export interface QueryPipelineBus {
     options?: { enforce?: Enforce },
   ) => () => void
   /**
-   * Applies a stage's composed transforms to a value map a module derived
-   * itself, so the derived state is shaped like the engine's own reads.
+   * Applies the transforms registered for a stage.
+   *
+   * @returns The transformed value, or the input itself when no transforms
+   * are registered.
    */
   run: <Stage extends QueryPipelineStage>(
     stage: Stage,

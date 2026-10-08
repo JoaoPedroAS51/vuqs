@@ -28,7 +28,11 @@ export interface QueryCore<TSchema extends QueryStateSchema> {
   debug: DebugChannelHandle
   /** The query I/O boundary: read the current query or transact atomically. */
   query: {
-    /** Reads the current committed query, without the optimistic overlay. */
+    /**
+     * Reads the current query.
+     *
+     * @returns The committed query without pending optimistic writes.
+     */
     current: () => ParsedQuery
     /** Atomically applies a partial or exhaustive query-state write. */
     transact: (request: QueryTransactionRequest<TSchema>) => void

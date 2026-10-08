@@ -33,7 +33,11 @@ export interface AddConsoleDebugReporterOptions extends ConsoleReporterOptions {
   channel?: DebugChannelHandle
 }
 
-/** Attaches an independently-owned console reporter and returns its disposer. */
+/**
+ * Attaches an independent console reporter.
+ *
+ * @returns A function that removes this reporter.
+ */
 export function addConsoleDebugReporter(options: AddConsoleDebugReporterOptions = {}): () => void {
   const { channel, ...reporterOptions } = options
   return addDebugReporter(createConsoleReporter(reporterOptions), { channel })

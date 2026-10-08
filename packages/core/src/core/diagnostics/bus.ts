@@ -90,8 +90,23 @@ export interface RetainHistoryOptions extends ChannelHistoryOptions {
  */
 export interface DebugChannelHandle {
   readonly runtimeId?: string
+  /**
+   * Attaches a reporter to this channel.
+   *
+   * @returns A function that removes this reporter.
+   */
   addReporter: (reporter: Reporter, options?: ChannelReporterOptions) => () => void
+  /**
+   * Retains channel events for replay.
+   *
+   * @returns A function that releases this history retention request.
+   */
   retainHistory: (options?: ChannelHistoryOptions) => () => void
+  /**
+   * Registers a snapshot source on this channel.
+   *
+   * @returns A function that unregisters this source.
+   */
   registerSnapshotSource: <Kind extends DebugSnapshotKind>(kind: Kind, describe: () => DebugSnapshotByKind[Kind]) => () => void
 }
 
@@ -162,16 +177,11 @@ interface EmissionDraft {
   context?: DebugEmissionContext
 }
 
-// The single process-global aggregation point. It owns the one event queue: it assigns
-// `seq`/timestamps, freezes the envelope, records history, then fans out, normalizing
-// and recording before any reporter runs, so a reporter cannot mutate `data` before the
-// retained record is taken.
+// Capture retained data before invoking reporters so their mutations cannot alter history.
 class DebugHub {
   private readonly consumers = new ReporterSet()
   private readonly channels = new Set<WeakRef<DebugChannel>>()
-  // Drop a channel's wrapper as soon as it is collected, so a per-request SSR channel
-  // with no attached devtools does not leak a retained `WeakRef` forever. The callback
-  // runs only on GC, which a test cannot force.
+  // Remove collected channels' wrappers to avoid accumulating dead WeakRefs.
   /* v8 ignore start */
   private readonly finalizer = new FinalizationRegistry<WeakRef<DebugChannel>>(
     ref => this.channels.delete(ref),
@@ -399,14 +409,7 @@ function emit(channel: DebugChannel | undefined, code: string, level: DebugLevel
   hub.enqueue({ channel, code, level, payload, context })
 }
 
-/**
- * A binding-scoped view over an adapter's {@link DebugChannel}: it merges an immutable
- * base context (the owning binding's id) into every emission, but shares the channel's
- * single FIFO, history, and snapshot registry. Reporters, leases, and snapshot
- * registration delegate straight to the channel; only emission carries the base context.
- *
- * @internal
- */
+// A channel handle with a fixed emission context.
 class DebugTarget implements DebugChannelHandle {
   constructor(readonly channel: DebugChannel, readonly base: DebugEmissionContext) {}
 
@@ -428,8 +431,9 @@ class DebugTarget implements DebugChannelHandle {
 }
 
 /**
- * Binds a base context onto a channel, returning a handle whose emissions always carry
- * it. Used to attach a `bindingId` once, per binding, instead of at every call site.
+ * Binds a base context to a channel.
+ *
+ * @returns A handle whose emissions include the bound context.
  *
  * @internal
  */
@@ -438,10 +442,9 @@ export function bindDebugTarget(channel: DebugChannelHandle, base: DebugEmission
 }
 
 /**
- * Resolves any handle to its concrete channel: a target unwraps to the channel it
- * wraps; a channel is itself; anything else is `undefined`. The single place that knows
- * how a handle maps to a channel, reused by emission, arming, and snapshots, so a target
- * can never be mistaken for "no channel" (which aggregates every runtime).
+ * Resolves a channel handle.
+ *
+ * @returns The associated channel, or `undefined` for an unrecognized handle.
  *
  * @internal
  */
@@ -479,10 +482,7 @@ function mergeContext(base: DebugEmissionContext | undefined, context: DebugEmis
 }
 
 /**
- * Emits a log-level event through a channel handle. Core call sites use this so they
- * only hold the opaque handle: the concrete channel's emit stays internal, and a
- * consumer holding a handle cannot forge event codes. A handle bound to a base context
- * ({@link bindDebugTarget}) merges it into the emission.
+ * Emits a debug event with the handle's bound context applied.
  *
  * @internal
  */
@@ -523,8 +523,9 @@ const channelsByAdapter = new WeakMap<object, DebugChannel>()
 let adapterSeq = 0
 
 /**
- * Returns the debug channel bound to an adapter identity, creating it on first use.
- * Query runtimes resolve their channel through the same map.
+ * Gets or creates an adapter's debug channel.
+ *
+ * @returns The same channel for subsequent calls with the same adapter identity.
  *
  * @internal
  */
@@ -540,18 +541,18 @@ export function debugChannelForAdapter(adapter: object): DebugChannel {
 }
 
 /**
- * Returns the {@link DebugChannelHandle} for an adapter identity, so a consumer can
- * observe (or retain history for) a single runtime instead of the global hub.
+ * Selects an adapter's debug channel.
  *
  * @param adapter - The query adapter whose events to select.
+ * @returns A stable handle for observing the adapter's events and history.
  */
 export function getDebugChannel(adapter: QueryAdapter): DebugChannelHandle {
   return debugChannelForAdapter(adapter)
 }
 
 /**
- * Registers a reporter that receives every debug event, returning a disposer that
- * removes it. Multiple reporters coexist; removing one never affects another.
+ * Registers a debug event reporter.
+ * Removing a reporter does not affect other reporters.
  *
  * @param reporter - Invoked with each event. A throw is caught and never propagates.
  * @param options - `replay` to receive retained history first; `channel` to observe a
@@ -567,9 +568,10 @@ export function addDebugReporter(reporter: Reporter, options: AddReporterOptions
 }
 
 /**
- * Takes a lease that makes events be retained for replay, returning a disposer that
- * releases it. While any lease is held the buffer keeps up to the largest lease's
- * limit; releasing the largest lease shrinks it.
+ * Retains debug events for replay.
+ *
+ * The buffer uses the largest active lease limit. Releasing that lease
+ * shrinks the buffer to the largest remaining limit.
  *
  * @param options - `limit` for the retained count; `channel` to retain a single
  *   channel's history instead of the global hub's.
@@ -596,8 +598,9 @@ export function isDebugArmed(channel?: DebugChannelHandle): boolean {
 }
 
 /**
- * Returns the live channels registered with the hub (fallback + any runtime channels
- * still alive), for aggregating snapshots.
+ * Lists the channels available for snapshot aggregation.
+ *
+ * @returns The fallback channel and runtime channels still alive.
  *
  * @internal
  */

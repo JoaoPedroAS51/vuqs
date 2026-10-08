@@ -2,10 +2,7 @@ import type { ComputedRef } from 'vue'
 import { reactive, readonly } from 'vue'
 
 /**
- * Exposes a computed record as a readonly reactive object, so consumers read
- * `state.page` instead of `state.value.page`. Keys mirror the underlying
- * computed live. Reimplements VueUse's `toReactive` (a Proxy over the ref) since
- * the lib has no VueUse dependency.
+ * Exposes a computed record as a readonly reactive object with live keys and values.
  *
  * @typeParam T - The shape of the computed record.
  * @param source - The computed record to expose.
