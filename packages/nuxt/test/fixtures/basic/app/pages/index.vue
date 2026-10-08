@@ -1,7 +1,10 @@
 <script setup lang="ts">
 const search = useQueryState('q', codecs.string.withDefault('none'))
 const page = useQueryState('page', codecs.integer.withDefault(1))
-const filters = useQueryStates({ sort: codecs.literal(['name', 'price']).withDefault('name') }).use(withActiveParams())
+const schema = defineQuerySchema({ sort: codecs.literal(['name', 'price']).withDefault('name') })
+const filters = useQueryStates(schema).use(withActiveParams())
+const { sort } = toQueryRefs(filters)
+const filterModel = toQueryRef(filters)
 </script>
 
 <template>
@@ -13,7 +16,10 @@ const filters = useQueryStates({ sort: codecs.literal(['name', 'price']).withDef
       {{ page }}
     </p>
     <p id="sort">
-      {{ filters.values.sort }}
+      {{ sort }}
+    </p>
+    <p id="model-sort">
+      {{ filterModel.sort }}
     </p>
     <p id="active">
       {{ filters.hasActive.value }}

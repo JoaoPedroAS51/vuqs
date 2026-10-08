@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 
 type NuxtImport = Parameters<NuxtHooks['imports:extend']>[0][number]
 
-const composables = ['useQueryState', 'useQueryStates', 'useQueryAdapter', 'provideQueryAdapter', 'queryParam', 'defineQueryModule', 'createSerializer']
+const composables = ['useQueryState', 'useQueryStates', 'useQueryAdapter', 'provideQueryAdapter', 'toQueryRef', 'toQueryRefs', 'queryParam', 'defineQuerySchema', 'defineQueryModule', 'createSerializer']
 const codecs = ['codecs', 'createCodec']
 const modules = ['withRuntimeDefaults', 'withContext', 'withActiveParams', 'withStorage']
 

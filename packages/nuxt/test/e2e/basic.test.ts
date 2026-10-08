@@ -13,6 +13,7 @@ describe('basic fixture', async () => {
     expect(html).toContain('<p id="search">sale</p>')
     expect(html).toContain('<p id="page">3</p>')
     expect(html).toContain('<p id="sort">price</p>')
+    expect(html).toContain('<p id="model-sort">price</p>')
     expect(html).toContain('<p id="active">true</p>')
   })
 
@@ -22,6 +23,7 @@ describe('basic fixture', async () => {
     expect(html).toContain('<p id="search">none</p>')
     expect(html).toContain('<p id="page">1</p>')
     expect(html).toContain('<p id="sort">name</p>')
+    expect(html).toContain('<p id="model-sort">name</p>')
     expect(html).toContain('<p id="active">false</p>')
   })
   it('falls back to defaults for invalid query values during SSR', async () => {
