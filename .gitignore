@@ -3,7 +3,8 @@ dist
 coverage
 *.tgz
 .turbo
+playwright-report
+test-results
 
 # README is copied into packages/core only at publish time
 packages/core/README.md
-

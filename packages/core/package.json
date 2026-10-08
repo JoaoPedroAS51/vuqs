@@ -83,6 +83,7 @@
     "test:watch": "vitest watch",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
+    "test:e2e": "playwright test",
     "test:types": "vitest run --project types --typecheck.only",
     "test:coverage": "vitest run --coverage",
     "test:perf": "vitest bench test/perf",
@@ -90,6 +91,7 @@
     "test:types:dist": "tsc -p test/package/tsconfig.json",
     "test:package": "turbo run test:dist test:types:dist --filter=@vuqs/core",
     "typecheck": "tsc --noEmit",
+    "typecheck:fixtures": "vue-tsc --noEmit -p test/fixtures/browser/tsconfig.json",
     "prepublishOnly": "cp ../../README.md ./README.md && pnpm build",
     "postpublish": "rm -f ./README.md"
   },
@@ -106,12 +108,16 @@
     "@standard-schema/spec": "catalog:"
   },
   "devDependencies": {
+    "@playwright/test": "catalog:",
+    "@vitejs/plugin-vue": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "typescript": "catalog:",
     "unbuild": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:",
     "vue": "catalog:",
-    "vue-router": "catalog:"
+    "vue-router": "catalog:",
+    "vue-tsc": "catalog:"
   },
   "publishConfig": {
     "access": "public"

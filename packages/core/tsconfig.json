@@ -11,6 +11,7 @@
     "*.config.ts"
   ],
   "exclude": [
+    "test/fixtures",
     "test/package",
     "node_modules",
     "dist"

@@ -79,6 +79,12 @@ jobs:
           disable_search: true
           flags: core
 
+      - name: Install Playwright browsers
+        run: pnpm --filter @vuqs/core exec playwright install --with-deps chromium
+
+      - name: Run end-to-end tests
+        run: pnpm exec turbo run test:e2e --filter=@vuqs/core
+
       - name: Test built package and types
         run: pnpm test:package
 

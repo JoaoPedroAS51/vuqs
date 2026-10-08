@@ -39,11 +39,19 @@
     },
 
     // Core
+    "@vuqs/core#test:e2e": {
+      "dependsOn": ["typecheck:fixtures"],
+      "cache": false
+    },
     "@vuqs/core#test:dist": {
       "dependsOn": ["build"]
     },
     "@vuqs/core#test:types:dist": {
       "dependsOn": ["build"]
+    },
+    "@vuqs/core#typecheck:fixtures": {
+      "dependsOn": ["build"],
+      "outputs": []
     },
 
     // Nuxt
