@@ -5,6 +5,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { codecs } from '../../../../../src/core/codecs/catalog'
 import { isCodecBijective } from '../../../../../src/testing'
 
+function schema<T>(validate: StandardSchemaV1.Props<unknown, T>['validate']): StandardSchemaV1<unknown, T> {
+  return { '~standard': { version: 1, vendor: 'test', validate } }
+}
+
 describe('codecs.json', () => {
   const json = codecs.json<{ a: number }>()
 
@@ -39,88 +43,84 @@ describe('codecs.json', () => {
     expect(validated.parse('5')).toBe(5)
     expect(validated.parse('"x"')).toBeUndefined()
   })
-})
 
-function schema<T>(validate: StandardSchemaV1.Props<unknown, T>['validate']): StandardSchemaV1<unknown, T> {
-  return { '~standard': { version: 1, vendor: 'test', validate } }
-}
+  describe('standard schema', () => {
+    it.each([
+      { name: 'JSON string', raw: '{"id":1}', expected: { id: 1 } },
+      { name: 'object', raw: { id: 1 }, expected: { id: 1 } },
+      { name: 'array', raw: [{ id: 1 }], expected: [{ id: 1 }] },
+    ])('validates the complete decoded $name once', ({ raw, expected }) => {
+      const validate = vi.fn((value: unknown) => ({ value }))
+      const codec = codecs.json({ validate: schema(validate) })
 
-describe('codecs.json with Standard Schema', () => {
-  it.each([
-    { name: 'JSON string', raw: '{"id":1}', expected: { id: 1 } },
-    { name: 'object', raw: { id: 1 }, expected: { id: 1 } },
-    { name: 'array', raw: [{ id: 1 }], expected: [{ id: 1 }] },
-  ])('validates the complete decoded $name once', ({ raw, expected }) => {
-    const validate = vi.fn((value: unknown) => ({ value }))
-    const codec = codecs.json({ validate: schema(validate) })
-
-    expect(codec.parse(raw)).toEqual(expected)
-    expect(validate).toHaveBeenCalledExactlyOnceWith(expected)
-  })
-
-  it('returns the schema output', () => {
-    const codec = codecs.json({ validate: schema(value => ({ value: { label: String(value) } })) })
-
-    expect(codec.parse('42')).toEqual({ label: '42' })
-    expect(codec.serialize({ label: '42' })).toBe('{"label":"42"}')
-  })
-
-  it('uses the Standard Schema interface on callable schemas', () => {
-    const callback = vi.fn(() => {
-      throw new Error('unexpected callback')
+      expect(codec.parse(raw)).toEqual(expected)
+      expect(validate).toHaveBeenCalledExactlyOnceWith(expected)
     })
-    const validate = vi.fn(() => ({ value: { id: 1 } }))
-    const callable = Object.assign(callback, schema(validate))
 
-    expect(codecs.json({ validate: callable }).parse('{"id":1}')).toEqual({ id: 1 })
-    expect(validate).toHaveBeenCalledOnce()
-    expect(callback).not.toHaveBeenCalled()
-  })
+    it('returns the schema output', () => {
+      const codec = codecs.json({ validate: schema(value => ({ value: { label: String(value) } })) })
 
-  it('treats issues as absent, including an empty issue list', () => {
-    for (const issues of [[], [{ message: 'invalid', path: ['id'] }]]) {
-      expect(codecs.json({ validate: schema(() => ({ issues })) }).parse('{"id":1}')).toBeUndefined()
-    }
-  })
+      expect(codec.parse('42')).toEqual({ label: '42' })
+      expect(codec.serialize({ label: '42' })).toBe('{"label":"42"}')
+    })
 
-  it('treats schema throws as absent', () => {
-    const codec = codecs.json({ validate: schema(() => {
-      throw new Error('invalid')
-    }) })
+    it('uses the Standard Schema interface on callable schemas', () => {
+      const callback = vi.fn(() => {
+        throw new Error('unexpected callback')
+      })
+      const validate = vi.fn(() => ({ value: { id: 1 } }))
+      const callable = Object.assign(callback, schema(validate))
 
-    expect(codec.parse('{"id":1}')).toBeUndefined()
-  })
+      expect(codecs.json({ validate: callable }).parse('{"id":1}')).toEqual({ id: 1 })
+      expect(validate).toHaveBeenCalledOnce()
+      expect(callback).not.toHaveBeenCalled()
+    })
 
-  it.each([undefined, null, Number.NaN, Number.POSITIVE_INFINITY, 'invalid'])('skips validation for %s', (raw) => {
-    const validate = vi.fn((value: unknown) => ({ value }))
+    it('treats issues as absent, including an empty issue list', () => {
+      for (const issues of [[], [{ message: 'invalid', path: ['id'] }]]) {
+        expect(codecs.json({ validate: schema(() => ({ issues })) }).parse('{"id":1}')).toBeUndefined()
+      }
+    })
 
-    expect(codecs.json({ validate: schema(validate) }).parse(raw)).toBeUndefined()
-    expect(validate).not.toHaveBeenCalled()
-  })
+    it('treats schema throws as absent', () => {
+      const codec = codecs.json({ validate: schema(() => {
+        throw new Error('invalid')
+      }) })
 
-  it('keeps defaults outside validation', () => {
-    const validate = vi.fn((value: unknown) => ({ value }))
-    const codec = codecs.json({ validate: schema(validate) }).withDefault({ id: 1 })
+      expect(codec.parse('{"id":1}')).toBeUndefined()
+    })
 
-    expect(codec.parse(undefined)).toBeUndefined()
-    expect(codec.defaultValue).toEqual({ id: 1 })
-    expect(validate).not.toHaveBeenCalled()
-  })
+    it.each([undefined, null, Number.NaN, Number.POSITIVE_INFINITY, 'invalid'])('skips validation for %s', (raw) => {
+      const validate = vi.fn((value: unknown) => ({ value }))
 
-  it('accepts synchronous results with a non-function then property', () => {
-    const codec = codecs.json({ validate: schema(() => ({ value: 1, then: 'metadata' })) })
+      expect(codecs.json({ validate: schema(validate) }).parse(raw)).toBeUndefined()
+      expect(validate).not.toHaveBeenCalled()
+    })
 
-    expect(codec.parse('1')).toBe(1)
-  })
+    it('keeps defaults outside validation', () => {
+      const validate = vi.fn((value: unknown) => ({ value }))
+      const codec = codecs.json({ validate: schema(validate) }).withDefault({ id: 1 })
 
-  it.each([
-    { name: 'resolved', validate: () => Promise.resolve({ value: 1 }) },
-    { name: 'rejected', validate: () => Promise.reject(new Error('async failure')) },
-    { name: 'another realm', validate: () => runInNewContext('Promise.resolve({ value: 1 })') as Promise<{ value: number }> },
-  ])('throws for $name asynchronous validation', async ({ validate }) => {
-    const codec = codecs.json({ validate: schema(validate) })
+      expect(codec.parse(undefined)).toBeUndefined()
+      expect(codec.defaultValue).toEqual({ id: 1 })
+      expect(validate).not.toHaveBeenCalled()
+    })
 
-    expect(() => codec.parse('1')).toThrow('Standard Schema validation must be synchronous')
-    await Promise.resolve()
+    it('accepts synchronous results with a non-function then property', () => {
+      const codec = codecs.json({ validate: schema(() => ({ value: 1, then: 'metadata' })) })
+
+      expect(codec.parse('1')).toBe(1)
+    })
+
+    it.each([
+      { name: 'resolved', validate: () => Promise.resolve({ value: 1 }) },
+      { name: 'rejected', validate: () => Promise.reject(new Error('async failure')) },
+      { name: 'another realm', validate: () => runInNewContext('Promise.resolve({ value: 1 })') as Promise<{ value: number }> },
+    ])('throws for $name asynchronous validation', async ({ validate }) => {
+      const codec = codecs.json({ validate: schema(validate) })
+
+      expect(() => codec.parse('1')).toThrow('Standard Schema validation must be synchronous')
+      await Promise.resolve()
+    })
   })
 })
