@@ -5,7 +5,7 @@ import { createBrowserHistoryAdapter, provideBrowserHistoryAdapter } from '../..
 
 describe('browser history adapter', () => {
   it('exposes the adapter contract and lifecycle operations', () => {
-    expectTypeOf<BrowserHistoryAdapter>().toMatchTypeOf<QueryAdapter>()
+    expectTypeOf<BrowserHistoryAdapter>().toExtend<QueryAdapter>()
     expectTypeOf<BrowserHistoryAdapter['refresh']>().toEqualTypeOf<() => void>()
     expectTypeOf<BrowserHistoryAdapter['dispose']>().toEqualTypeOf<() => void>()
     expectTypeOf(createBrowserHistoryAdapter).returns.toEqualTypeOf<BrowserHistoryAdapter>()

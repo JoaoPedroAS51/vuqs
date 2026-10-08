@@ -10,12 +10,12 @@ describe('debug protocol codes', () => {
   it('partitions warn codes from log codes', () => {
     expectTypeOf<WarnDebugCode>().toEqualTypeOf<'engine:parse-miss' | 'adapter:error' | 'storage:error' | 'module:warn'>()
     expectTypeOf<Extract<LogDebugCode, WarnDebugCode>>().toEqualTypeOf<never>()
-    expectTypeOf<'gtq:flush'>().toMatchTypeOf<LogDebugCode>()
+    expectTypeOf<'gtq:flush'>().toExtend<LogDebugCode>()
   })
 
   it('derives scope from the code prefix', () => {
-    expectTypeOf<'gtq'>().toMatchTypeOf<DebugScope>()
-    expectTypeOf<'storage'>().toMatchTypeOf<DebugScope>()
+    expectTypeOf<'gtq'>().toExtend<DebugScope>()
+    expectTypeOf<'storage'>().toExtend<DebugScope>()
   })
 })
 

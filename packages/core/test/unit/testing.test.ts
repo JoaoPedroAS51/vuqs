@@ -35,7 +35,7 @@ describe('testSerializeThenParse', () => {
       serialize: value => String(value),
     })
 
-    expect(() => testSerializeThenParse(broken, 42)).toThrowError(
+    expect(() => testSerializeThenParse(broken, 42)).toThrow(
       '[vuqs] testSerializeThenParse: parsed value is undefined',
     )
   })
@@ -46,7 +46,7 @@ describe('testSerializeThenParse', () => {
       serialize: value => String(value),
     })
 
-    expect(() => testSerializeThenParse(lossy, 42)).toThrowError(
+    expect(() => testSerializeThenParse(lossy, 42)).toThrow(
       '[vuqs] codec is not bijective (in testSerializeThenParse)',
     )
   })
@@ -57,11 +57,11 @@ describe('testSerializeThenParse', () => {
       serialize: value => String(value.n),
     })
 
-    expect(() => testSerializeThenParse(lossy, { n: 1 })).toThrowError(/"n":2/)
+    expect(() => testSerializeThenParse(lossy, { n: 1 })).toThrow(/"n":2/)
   })
 
   it('throws for NaN (integer codec rejects NaN serialized form)', () => {
-    expect(() => testSerializeThenParse(codecs.integer, Number.NaN)).toThrowError(
+    expect(() => testSerializeThenParse(codecs.integer, Number.NaN)).toThrow(
       '[vuqs] testSerializeThenParse: parsed value is undefined',
     )
   })
@@ -94,7 +94,7 @@ describe('testParseThenSerialize', () => {
   })
 
   it('throws when the serialized input is rejected by parse (returns undefined)', () => {
-    expect(() => testParseThenSerialize(codecs.integer, 'not-a-number')).toThrowError(
+    expect(() => testParseThenSerialize(codecs.integer, 'not-a-number')).toThrow(
       '[vuqs] testParseThenSerialize: parsed value is undefined',
     )
   })
@@ -105,7 +105,7 @@ describe('testParseThenSerialize', () => {
       serialize: value => String(Math.abs(value)),
     })
 
-    expect(() => testParseThenSerialize(normalizing, '-5')).toThrowError(
+    expect(() => testParseThenSerialize(normalizing, '-5')).toThrow(
       '[vuqs] codec is not bijective (in testParseThenSerialize)',
     )
   })
@@ -143,7 +143,7 @@ describe('isCodecBijective', () => {
   })
 
   it('throws when serialize(input) does not match the expected serialized value', () => {
-    expect(() => isCodecBijective(codecs.integer, '999', 42)).toThrowError(
+    expect(() => isCodecBijective(codecs.integer, '999', 42)).toThrow(
       '[vuqs] codec.serialize does not match expected serialized value',
     )
   })
@@ -151,13 +151,13 @@ describe('isCodecBijective', () => {
   it('throws when serialize(input) does not produce the expected serialized value', () => {
     // serialize(99) = '99', but the expected serialized value is '42'. This fails
     // before the round-trip checks.
-    expect(() => isCodecBijective(codecs.integer, '42', 99)).toThrowError(
+    expect(() => isCodecBijective(codecs.integer, '42', 99)).toThrow(
       '[vuqs] codec.serialize does not match expected serialized value',
     )
   })
 
   it('throws when serialized is rejected by parse', () => {
-    expect(() => isCodecBijective(codecs.integer, 'not-a-number', 42)).toThrowError(
+    expect(() => isCodecBijective(codecs.integer, 'not-a-number', 42)).toThrow(
       '[vuqs] testParseThenSerialize: parsed value is undefined',
     )
   })
@@ -175,7 +175,7 @@ describe('isCodecBijective', () => {
       eq: (a, b) => a <= b,
     })
 
-    expect(() => isCodecBijective(asymmetric, '5', 5)).toThrowError(
+    expect(() => isCodecBijective(asymmetric, '5', 5)).toThrow(
       '[vuqs] codec.parse does not match expected input value',
     )
   })
@@ -188,7 +188,7 @@ describe('isCodecBijective', () => {
 
   it('throws for a json codec when expected input does not match', () => {
     const json = codecs.json<{ x: number }>()
-    expect(() => isCodecBijective(json, '{"x":1}', { x: 2 })).toThrowError(
+    expect(() => isCodecBijective(json, '{"x":1}', { x: 2 })).toThrow(
       '[vuqs] codec.serialize does not match expected serialized value',
     )
   })

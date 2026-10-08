@@ -400,11 +400,11 @@ describe('useQueryStates', () => {
       b: queryParam('dupe', codecs.string),
     }
 
-    expect(() => run(() => useQueryStates(clashing))).toThrowError(/duplicate query path/)
+    expect(() => run(() => useQueryStates(clashing))).toThrow(/duplicate query path/)
   })
 
   it('throws when no adapter is provided', () => {
-    expect(() => useQueryStates(schema)).toThrowError(/no query adapter/)
+    expect(() => useQueryStates(schema)).toThrow(/no query adapter/)
   })
 
   describe('clearOnDefault', () => {

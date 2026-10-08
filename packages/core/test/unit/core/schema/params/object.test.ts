@@ -233,7 +233,7 @@ describe('queryParam.object', () => {
   })
 
   it('throws when a prefix is given without children', () => {
-    expect(() => (queryParam.object as (prefix: string) => unknown)('bounds')).toThrowError(
+    expect(() => (queryParam.object as (prefix: string) => unknown)('bounds')).toThrow(
       '[vuqs] queryParam.object(prefix, children) requires children.',
     )
   })

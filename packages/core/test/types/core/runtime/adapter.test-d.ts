@@ -5,12 +5,12 @@ describe('query adapter navigation', () => {
   it('supports synchronous and asynchronous navigation', () => {
     expectTypeOf<QueryStateNavigate>().returns.toEqualTypeOf<void | Promise<void>>()
     expectTypeOf<QueryAdapter['navigate']>().toEqualTypeOf<QueryStateNavigate>()
-    expectTypeOf<() => void>().toMatchTypeOf<QueryStateNavigate>()
-    expectTypeOf<() => Promise<void>>().toMatchTypeOf<QueryStateNavigate>()
+    expectTypeOf<() => void>().toExtend<QueryStateNavigate>()
+    expectTypeOf<() => Promise<void>>().toExtend<QueryStateNavigate>()
   })
 
   it('rejects unrelated navigation results', () => {
-    expectTypeOf<() => boolean>().not.toMatchTypeOf<QueryStateNavigate>()
-    expectTypeOf<() => Promise<boolean>>().not.toMatchTypeOf<QueryStateNavigate>()
+    expectTypeOf<() => boolean>().not.toExtend<QueryStateNavigate>()
+    expectTypeOf<() => Promise<boolean>>().not.toExtend<QueryStateNavigate>()
   })
 })

@@ -159,7 +159,7 @@ describe('createSerializer', () => {
   it('throws on a string base without the parse option', () => {
     const serialize = createSerializer(schema)
 
-    expect(() => (serialize as (base: unknown, values: unknown) => unknown)('?q=x', {})).toThrowError(
+    expect(() => (serialize as (base: unknown, values: unknown) => unknown)('?q=x', {})).toThrow(
       /string base requires the `parse` option/,
     )
   })

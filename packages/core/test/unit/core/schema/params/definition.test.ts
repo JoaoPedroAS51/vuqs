@@ -11,7 +11,7 @@ describe('defined query param write guard', () => {
       write: value => ({ from: value.from, to: value.to }),
     })
 
-    expect(() => broken.write({ from: 'a', to: 'b' })).toThrowError(/not in the declared paths/)
+    expect(() => broken.write({ from: 'a', to: 'b' })).toThrow(/not in the declared paths/)
   })
 
   it('allows write output that stays within the declared paths', () => {
@@ -36,7 +36,7 @@ describe('defined query param write guard', () => {
 
     mode = 'leak'
 
-    expect(() => field.write('a')).toThrowError(/not in the declared paths/)
+    expect(() => field.write('a')).toThrow(/not in the declared paths/)
   })
 })
 
