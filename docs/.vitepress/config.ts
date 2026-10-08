@@ -144,7 +144,6 @@ export default defineConfig({
             { text: 'createCodec', link: '/api/codecs/create-codec' },
             { text: 'codecs.arrayOf', link: '/api/codecs/array-of' },
             { text: 'codecs.literal', link: '/api/codecs/literal' },
-            { text: 'codecs.numberLiteral', link: '/api/codecs/number-literal' },
             { text: 'codecs.enum', link: '/api/codecs/enum' },
             { text: 'codecs.json', link: '/api/codecs/json' },
           ],

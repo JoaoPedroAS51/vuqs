@@ -87,7 +87,14 @@ describe('codec value types', () => {
   })
 
   it('infers the number literal union', () => {
-    expectTypeOf(codecs.numberLiteral([1, 2, 3])).toEqualTypeOf<Codec<1 | 2 | 3>>()
+    expectTypeOf(codecs.literal([1, 2, 3])).toEqualTypeOf<Codec<1 | 2 | 3>>()
+  })
+
+  it('rejects mixed and boolean literal lists', () => {
+    // @ts-expect-error Literal values must all have the same primitive type.
+    codecs.literal(['1', 1])
+    // @ts-expect-error Boolean literals are not supported.
+    codecs.literal([true, false])
   })
 
   it('infers the enum member union', () => {

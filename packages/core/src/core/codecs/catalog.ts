@@ -9,7 +9,6 @@ import { isoDateCodec } from './builtins/iso-date'
 import { isoDateTimeCodec } from './builtins/iso-date-time'
 import { createJsonCodec } from './builtins/json'
 import { literalCodec } from './builtins/literal'
-import { numberLiteralCodec } from './builtins/number-literal'
 import { stringCodec } from './builtins/string'
 import { timestampCodec } from './builtins/timestamp'
 
@@ -28,7 +27,6 @@ export const codecs = {
   isoDate: isoDateCodec,
   arrayOf: arrayOfCodec,
   literal: literalCodec,
-  numberLiteral: numberLiteralCodec,
   enum: enumCodec,
   json: createJsonCodec,
 }

@@ -15,8 +15,7 @@ A namespace of built-in codecs and codec factories. Every codec's `parse` return
 | `codecs.isoDate` | codec | `Date` | `YYYY-MM-DD`, midnight UTC. |
 | `codecs.isoDateTime` | codec | `Date` | Full ISO-8601. |
 | [`codecs.arrayOf(codec)`](/api/codecs/array-of) | factory | `T[]` | Repeated-key arrays; drops invalid items. |
-| [`codecs.literal(values)`](/api/codecs/literal) | factory | string union | Outside the set → absent. |
-| [`codecs.numberLiteral(values)`](/api/codecs/number-literal) | factory | number union | Outside the set → absent. |
+| [`codecs.literal(values)`](/api/codecs/literal) | factory | string or number union | Outside the set → absent. |
 | [`codecs.enum(enumObject)`](/api/codecs/enum) | factory | enum members | TS `enum`; outside it → absent. |
 | [`codecs.json(options?)`](/api/codecs/json) | factory | `T` | JSON text or parsed value; optional `validate`. |
 

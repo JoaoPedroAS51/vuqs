@@ -97,25 +97,29 @@ useQueryState('archived', codecs.boolean.withDefault(false)) // ?archived=true
 
 ## Literals
 
+`literal` accepts a homogeneous list of strings or numbers. Mixed lists and values
+of other types throw `TypeError` when creating the codec. Inline lists infer their
+literal union without `as const`.
+
 ### String literal
 
 Constrains a string to a fixed set. Anything outside the set parses as absent.
-Use `as const` so the value type narrows to the union.
 
 ```ts
 const sort = useQueryState(
   'sort',
-  codecs.literal(['asc', 'desc'] as const).withDefault('asc'),
+  codecs.literal(['asc', 'desc']).withDefault('asc'),
 )
 //    ^? QueryStateRef<'asc' | 'desc'>
 ```
 
 ### Numeric literal
 
-The numeric counterpart of `literal`.
+Pass a list of numbers to parse numeric literals. Numeric strings such as `'01'`
+and `'1.0'` resolve to `1` when it is allowed.
 
 ```ts
-const perPage = useQueryState('perPage', codecs.numberLiteral([10, 20, 50] as const))
+const perPage = useQueryState('perPage', codecs.literal([10, 20, 50]))
 //    ^? QueryStateRef<10 | 20 | 50 | undefined>
 ```
 
@@ -153,7 +157,7 @@ useQueryState('level', codecs.enum(Level)) // ?level=2 → Level.High
 
 ::: tip Fixed set without an enum
 For an inline set of strings or numbers, use
-[`literal`](#string-literal)/[`numberLiteral`](#numeric-literal). A plain
+[`literal`](#literals). A plain
 `as const` object works with `enum` too, narrowing to its value union.
 :::
 
@@ -290,7 +294,7 @@ omit `null` instead of encoding the text `"null"`.
 | `index` | `number` (0-based) | `?page=1` → `0` |
 | `boolean` | `boolean` | `?archived=true` |
 | `literal([…])` | string union | `?sort=asc` |
-| `numberLiteral([…])` | number union | `?perPage=20` |
+| `literal([10, 20, 50])` | number union | `?perPage=20` |
 | `enum(E)` | enum members | `?status=archived` |
 | `isoDateTime` | `Date` | `?d=2026-06-22T10:00:00Z` |
 | `isoDate` | `Date` | `?d=2026-06-22` |

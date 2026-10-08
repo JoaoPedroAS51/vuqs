@@ -20,7 +20,7 @@ describe('codec query inputs', () => {
       codecCase('index', codecs.index, 1, 0),
       codecCase('timestamp', codecs.timestamp, 1000, new Date(1000)),
       codecCase('epoch timestamp', codecs.timestamp, 0, new Date(0)),
-      codecCase('numberLiteral', codecs.numberLiteral([1, 2]), 2, 2),
+      codecCase('numeric literal', codecs.literal([1, 2]), 2, 2),
       codecCase('numeric enum', codecs.enum({ Open: 1, Closed: 2 }), 1, 1),
       codecCase('hex digits', codecs.hex, 10, 16),
     ])('decodes $name', ({ parse, raw, expected }) => {
@@ -64,7 +64,7 @@ describe('codec query inputs', () => {
     it('rejects incompatible primitive types', () => {
       expect(codecs.integer.parse(true)).toBeUndefined()
       expect(codecs.float.parse(false)).toBeUndefined()
-      expect(codecs.numberLiteral([0, 1]).parse(true)).toBeUndefined()
+      expect(codecs.literal([0, 1]).parse(true)).toBeUndefined()
       expect(codecs.boolean.parse(1)).toBeUndefined()
       expect(codecs.isoDate.parse(2026)).toBeUndefined()
       expect(codecs.isoDateTime.parse(0)).toBeUndefined()
@@ -84,7 +84,7 @@ describe('codec query inputs', () => {
       expect(codecs.index.parse(raw)).toBeUndefined()
       expect(codecs.timestamp.parse(raw)).toBeUndefined()
       expect(codecs.hex.parse(raw)).toBeUndefined()
-      expect(codecs.numberLiteral([1, 2]).parse(raw)).toBeUndefined()
+      expect(codecs.literal([1, 2]).parse(raw)).toBeUndefined()
       expect(codecs.json().parse(raw)).toBeUndefined()
     })
 
