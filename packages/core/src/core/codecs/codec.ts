@@ -76,12 +76,10 @@ export interface CodecInput<T> {
  * ```
  */
 export function createCodec<T>(input: CodecInput<T>): Codec<T> {
-  const eq = input.eq ?? structuralEq
-
   const codec: Codec<T> = {
     parse: input.parse,
     serialize: input.serialize,
-    eq,
+    eq: input.eq ?? structuralEq,
     withDefault(defaultValue) {
       return {
         ...codec,

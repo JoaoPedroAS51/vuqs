@@ -1,5 +1,5 @@
 import { createCodec } from '../codec'
-import { dateEq, fromQueryString } from './utils'
+import { fromQueryString } from './utils'
 
 /** Parses a `Date` from a full ISO-8601 string. Invalid input parses as absent. */
 export const isoDateTimeCodec = createCodec<Date>({
@@ -13,5 +13,4 @@ export const isoDateTimeCodec = createCodec<Date>({
     return date
   }),
   serialize: value => value.toISOString(),
-  eq: dateEq,
 })

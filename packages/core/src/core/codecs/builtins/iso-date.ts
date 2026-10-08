@@ -1,5 +1,5 @@
 import { createCodec } from '../codec'
-import { dateEq, fromQueryString } from './utils'
+import { fromQueryString } from './utils'
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}/
 
@@ -19,5 +19,4 @@ export const isoDateCodec = createCodec<Date>({
     return date
   }),
   serialize: value => value.toISOString().slice(0, 10),
-  eq: dateEq,
 })

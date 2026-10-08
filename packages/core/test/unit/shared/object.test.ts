@@ -31,6 +31,23 @@ describe('structuralEq', () => {
     expect(structuralEq({ a: 1 }, { a: 1, b: 2 })).toBe(false)
     expect(structuralEq({ a: 1 }, { a: 2 })).toBe(false)
   })
+
+  it('compares dates by timestamp with Object.is', () => {
+    expect(structuralEq(new Date(0), new Date(0))).toBe(true)
+    expect(structuralEq(new Date(0), new Date(1))).toBe(false)
+    expect(structuralEq(new Date(Number.NaN), new Date(Number.NaN))).toBe(true)
+    expect(structuralEq(new Date(Number.NaN), new Date(0))).toBe(false)
+  })
+
+  it('treats dates and plain objects as unequal in either order', () => {
+    expect(structuralEq(new Date(0), {})).toBe(false)
+    expect(structuralEq({}, new Date(0))).toBe(false)
+  })
+
+  it('compares dates nested in objects and arrays', () => {
+    expect(structuralEq({ dates: [new Date(0)] }, { dates: [new Date(0)] })).toBe(true)
+    expect(structuralEq({ dates: [new Date(0)] }, { dates: [new Date(1)] })).toBe(false)
+  })
 })
 
 describe('structuralClone', () => {
@@ -70,7 +87,7 @@ describe('structuralClone', () => {
   })
 })
 
-describe('pickBy / omitBy', () => {
+describe('property filtering', () => {
   it('pickBy keeps the matching keys', () => {
     expect(pickBy(key => key.startsWith('a'))({ a1: 1, a2: 2, b: 3 })).toEqual({ a1: 1, a2: 2 })
   })

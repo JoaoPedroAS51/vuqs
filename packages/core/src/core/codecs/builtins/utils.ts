@@ -48,9 +48,3 @@ export function parseInteger(value: QueryScalar): number | undefined {
   const parsed = parseNumber(value)
   return parsed !== undefined && Number.isInteger(parsed) ? parsed : undefined
 }
-
-// `structuralEq` reads `Object.keys(date)`, which is always empty, so every
-// pair of `Date` values would otherwise compare as equal.
-export function dateEq(a: Date, b: Date): boolean {
-  return a.valueOf() === b.valueOf()
-}

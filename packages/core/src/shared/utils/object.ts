@@ -15,6 +15,10 @@ export function structuralEq(a: unknown, b: unknown): boolean {
     return false
   }
 
+  if (a instanceof Date || b instanceof Date) {
+    return a instanceof Date && b instanceof Date && Object.is(a.valueOf(), b.valueOf())
+  }
+
   if (Array.isArray(a) || Array.isArray(b)) {
     if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
       return false

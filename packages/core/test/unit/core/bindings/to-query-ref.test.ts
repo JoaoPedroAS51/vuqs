@@ -98,4 +98,18 @@ describe('toQueryRef', () => {
 
     expect(ref.value).toBe(first)
   })
+
+  it('updates its snapshot when a decoded date changes', () => {
+    const { query, build } = setup({ date: '0' })
+    const ref = build(() => toQueryRef(useQueryStates({ date: codecs.timestamp })))
+    const first = ref.value
+
+    expect(first.date).toEqual(new Date(0))
+
+    query.value = { date: '1' }
+
+    expect(ref.value).not.toBe(first)
+    expect(ref.value.date).toEqual(new Date(1))
+    expect(first.date).toEqual(new Date(0))
+  })
 })

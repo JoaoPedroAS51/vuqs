@@ -1,5 +1,5 @@
 import { createCodec } from '../codec'
-import { dateEq, fromQueryScalar, parseInteger } from './utils'
+import { fromQueryScalar, parseInteger } from './utils'
 
 /** Parses a `Date` from milliseconds since the epoch. Non-integer or invalid input parses as absent. */
 export const timestampCodec = createCodec<Date>({
@@ -19,5 +19,4 @@ export const timestampCodec = createCodec<Date>({
     return date
   }),
   serialize: value => String(value.valueOf()),
-  eq: dateEq,
 })
