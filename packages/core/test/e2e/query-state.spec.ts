@@ -39,7 +39,7 @@ for (const adapter of ['vue-router', 'browser-history']) {
       await expect(page.getByTestId('filters')).toHaveText(JSON.stringify({ page: 1, tags: [] }))
     })
 
-    test('resolves defaults without writing them and omits a selected default', async ({ page }) => {
+    test('resolves defaults without writing them and omits an explicit default value', async ({ page }) => {
       await page.goto(path)
 
       await expect(page.getByTestId('filters')).toHaveText(JSON.stringify({ page: 1, tags: [] }))

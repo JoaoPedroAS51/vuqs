@@ -10,7 +10,7 @@ async function storedQuery(page: Page): Promise<unknown> {
   })
 }
 
-test('persists selection and restores an empty URL after reopening the page', async ({ page }) => {
+test('persists state and restores an empty URL after reopening the page', async ({ page }) => {
   await page.goto(path)
   await expect(page.getByTestId('storage-status')).toHaveText('ready')
 
@@ -27,7 +27,7 @@ test('persists selection and restores an empty URL after reopening the page', as
   await expect(page.getByRole('spinbutton', { name: 'Page' })).toHaveValue('3')
 })
 
-test('prefers URL selection to stored params without merging omitted params', async ({ page }) => {
+test('prefers URL state to stored params without merging omitted params', async ({ page }) => {
   await page.goto(`${path}?q=stored&page=3`)
   await expect(page.getByTestId('storage-status')).toHaveText('ready')
   await expect.poll(() => storedQuery(page)).toEqual({ q: 'stored', page: '3' })
@@ -41,7 +41,7 @@ test('prefers URL selection to stored params without merging omitted params', as
   await expect.poll(() => storedQuery(page)).toEqual({ q: 'from-url' })
 })
 
-test('clears persisted selection so reload does not restore it', async ({ page }) => {
+test('clears persisted state so reload does not restore it', async ({ page }) => {
   await page.goto(`${path}?q=stored&page=3`)
   await expect(page.getByTestId('storage-status')).toHaveText('ready')
   await expect.poll(() => storedQuery(page)).toEqual({ q: 'stored', page: '3' })

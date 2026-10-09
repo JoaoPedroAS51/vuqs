@@ -1,6 +1,6 @@
 # withActiveParams <Badge type="tip" text="@vuqs/core/modules" />
 
-Derives which params are explicitly selected away from their resolved defaults.
+Derives which params are explicitly present and different from their resolved defaults.
 
 ## Usage
 
@@ -44,7 +44,7 @@ A module contributing `ActiveParamsStatesApi<TSchema>` to a group or `ActivePara
 | `hasActive` | `ComputedRef<boolean>` | Whether a param is active. |
 | `isActive` | `(key: keyof TSchema & string) => boolean` | Reads the same reactive source as the aggregate views. |
 
-The single API exposes `isActive: ComputedRef<boolean>`. A param is active when an explicit selection survives the read pipeline and differs from its resolved default according to its equality function. Optimistic writes and changes to default layers update the result.
+The single API exposes `isActive: ComputedRef<boolean>`. A param is active when an explicit value survives the read pipeline and differs from its resolved default according to its equality function. Optimistic writes and changes to default layers update the result.
 
 Call grouped `isActive(key)` in a template, computed, or effect when the result must track changes.
 

@@ -52,7 +52,7 @@ declare module '../core/module-system/contract' {
 }
 
 /**
- * Adds reactive views over params explicitly selected away from their resolved defaults.
+ * Adds reactive views over params explicitly present and different from their resolved defaults.
  *
  * @returns A module that contributes {@link ActiveParamsStatesApi} to
  * {@link useQueryStates} and {@link ActiveParamsStateApi} to {@link useQueryState}.
@@ -83,10 +83,10 @@ function createActiveParamsStatesApi<TSchema extends QueryStateSchema>(
   const keys = Object.keys(core.schema) as Key[]
   const excluded = new Set<Key>(options.exclude ?? [])
   const activeKeys = computed<readonly Key[]>(() => {
-    const selected = core.state.selected.value
+    const explicitValues = core.state.explicitValues.value
     const defaults = core.defaults.resolved.value
 
-    return keys.filter(key => !excluded.has(key) && isParamActive(core, key, selected, defaults))
+    return keys.filter(key => !excluded.has(key) && isParamActive(core, key, explicitValues, defaults))
   })
   const activeSet = computed(() => new Set(activeKeys.value))
 
@@ -106,7 +106,7 @@ function createActiveParamsStateApi<
     isActive: computed(() => isParamActive(
       core,
       key,
-      core.state.selected.value,
+      core.state.explicitValues.value,
       core.defaults.resolved.value,
     )),
   }
@@ -115,10 +115,10 @@ function createActiveParamsStateApi<
 function isParamActive<TSchema extends QueryStateSchema>(
   core: QueryCore<TSchema>,
   key: keyof TSchema & string,
-  selected: QueryStateValues<TSchema>,
+  explicitValues: QueryStateValues<TSchema>,
   defaults: QueryStateValues<TSchema>,
 ): boolean {
-  if (!Object.hasOwn(selected, key)) {
+  if (!Object.hasOwn(explicitValues, key)) {
     return false
   }
 
@@ -126,5 +126,5 @@ function isParamActive<TSchema extends QueryStateSchema>(
     return true
   }
 
-  return !core.schema[key].eq(selected[key], defaults[key])
+  return !core.schema[key].eq(explicitValues[key], defaults[key])
 }

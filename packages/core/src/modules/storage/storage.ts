@@ -41,7 +41,7 @@ export interface StorageOptions {
   key: string
   /** Sync or async persistence implementation. */
   storage: QueryStorage
-  /** Restore only into an empty selection, or never restore. Defaults to `if-empty`. */
+  /** Restore only into an empty state, or never restore. Defaults to `if-empty`. */
   restore?: StorageRestorePolicy
   /** Application version that must match a stored snapshot before restore. */
   version?: string
@@ -79,7 +79,7 @@ declare module '../../core/module-system/contract' {
 }
 
 /**
- * Mirrors explicit query selection into sync or async storage.
+ * Mirrors explicit query state into sync or async storage.
  *
  * @param options - Storage key, implementation, restore policy, and optional version.
  * @returns A dual module that contributes {@link StorageApi}.
@@ -244,7 +244,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
 
     persistRequested = false
     try {
-      const query = serializeQueryStates(core.schema, core.state.selected.value)
+      const query = serializeQueryStates(core.schema, core.state.explicitValues.value)
 
       if (desiredQuery !== undefined && structuralEq(query, desiredQuery)) {
         return
@@ -405,7 +405,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
         return
       }
 
-      if (changedDuringRestore || Object.keys(core.state.selected.value).length > 0) {
+      if (changedDuringRestore || Object.keys(core.state.explicitValues.value).length > 0) {
         await persistCurrentBeforeReady()
         emitDebug(core.debug, 'storage:restore', { key: storageOptions.key, outcome: 'url-won' })
         return
@@ -429,7 +429,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
       core.query.transact({
         mode: 'replace',
         values,
-        // Storage mirrors explicit selection, including presence equal to a default.
+        // Storage mirrors explicit state, including presence equal to a default.
         defaultPolicy: 'preserve-explicit',
         navigation: { history: 'replace' },
         origin,
@@ -486,8 +486,8 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     },
   })
 
-  const stopSelected = watch(
-    core.state.selected,
+  const stopExplicitValues = watch(
+    core.state.explicitValues,
     () => handleSourceChange(),
     { deep: true, flush: 'sync' },
   )
@@ -509,7 +509,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     unsettledRevisions.clear()
     notifySettlement()
     stopTransactions()
-    stopSelected()
+    stopExplicitValues()
     stopQuery()
 
     if (statusState.value === 'restoring') {

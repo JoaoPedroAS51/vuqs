@@ -18,7 +18,7 @@ describe('useQueryStates', () => {
   it.each([
     { name: 'string values', input: { page: '2', enabled: 'false', filters: { limit: '0' }, ids: ['1', '2'] } },
     { name: 'mixed values', input: { page: 2, enabled: false, filters: { limit: 0 }, ids: [1, 2] } },
-  ])('reads $name without replacing selections with defaults', ({ input }) => {
+  ])('reads $name without replacing values with defaults', ({ input }) => {
     const { run } = setup(input)
     const { values } = run(() => useQueryStates({
       page: codecs.integer.withDefault(1),
@@ -250,7 +250,7 @@ describe('useQueryStates', () => {
       expect(query.value).toEqual({ filters: { sort: 'name' } })
     })
 
-    it('returns to the default after clearing and preserves falsy selections', async () => {
+    it('returns to the default after clearing and preserves falsy values', async () => {
       const { query, run } = setup({ page: '3', other: 'keep' })
       const { values, patch } = run(() => useQueryStates({
         page: codecs.integer.withDefault(1),

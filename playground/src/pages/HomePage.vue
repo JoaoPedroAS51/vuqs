@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router'
 const demos = [
   { to: '/single', title: 'Single + codecs', text: 'Bind one query key with several built-in codecs and try defaults and .clear().' },
   { to: '/grouped', title: 'Grouped states', text: 'Bind search, sort, and page as one state object. Switch between push and replace history while consecutive writes coalesce into one navigation.' },
-  { to: '/store', title: 'Three states', text: 'Layer runtime defaults under URL selections without serializing the defaults.' },
+  { to: '/store', title: 'Three states', text: 'Layer runtime defaults under URL values without serializing the defaults.' },
   { to: '/context', title: 'Context', text: 'Preserve, reset, or restrict params while switching contexts in one navigation.' },
 ]
 </script>

@@ -9,22 +9,22 @@ import { expectTypeOf } from 'vitest'
 
 declare module '@vuqs/core' {
   interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
-    'consumer:selection': {
+    'consumer:explicit-value': {
       states: {
         options: { tag?: TParam }
-        api: { selectionSnapshot: QueryStateValues<TSchema> }
+        api: { explicitSnapshot: QueryStateValues<TSchema> }
       }
     }
   }
 }
 
-const withSelection = defineQueryModule({
-  name: 'consumer:selection',
-  queryStates: core => ({ selectionSnapshot: core.state.selected.value }),
+const withExplicitValue = defineQueryModule({
+  name: 'consumer:explicit-value',
+  queryStates: core => ({ explicitSnapshot: core.state.explicitValues.value }),
 })
 
 const schema = defineQuerySchema({ page: codecs.integer.withDefault(1), q: codecs.string })
-const grouped = useQueryStates(schema).use(withActiveParams()).use(withRuntimeDefaults()).use(withSelection())
+const grouped = useQueryStates(schema).use(withActiveParams()).use(withRuntimeDefaults()).use(withExplicitValue())
 const single = useQueryState('page', codecs.integer.withDefault(1)).use(withActiveParams()).use(withRuntimeDefaults())
 
 expectTypeOf(grouped.activeKeys.value).toEqualTypeOf<readonly ('page' | 'q')[]>()
@@ -32,10 +32,10 @@ expectTypeOf(grouped.values.page).toEqualTypeOf<number>()
 expectTypeOf(single.value).toEqualTypeOf<number>()
 expectTypeOf(single.defaultValue.value).toEqualTypeOf<number | undefined>()
 expectTypeOf(single.isActive.value).toEqualTypeOf<boolean>()
-expectTypeOf(grouped.selectionSnapshot).toEqualTypeOf<{ readonly page?: number, readonly q?: string }>()
+expectTypeOf(grouped.explicitSnapshot).toEqualTypeOf<{ readonly page?: number, readonly q?: string }>()
 expectTypeOf(grouped.isActive).parameter(0).toEqualTypeOf<'page' | 'q'>()
 expectTypeOf(single.setDefault).parameter(0).toEqualTypeOf<number>()
-expectTypeOf<{ page: string }>().not.toExtend<typeof grouped.selectionSnapshot>()
+expectTypeOf<{ page: string }>().not.toExtend<typeof grouped.explicitSnapshot>()
 
 interface Payload { id: string }
 const validator: StandardSchemaV1<unknown, Payload> = {

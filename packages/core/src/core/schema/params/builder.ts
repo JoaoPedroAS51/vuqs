@@ -45,13 +45,13 @@ export function createQueryParamBuilder<T, TDefaultInput = T>(
         read(query, context) {
           // Preserve absence so the transformed param can resolve its own default.
           // Present objects need static defaults before the transform reads them.
-          const selection = options.read(query, context)
+          const parsedValue = options.read(query, context)
 
-          if (selection === undefined) {
+          if (parsedValue === undefined) {
             return undefined
           }
 
-          const resolved = options.resolve ? options.resolve(selection, options.defaultValue) : selection
+          const resolved = options.resolve ? options.resolve(parsedValue, options.defaultValue) : parsedValue
 
           return transformer.read(resolved)
         },

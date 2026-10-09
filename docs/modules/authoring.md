@@ -19,10 +19,10 @@ const schema = { q: codecs.string }
 
 export const withPresence = defineQueryModule({
   queryStates: core => ({
-    present: computed(() => Object.keys(core.state.selected.value)),
+    present: computed(() => Object.keys(core.state.explicitValues.value)),
   }),
   queryState: (core, key) => ({
-    isPresent: computed(() => core.state.selected.value[key] !== undefined),
+    isPresent: computed(() => core.state.explicitValues.value[key] !== undefined),
   }),
 })
 
@@ -32,8 +32,8 @@ useQueryState('q').use(withPresence()) // on a single param
 
 ::: info Teaching example
 `withPresence` is an authoring example, not a published module. It reports
-explicit URL presence. [`withActiveParams`](/modules/active-params) is the
-published module for selections that differ from their resolved defaults.
+explicit presence after optimistic writes and the read pipeline. [`withActiveParams`](/modules/active-params) is the
+published module for values that differ from their resolved defaults.
 :::
 
 Provide only `queryStates` for a group-only module, only `queryState` for a
@@ -63,12 +63,12 @@ members are grouped into facets:
 | Facet | Member | What it is |
 | --- | --- | --- |
 | | `schema` | The schema being managed. |
-| `state` | `selected` | `ComputedRef` of explicit URL selections plus the optimistic overlay, with the `read` pipeline applied and no defaults. Derive read state from this. |
-| | `values` | `ComputedRef` of the resolved reads: the selection layered over `defaults.resolved`. |
+| `state` | `explicitValues` | `ComputedRef` of explicit param values plus the optimistic overlay, with the `read` pipeline applied and before engine default resolution. Derive read state from this. |
+| | `values` | `ComputedRef` of the resolved reads: explicit values layered over `defaults.resolved`. |
 | `defaults` | `resolved` | `ComputedRef` of the merged default layers (codec base + registered), `read` applied. |
 | | `register(source)` | Register a reactive default layer above the codec base; later layers win. Returns a disposer. |
 | `query` | `current()` | Read the current committed query. |
-| | `transact(request)` | Atomically write a partial or exhaustive selection. |
+| | `transact(request)` | Atomically write a partial or exhaustive state. |
 | | `transactions` | Observe transaction starts that overlap this schema's raw paths. |
 | `options` | | The resolved behavior baseline (`history`/`scroll`/`throttleMs`/`clearOnDefault`), so a query you build matches the engine's write behavior. |
 | `pipeline` | | The transform pipeline for reshaping reads and writes. |
@@ -79,20 +79,20 @@ Treat `core` as the authoring surface: it is not app-facing state.
 
 ## Deriving state
 
-Build read models off `core.state.selected` with `computed`. To expose a *map*,
+Build read models off `core.state.explicitValues` with `computed`. To expose a *map*,
 wrap it with `toReadonlyState` so consumers read `state.field`, matching `values`:
 
 ```ts
 import { toReadonlyState } from '@vuqs/core/shared'
 import { computed } from 'vue'
 
-const visible = computed(() => { /* derive a record from core.state.selected.value */ })
+const visible = computed(() => { /* derive a record from core.state.explicitValues.value */ })
 
 return { visible: toReadonlyState(visible) }
 ```
 
 `toReadonlyState` turns a `ComputedRef<record>` into a `Readonly<record>` whose keys
-track the computed live, the shape `withRuntimeDefaults` exposes for `selected` and
+track the computed live, the shape `withRuntimeDefaults` exposes for `explicitValues` and
 `defaults`. A single scalar stays a plain `ComputedRef`, like `withContext`'s
 `activeContext`.
 
@@ -101,7 +101,7 @@ track the computed live, the shape `withRuntimeDefaults` exposes for `selected` 
 The engine resolves values through a stack of default layers. The codec defaults
 are the base; a module contributes a reactive layer above them with
 `core.defaults.register(source)`, and later registrations win. `core.state.values`
-is the selection layered over `core.defaults.resolved`, the merged read.
+contains explicit values layered over `core.defaults.resolved`, the merged read.
 
 ```ts
 import { onScopeDispose, ref } from 'vue'
@@ -204,25 +204,25 @@ import { computed } from 'vue'
 
 declare module '@vuqs/core' {
   interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
-    'my-lib:selection': {
-      state: { api: { selection: ComputedRef<QueryStateValueAt<TSchema, 'value'> | undefined> } }
+    'my-lib:explicit-value': {
+      state: { api: { explicitValue: ComputedRef<QueryStateValueAt<TSchema, 'value'> | undefined> } }
     }
   }
 }
 
-export const withSelection = defineQueryModule({
-  name: 'my-lib:selection',
+export const withExplicitValue = defineQueryModule({
+  name: 'my-lib:explicit-value',
   queryState: (core, key) => ({
-    selection: computed(() => core.state.selected.value[key]),
+    explicitValue: computed(() => core.state.explicitValues.value[key]),
   }),
 })
 ```
 
 `useQueryState` resolves the registered `state` facet against its bound param,
-so `ref.selection` is typed as that param's value. Read the bound value
+so `ref.explicitValue` is typed as that param's value. Read the bound value
 with `QueryStateValueAt<TSchema, 'value'>`: inside a `state` facet `TSchema` is the
 single-schema `{ value: … }`, not the composable's schema. `withRuntimeDefaults`
-uses this mechanism to expose `selectedValue`/`defaultValue` on a single ref.
+uses this mechanism to expose `explicitValue`/`defaultValue` on a single ref.
 
 ## Facade-driven options
 
@@ -289,7 +289,7 @@ unique across modules: `.use()` throws if a module returns a key an earlier one
 already provided.
 
 ```
-[vuqs] module key "selected" is already provided by an earlier module
+[vuqs] module key "explicitValues" is already provided by an earlier module
 ```
 
 Avoid the base API names (`values`, `patch`, `replace`, `clear`, `use`, `binding`)

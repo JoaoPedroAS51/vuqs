@@ -46,7 +46,7 @@ export type QueryStatesValues<TSchema extends QueryStateSchema> = {
 export interface QueryBinding<TSchema extends QueryStateSchema> {
   /** The schema param names, the key set every lens iterates. */
   readonly keys: readonly (keyof TSchema & string)[]
-  /** The resolved whole-object read: the selection layered over defaults. */
+  /** The resolved whole-object read: explicit values layered over defaults. */
   readonly read: ComputedRef<QueryStateValues<TSchema>>
   /** Atomically applies a partial or exhaustive query-state write. */
   readonly transact: (request: QueryTransactionRequest<TSchema>) => void

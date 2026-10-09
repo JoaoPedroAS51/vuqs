@@ -80,7 +80,7 @@ describe('useQueryState', () => {
     const module = defineQueryModule({
       queryStates: () => ({ grouped: true }),
       queryState: (core, key) => ({
-        selectedValue: computed(() => core.state.selected.value[key]),
+        explicitValue: computed(() => core.state.explicitValues.value[key]),
       }),
     })
     const q = run(() => useQueryState('q', codecs.string))
@@ -91,7 +91,7 @@ describe('useQueryState', () => {
     expect(used).toBe(q)
     expect(isRef(q)).toBe(true)
     expect(q.value).toBe('phone')
-    expect(used.selectedValue.value).toBe('phone')
+    expect(used.explicitValue.value).toBe('phone')
 
     q.set('sale')
     await flush()

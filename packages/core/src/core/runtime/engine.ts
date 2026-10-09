@@ -61,14 +61,14 @@ export interface ResolvedQueryStateOptions {
 }
 
 /**
- * The resolved reactive reads: the explicit selection and the resolved values.
+ * The explicit and default-resolved reactive reads.
  *
  * @typeParam TSchema - The schema whose params the engine tracks.
  */
 export interface QueryStateReads<TSchema extends QueryStateSchema> {
-  /** Explicit selection plus overlay, with the read pipeline applied and without defaults. */
-  selected: ComputedRef<QueryStateValues<TSchema>>
-  /** Resolved values: the selection layered over {@link QueryDefaultsBus.resolved}. */
+  /** Decoded values including optimistic writes and the read pipeline, before engine default resolution. */
+  explicitValues: ComputedRef<QueryStateValues<TSchema>>
+  /** Resolved values: explicit values layered over {@link QueryDefaultsBus.resolved}. */
   values: ComputedRef<QueryStateValues<TSchema>>
 }
 
@@ -232,8 +232,8 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     return next
   })
 
-  // Omit absent selections so they cannot overwrite defaults with undefined.
-  const rawSelection = computed<Record<string, unknown>>(() => {
+  // Omit absent values so they cannot overwrite defaults with undefined.
+  const parsedValues = computed<Record<string, unknown>>(() => {
     const invalid = new Set<string>()
     const context: QueryParamReadContext = {
       onInvalid(path, raw) {
@@ -246,7 +246,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
         }
       },
     }
-    const selection = parseQueryStates(schema, optimisticQuery.value, context) as Record<string, unknown>
+    const parsed = parseQueryStates(schema, optimisticQuery.value, context) as Record<string, unknown>
 
     for (const path of lastInvalidRaw.keys()) {
       if (!invalid.has(path)) {
@@ -254,16 +254,16 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
       }
     }
 
-    return selection
+    return parsed
   })
 
-  const selected = computed<QueryStateValues<TSchema>>(
-    () => definedOnly(pipeline.run('read', { ...rawSelection.value })) as QueryStateValues<TSchema>,
+  const explicitValues = computed<QueryStateValues<TSchema>>(
+    () => definedOnly(pipeline.run('read', { ...parsedValues.value })) as QueryStateValues<TSchema>,
   )
 
-  // Resolve present objects per child so partial selections preserve layered defaults.
+  // Resolve present objects per child so partial values preserve layered defaults.
   const values = computed<QueryStateValues<TSchema>>(() => {
-    const resolved = resolveQueryStateValues(schema, keys, rawSelection.value, mergedDefaults.value)
+    const resolved = resolveQueryStateValues(schema, keys, parsedValues.value, mergedDefaults.value)
 
     return pipeline.run('read', resolved) as QueryStateValues<TSchema>
   })
@@ -373,12 +373,12 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     id,
     keys: [...keys],
     managedPaths: [...managedPaths],
-    committedSelected: normalizeForHistory(
+    committedExplicitValues: normalizeForHistory(
       definedOnly(pipeline.run('read', {
         ...parseQueryStates(schema, toValue(adapter.query)),
       })),
     ) as Record<string, unknown>,
-    optimisticSelected: normalizeForHistory(selected.value) as Record<string, unknown>,
+    optimisticExplicitValues: normalizeForHistory(explicitValues.value) as Record<string, unknown>,
     // Deeply detach and bound: a devtools consumer must not be able to mutate the
     // engine's live values/caches through the snapshot.
     values: normalizeForHistory(values.value) as Record<string, unknown>,
@@ -392,7 +392,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
   }, true)
 
   return {
-    state: { selected, values },
+    state: { explicitValues, values },
     defaults: { resolved: resolvedDefaults, register },
     query: { current: () => toValue(adapter.query), transact, transactions },
     options: resolvedOptions,

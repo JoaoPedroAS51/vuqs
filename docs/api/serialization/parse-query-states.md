@@ -1,6 +1,6 @@
 # parseQueryStates <Badge type="info" text="@vuqs/core" />
 
-Parses selections from a query.
+Parses values from a query.
 
 ## Usage
 
@@ -29,7 +29,7 @@ function parseQueryStates<TSchema extends QueryStateSchema>(schema: TSchema, que
 ## Return value
 
 - `values: QueryStateValues<TSchema>`
-  - Selections present in the query. Absent or invalid params are omitted; defaults are not resolved.
+  - Explicit values present in the query. Absent or invalid params are omitted; state-level defaults are not resolved. Object transforms may resolve static child defaults during decoding.
 
 ## Related guide
 

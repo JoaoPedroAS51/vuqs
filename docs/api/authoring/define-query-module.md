@@ -12,10 +12,10 @@ const schema = { q: codecs.string }
 
 export const withPresence = defineQueryModule({
   queryStates: core => ({
-    present: computed(() => Object.keys(core.state.selected.value)),
+    present: computed(() => Object.keys(core.state.explicitValues.value)),
   }),
   queryState: (core, key) => ({
-    isPresent: computed(() => core.state.selected.value[key] !== undefined),
+    isPresent: computed(() => core.state.explicitValues.value[key] !== undefined),
   }),
 })
 

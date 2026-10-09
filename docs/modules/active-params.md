@@ -1,6 +1,6 @@
 # Active params
 
-Derives which params are explicitly selected away from their resolved defaults.
+Derives which params are explicitly present and different from their resolved defaults.
 Use it for active-filter badges, summaries, and per-param indicators without
 duplicating the comparison policy in application code.
 
@@ -64,19 +64,19 @@ that affect those reads.
 
 A param is active when all these conditions hold:
 
-1. It exists in the explicit selection after the `read` pipeline.
+1. It exists in the explicit state after the `read` pipeline.
 2. It is not excluded.
 3. It has no resolved default, or its value differs from that default according
    to the param's equality function.
 
 Resolved defaults include codec defaults and registered default layers. Custom
-equality from `withEquality` is respected. Changes to the explicit selection,
+equality from `withEquality` is respected. Changes to the explicit state,
 resolved defaults, or read pipeline update the result reactively. Optimistic
 writes update it before the adapter commits the URL.
 
 ### Presence is not activity
 
-An explicit selection can equal its resolved default. That param is present in
+An explicit value can equal its resolved default. That param is present in
 the URL, but it is not active.
 
 | State | Present | Active |
@@ -86,7 +86,7 @@ the URL, but it is not active.
 | Explicit value different from the default | yes | yes |
 | Explicit value equal to the default | yes | no |
 
-Use `core.state.selected` when authoring a module that needs URL presence alone.
+Use `core.state.explicitValues` when authoring a module that needs explicit values regardless of activity. These reads include optimistic writes and the read pipeline.
 
 ## Example
 

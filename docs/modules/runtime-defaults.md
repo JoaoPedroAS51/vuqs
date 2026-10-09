@@ -15,11 +15,11 @@ with `useQueryState`, adding a grouped API to one and a per-param API to the oth
 import { useQueryStates } from '@vuqs/core'
 import { withRuntimeDefaults } from '@vuqs/core/modules'
 
-const { values, selected, defaults, setDefaults } = useQueryStates(schema)
+const { values, explicitValues, defaults, setDefaults } = useQueryStates(schema)
   .use(withRuntimeDefaults())
 
 setDefaults(await loadUserPreferences()) // runtime defaults, never written to the URL
-values.status // reads through them: a selection if present, else the runtime default
+values.status // reads through them: an explicit value if present, else the runtime default
 ```
 
 ### On a single param
@@ -32,7 +32,7 @@ const perPage = useQueryState('perPage', codecs.integer)
   .use(withRuntimeDefaults())
 
 perPage.setDefault(20)
-perPage.value // the selection if present, else 20
+perPage.value // the explicit value if present, else 20
 ```
 
 See the [withRuntimeDefaults reference](/api/modules/with-runtime-defaults) for call forms, options, return values, and types.
@@ -54,25 +54,26 @@ interaction that uses this signal.
 
 `withRuntimeDefaults` registers a runtime-default layer on the core's
 [layered defaults](/modules/authoring#layered-defaults). The codec defaults are the
-base, the runtime defaults sit above them, and an explicit URL selection sits above
+base, the runtime defaults sit above them, and an explicit param value sits above
 both. The bound `values` resolve through that stack, so `values` **is** the
 effective read.
 
-| State | Source | In the URL? |
-| --- | --- | --- |
-| `selected` | explicit URL selections | yes (and only this) |
-| `defaults` | runtime defaults over codec defaults | never |
-| `values` | `selected` over `defaults`, the read model | derived |
+| State | Meaning |
+| --- | --- |
+| `explicitValues` | Decoded param values, including optimistic writes and the read pipeline, before engine default resolution. |
+| `defaults` | Runtime defaults over codec defaults, with the read pipeline applied. |
+| `values` | Values resolved against defaults, with the read pipeline applied. |
 
-```
-values   = { ...defaults, ...selected }
-defaults = { ...codecDefaults, ...runtimeDefaults }
-```
+`explicitValues` can change before navigation completes. A read pipeline can also
+remove or transform values, so this map is not a snapshot of the committed URL.
+Object transforms may resolve static child defaults during decoding.
 
-Precedence runs **selection → runtime default → codec default**. A user selection
+Objects resolve defaults per child. The engine applies the read pipeline separately
+to explicit values and to values resolved against defaults.
+
+Precedence runs **explicit value → runtime default → codec default**. An explicit value
 always wins; clearing it reveals the runtime default, and clearing the runtime
-default reveals the codec default, if the param has one. Your UI reads `values`;
-only `selected` is serialized.
+default reveals the codec default, if the param has one. Your UI reads `values`.
 
 ### Writes use the resolved default
 
@@ -86,8 +87,8 @@ write that equals the *resolved* default, which here is `eur`.
 
 ### URL contents
 
-- **Selections only.** The URL stores explicit selections. Runtime defaults remain
-  local, so a shared link uses the recipient's defaults for unselected params.
+- **Explicit values only.** The URL stores explicit values. Runtime defaults remain
+  local, so a shared link uses the recipient's defaults for absent params.
 - **Changing defaults.** If the runtime default for `perPage` changes from 20 to
   50, bookmarks without an explicit `perPage` use 50.
 
@@ -99,7 +100,7 @@ import { codecs, useQueryStates } from '@vuqs/core'
 import { withRuntimeDefaults } from '@vuqs/core/modules'
 import { onMounted } from 'vue'
 
-const { values, selected, defaults, setDefaults, clear } = useQueryStates({
+const { values, explicitValues, defaults, setDefaults, clear } = useQueryStates({
   q: codecs.string,
   status: codecs.literal(['active', 'archived'] as const),
   perPage: codecs.integer,
@@ -115,7 +116,7 @@ onMounted(async () => {
   <p>Showing {{ values.perPage }} per page</p>
 
   <select
-    :value="selected.status ?? ''"
+    :value="explicitValues.status ?? ''"
     @change="values.status = ($event.target as HTMLSelectElement).value || undefined"
   >
     <option value="">— (default: {{ defaults.status }})</option>
@@ -127,7 +128,7 @@ onMounted(async () => {
 </template>
 ```
 
-With no `?status` in the URL, `selected.status` is `undefined`, `defaults.status`
+With no `?status` in the URL, `explicitValues.status` is `undefined`, `defaults.status`
 is whatever `setDefaults` supplied, and `values.status` shows the default.
 Selecting `archived` writes `?status=archived`; clearing it restores the default.
 

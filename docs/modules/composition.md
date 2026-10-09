@@ -12,7 +12,7 @@ without special behavior are omitted.
 
 | Mechanism | Purpose |
 | --- | --- |
-| Shared reads | Derive state from `selected`, resolved `values`, or resolved defaults. |
+| Shared reads | Derive state from `explicitValues`, resolved `values`, or resolved defaults. |
 | Default layers | Contribute fallback values without writing them to the URL. |
 | Pipeline | Transform or filter reads, writes, and navigation output. |
 | Signals | Publish typed, namespaced events without knowing who reacts. |
@@ -23,10 +23,10 @@ without special behavior are omitted.
 | Modules | Mechanism | Result |
 | --- | --- | --- |
 | [`withContext`](/modules/context) + [`withRuntimeDefaults`](/modules/runtime-defaults) | `context:change` signal | Changing context clears runtime defaults that may belong to the previous context. |
-| [`withRuntimeDefaults`](/modules/runtime-defaults) + [`withActiveParams`](/modules/active-params) | Resolved defaults | A selected param becomes active or inactive when its resolved default changes. |
+| [`withRuntimeDefaults`](/modules/runtime-defaults) + [`withActiveParams`](/modules/active-params) | Resolved defaults | An explicit param becomes active or inactive when its resolved default changes. |
 | [`withContext`](/modules/context) + [`withActiveParams`](/modules/active-params) | Read pipeline | A param invalid in the active context is absent from active-param views. |
-| [`withRuntimeDefaults`](/modules/runtime-defaults) + [`withStorage`](/modules/storage) | Explicit selection | Runtime defaults are not persisted; an explicitly selected value remains part of the mirror. |
-| [`withContext`](/modules/context) + [`withStorage`](/modules/storage) | Read/write pipeline | Storage persists only context-valid selections, and restore never reintroduces params invalid in the active context. |
+| [`withRuntimeDefaults`](/modules/runtime-defaults) + [`withStorage`](/modules/storage) | Explicit values | Runtime defaults are not persisted; an explicitly present value remains part of the mirror. |
+| [`withContext`](/modules/context) + [`withStorage`](/modules/storage) | Read/write pipeline | Storage persists only context-valid values, and restore never reintroduces params invalid in the active context. |
 
 ## Order independence
 

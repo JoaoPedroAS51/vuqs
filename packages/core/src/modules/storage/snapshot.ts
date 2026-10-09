@@ -8,7 +8,7 @@ export interface StoredQuerySnapshot {
   version?: string
   /** Unix timestamp in milliseconds for diagnostics and future policies. */
   savedAt: number
-  /** Explicit selected state encoded through the schema params. */
+  /** Explicit state encoded through the schema params. */
   query: ParsedQueryRaw
 }
 

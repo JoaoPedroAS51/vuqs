@@ -122,7 +122,7 @@ export function pickBy(predicate: (key: string) => boolean): <T extends object>(
 }
 
 /**
- * Creates a property filter with the inverse selection of {@link pickBy}.
+ * Creates a property filter that excludes keys matching `predicate`.
  *
  * @param predicate - Returns `true` for a key to drop.
  * @returns A function that copies an object's own enumerable string-keyed properties

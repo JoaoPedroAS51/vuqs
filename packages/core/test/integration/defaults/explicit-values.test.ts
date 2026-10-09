@@ -5,11 +5,7 @@ import { queryParam } from '../../../src/core/schema/params/query-param'
 import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults'
 import { withTestQuery } from '../../helpers/adapter'
 
-// An absent or invalid value must behave as "no selection", at every level: its
-// default is resolved by the engine's default layer, never leaked into `selected`.
-// `selected` is a pure URL selection (including a present object's children);
-// `values` is the selection composed over the resolved (layered) default.
-describe('selection vs default resolution', () => {
+describe('explicit values and default resolution', () => {
   const schema = { page: queryParam('page', codecs.integer.withDefault(1)) }
 
   function mount(initial: Parameters<typeof withTestQuery>[0]) {
@@ -17,15 +13,15 @@ describe('selection vs default resolution', () => {
     return build(() => useQueryStates(schema).use(withRuntimeDefaults()))
   }
 
-  it('omits an absent defaulted param from the selection, resolves the default', () => {
+  it('omits an absent defaulted param from explicit values and resolves its default', () => {
     const q = mount({})
-    expect(q.selected).toEqual({})
+    expect(q.explicitValues).toEqual({})
     expect(q.values.page).toBe(1)
   })
 
   it('treats an invalid value as absent, not as its default', () => {
     const q = mount({ page: 'bad' })
-    expect(q.selected).toEqual({})
+    expect(q.explicitValues).toEqual({})
     expect(q.values.page).toBe(1)
   })
 
@@ -33,35 +29,35 @@ describe('selection vs default resolution', () => {
     const q = mount({ page: 'bad' })
     q.setDefaults({ page: 2 })
 
-    expect(q.selected).toEqual({})
+    expect(q.explicitValues).toEqual({})
     expect(q.defaults.page).toBe(2)
     expect(q.values.page).toBe(2)
   })
 
-  it('keeps a valid value that differs from the default as a selection', () => {
+  it('keeps a valid value that differs from the default as an explicit value', () => {
     const q = mount({ page: '3' })
-    expect(q.selected).toEqual({ page: 3 })
+    expect(q.explicitValues).toEqual({ page: 3 })
     expect(q.values.page).toBe(3)
   })
 
-  it('keeps a valid value equal to the default, when explicitly present, as a selection', () => {
+  it('keeps a valid value equal to the default, when explicitly present, as an explicit value', () => {
     const q = mount({ page: '1' })
-    expect(q.selected).toEqual({ page: 1 })
+    expect(q.explicitValues).toEqual({ page: 1 })
     expect(q.values.page).toBe(1)
   })
 
-  it('treats falsy-but-valid values as selections, not absences', () => {
+  it('treats falsy-but-valid values as values, not absences', () => {
     const q = withTestQuery({ n: '0', flag: 'false' })
       .build(() => useQueryStates({
         n: queryParam('n', codecs.integer.withDefault(9)),
         flag: queryParam('flag', codecs.boolean.withDefault(true)),
       }).use(withRuntimeDefaults()))
 
-    expect(q.selected).toEqual({ n: 0, flag: false })
+    expect(q.explicitValues).toEqual({ n: 0, flag: false })
   })
 })
 
-describe('selection through transforms, prefixes, and objects', () => {
+describe('explicit values through transforms, prefixes, and objects', () => {
   it('omits a param whose transform rejects a present value', () => {
     const positive = queryParam('n', codecs.integer.withDefault(1)).transform<number>({
       read: v => (v > 0 ? v : undefined),
@@ -70,7 +66,7 @@ describe('selection through transforms, prefixes, and objects', () => {
     const q = withTestQuery({ n: '-5' })
       .build(() => useQueryStates({ n: positive }).use(withRuntimeDefaults()))
 
-    expect(q.selected).toEqual({})
+    expect(q.explicitValues).toEqual({})
     expect(q.values.n).toBe(1)
   })
 
@@ -79,7 +75,7 @@ describe('selection through transforms, prefixes, and objects', () => {
     const q = withTestQuery({ range: { f: 'bad' } })
       .build(() => useQueryStates({ range: inner }).use(withRuntimeDefaults()))
 
-    expect(q.selected).toEqual({})
+    expect(q.explicitValues).toEqual({})
   })
 
   it('omits a present object\'s missing child that has no default', () => {
@@ -90,11 +86,11 @@ describe('selection through transforms, prefixes, and objects', () => {
     const q = withTestQuery({ pair: { a: 'x' } })
       .build(() => useQueryStates({ pair }).use(withRuntimeDefaults()))
 
-    expect(q.selected).toEqual({ pair: { a: 'x' } })
+    expect(q.explicitValues).toEqual({ pair: { a: 'x' } })
     expect(q.values.pair).toEqual({ a: 'x' }) // `b` has no default, so it stays out
   })
 
-  it('keeps a present object\'s selection pure; child defaults resolve in values', () => {
+  it('resolves child defaults without adding them to explicit values', () => {
     const range = queryParam
       .object('range', {
         from: queryParam('from', codecs.string.withDefault('A')),
@@ -105,20 +101,20 @@ describe('selection through transforms, prefixes, and objects', () => {
     const q = withTestQuery({ range: { from: 'x' } })
       .build(() => useQueryStates({ range }).use(withRuntimeDefaults()))
 
-    expect(q.selected).toEqual({ range: { from: 'x' } })
+    expect(q.explicitValues).toEqual({ range: { from: 'x' } })
     expect(q.values.range).toEqual({ from: 'x', to: 'B' })
   })
 
-  it('omits a present object with only an invalid child from selection, resolves in values', () => {
+  it('omits a present object with only an invalid child from explicit values and resolves its defaults', () => {
     const inner = queryParam.object('range', { from: queryParam('f', codecs.integer.withDefault(0)) })
     const q = withTestQuery({ range: { f: 'bad' } })
       .build(() => useQueryStates({ range: inner }).use(withRuntimeDefaults()))
 
-    expect(q.selected).toEqual({}) // invalid child → no valid selection
+    expect(q.explicitValues).toEqual({}) // invalid child → no valid value
     expect(q.values.range).toEqual({ from: 0 }) // resolves to the child default
   })
 
-  it('omits an absent withDefaultsWhenPresent object from selection and values', () => {
+  it('omits an absent withDefaultsWhenPresent object from explicit and resolved values', () => {
     const range = queryParam
       .object('range', {
         from: queryParam('from', codecs.string.withDefault('A')),
@@ -128,7 +124,7 @@ describe('selection through transforms, prefixes, and objects', () => {
     const q = withTestQuery({})
       .build(() => useQueryStates({ range }).use(withRuntimeDefaults()))
 
-    expect(q.selected).toEqual({})
+    expect(q.explicitValues).toEqual({})
     expect(q.values.range).toBeUndefined()
   })
 
@@ -143,7 +139,7 @@ describe('selection through transforms, prefixes, and objects', () => {
     const q = withTestQuery({})
       .build(() => useQueryStates({ range }).use(withRuntimeDefaults()))
 
-    expect(q.selected).toEqual({})
+    expect(q.explicitValues).toEqual({})
     expect(q.values.range).toEqual({ from: 'A' })
   })
 })
@@ -165,7 +161,7 @@ describe('runtime defaults over object children', () => {
     const q = mount({ range: { to: '5' } })
     q.setDefaults({ range: { from: 99, to: 99 } })
 
-    expect(q.selected).toEqual({ range: { to: 5 } }) // pure
+    expect(q.explicitValues).toEqual({ range: { to: 5 } }) // pure
     expect(q.values.range).toEqual({ from: 99, to: 5 }) // runtime `from` wins the gap
   })
 

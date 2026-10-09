@@ -17,7 +17,7 @@ const schema = {
   sort: queryParam('filters.sort', codecs.string),
 }
 
-function createEngine<TSchema extends QueryStateSchema>(adapter: QueryAdapter, selectedSchema: TSchema) {
+function createEngine<TSchema extends QueryStateSchema>(adapter: QueryAdapter, schema: TSchema) {
   const scope = effectScope()
   onTestFinished(() => {
     try {
@@ -29,7 +29,7 @@ function createEngine<TSchema extends QueryStateSchema>(adapter: QueryAdapter, s
   })
   const engine = scope.run(() => createQueryStateEngine({
     id: 'transaction-test',
-    schema: selectedSchema,
+    schema,
     adapter,
   }))!
 
@@ -48,7 +48,7 @@ describe('query transactions', () => {
       start: (transaction) => {
         starts.push({
           transaction,
-          selected: { ...engine.state.selected.value },
+          explicitValues: { ...engine.state.explicitValues.value },
         })
       },
     })
@@ -69,7 +69,7 @@ describe('query transactions', () => {
         paths: ['q', 'filters.sort'],
         origin,
       },
-      selected: { q: 'sale', sort: 'name' },
+      explicitValues: { q: 'sale', sort: 'name' },
     })
 
     const transaction = (starts[0] as { transaction: object & { keys: object, paths: object } }).transaction
@@ -97,7 +97,7 @@ describe('query transactions', () => {
     })
 
     scope.run(() => watch(
-      () => engine.state.selected.value.q,
+      () => engine.state.explicitValues.value.q,
       (value) => {
         if (value === 'outer') {
           engine.query.transact({ mode: 'patch', values: { sort: 'inner' } })
@@ -146,7 +146,7 @@ describe('query transactions', () => {
       keys: ['sort'],
       paths: ['filters.sort'],
     }))
-    expect(engine.state.selected.value).toEqual({ q: 'phone' })
+    expect(engine.state.explicitValues.value).toEqual({ q: 'phone' })
     await flush()
     expect(adapter.query.value).toEqual({ q: 'phone', filters: { keep: '' }, other: 'keep' })
     expect(onUrlUpdate).toHaveBeenCalledOnce()
@@ -168,7 +168,7 @@ describe('query transactions', () => {
       keys: ['q', 'sort'],
       paths: ['q', 'filters.sort'],
     }))
-    expect(engine.state.selected.value).toEqual({})
+    expect(engine.state.explicitValues.value).toEqual({})
 
     await flush()
     expect(adapter.query.value).toEqual({})
@@ -187,7 +187,7 @@ describe('query transactions', () => {
       defaultPolicy: 'preserve-explicit',
     })
 
-    expect(engine.state.selected.value).toEqual({ page: 1 })
+    expect(engine.state.explicitValues.value).toEqual({ page: 1 })
     await flush()
     expect(adapter.query.value).toEqual({ page: '1' })
   })
@@ -228,7 +228,7 @@ describe('query transactions', () => {
 
     engine.query.transact({ mode, values: { value: null } })
 
-    expect(engine.state.selected.value).toEqual({ value: null })
+    expect(engine.state.explicitValues.value).toEqual({ value: null })
     await flush()
     expect(adapter.query.value).toEqual({ value: 'null' })
   })
@@ -276,7 +276,7 @@ describe('query transactions', () => {
       values: { unknown: 'value' },
     })).toThrow('cannot write unknown query-state key "unknown"')
 
-    expect(engine.state.selected.value).toEqual({})
+    expect(engine.state.explicitValues.value).toEqual({})
     expect(starts).not.toHaveBeenCalled()
     await flush()
     expect(onUrlUpdate).not.toHaveBeenCalled()
@@ -379,12 +379,12 @@ describe('query transactions', () => {
     ])
   })
 
-  it('parses a raw selection without injecting defaults or running a pipeline', () => {
-    const selectedSchema = {
+  it('decodes query values without injecting defaults or running a pipeline', () => {
+    const schema = {
       q: queryParam('q', codecs.string.withDefault('default')),
     }
 
-    expect(parseQueryStates(selectedSchema, {})).toEqual({})
-    expect(parseQueryStates(selectedSchema, { q: 'sale' })).toEqual({ q: 'sale' })
+    expect(parseQueryStates(schema, {})).toEqual({})
+    expect(parseQueryStates(schema, { q: 'sale' })).toEqual({ q: 'sale' })
   })
 })

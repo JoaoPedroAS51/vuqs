@@ -42,7 +42,7 @@ function setPerPage(event: Event) {
       <p>
         <code>withRuntimeDefaults</code> layers runtime <code>defaults</code> (supplied at
         runtime, never serialized) under the bound <code>values</code> read model, and
-        exposes <code>selected</code> (mirrors the URL). Clearing a value reverts it to its default.
+        exposes <code>explicitValues</code> (explicit param values). Clearing a value reverts it to its default.
       </p>
     </div>
 
@@ -52,7 +52,7 @@ function setPerPage(event: Event) {
         <input
           type="text"
           placeholder="search…"
-          :value="q.selected.q ?? ''"
+          :value="q.explicitValues.q ?? ''"
           @input="q.values.q = ($event.target as HTMLInputElement).value || undefined"
         >
         <button class="clear-btn" type="button" @click="q.values.q = undefined">
@@ -65,7 +65,7 @@ function setPerPage(event: Event) {
     <div class="row">
       <span class="k">status</span>
       <div class="control">
-        <select :value="q.selected.status ?? ''" @change="setStatus">
+        <select :value="q.explicitValues.status ?? ''" @change="setStatus">
           <option value="">
             — (default)
           </option>
@@ -86,7 +86,7 @@ function setPerPage(event: Event) {
     <div class="row">
       <span class="k">perPage</span>
       <div class="control">
-        <select :value="q.selected.perPage ?? ''" @change="setPerPage">
+        <select :value="q.explicitValues.perPage ?? ''" @change="setPerPage">
           <option value="">
             — (default)
           </option>
@@ -112,7 +112,7 @@ function setPerPage(event: Event) {
       <div class="control">
         <div class="actions">
           <button class="primary" type="button" @click="q.clear()">
-            clear selections
+            clear values
           </button>
           <button type="button" :disabled="loading" @click="loadDefaults()">
             {{ loading ? 'loading…' : 'reload defaults' }}
@@ -126,7 +126,7 @@ function setPerPage(event: Event) {
     </div>
 
     <template #panel>
-      <StateBlock label="selected → URL" :value="q.selected" accent />
+      <StateBlock label="explicitValues" :value="q.explicitValues" accent />
       <StateBlock label="defaults · runtime" :value="q.defaults" />
       <StateBlock label="values · read" :value="q.values" />
     </template>

@@ -79,7 +79,7 @@ interface QueryStateEngine<TSchema extends QueryStateSchema> {
 
 ```ts
 interface QueryStateReads<TSchema extends QueryStateSchema> {
-  selected: ComputedRef<QueryStateValues<TSchema>>
+  explicitValues: ComputedRef<QueryStateValues<TSchema>>
   values: ComputedRef<QueryStateValues<TSchema>>
 }
 ```

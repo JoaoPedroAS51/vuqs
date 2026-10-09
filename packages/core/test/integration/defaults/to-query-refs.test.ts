@@ -18,7 +18,7 @@ describe('read-only per-field refs via Vue toRefs', () => {
   it('reads each field and tracks updates without a writer', async () => {
     const { build } = setup({ q: 'sale' })
     const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
-    const qRef = toRefs(q.selected).q!
+    const qRef = toRefs(q.explicitValues).q!
 
     expect(qRef.value).toBe('sale')
     expect('set' in qRef).toBe(false)
@@ -40,11 +40,11 @@ describe('toQueryRefs coherence with withRuntimeDefaults', () => {
 
     page.value = 1 // codec default, not the effective default (5)
     await flush()
-    expect(q.selected).toEqual({ page: 1 })
+    expect(q.explicitValues).toEqual({ page: 1 })
 
     page.value = 5 // the effective default
     await flush()
-    expect(q.selected).toEqual({})
+    expect(q.explicitValues).toEqual({})
     expect(q.values).toEqual({ page: 5 })
   })
 })

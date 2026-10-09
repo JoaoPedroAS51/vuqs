@@ -149,7 +149,7 @@ describe('withContext buildContextQuery', () => {
   it('does not materialize an absent or invalid default-valued field, even with clearOnDefault false', () => {
     const tab = ref<'products' | 'orders'>('products')
 
-    // Absent: a pure selection has nothing to preserve, so a context switch must
+    // Absent: an absent param has nothing to preserve, so a context switch must
     // not synthesize `page`'s default into the URL.
     const absent = setup({ q: 'foo' })
     const qa = absent.build(() =>

@@ -77,7 +77,7 @@ By default, `hasMemory` is `false`: `adapter.query.value` stays at the initial
 Writes in one batch are coalesced, but completed writes are not reapplied to later
 navigations. Composables retain their simulated values in a separate read layer
 shared by bindings using that adapter. Clearing a param removes its simulated
-selection, even if it exists in the initial base.
+state, even if it exists in the initial base.
 
 For example, starting from `{}`, writing `q` and flushing emits `{ q: 'search' }`.
 Writing `page` in a later batch emits `{ page: '2' }`, while the composables still

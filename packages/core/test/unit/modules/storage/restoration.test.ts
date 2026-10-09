@@ -14,7 +14,7 @@ import { deferred, flushMicrotasks, schema, stubBrowserEnvironment } from './hel
 describe('withStorage restoration', () => {
   beforeEach(stubBrowserEnvironment)
 
-  it('restores one complete stored selection into an empty URL with replace history', async () => {
+  it('restores one complete stored state into an empty URL with replace history', async () => {
     const memory = createMemoryStorage(snapshot({ q: 'stored', page: '2' }))
     const { query, navigate, build } = setup()
     const state = build(() => useQueryStates(schema).use(withStorage({
@@ -62,7 +62,7 @@ describe('withStorage restoration', () => {
     })
   })
 
-  it('does nothing when both the URL selection and storage are empty', async () => {
+  it('does nothing when both the URL state and storage are empty', async () => {
     const memory = createMemoryStorage()
     const { build } = setup()
     const state = build(() => useQueryStates(schema).use(withStorage({
@@ -78,7 +78,7 @@ describe('withStorage restoration', () => {
     expect(memory.remove).not.toHaveBeenCalled()
   })
 
-  it('never loads under restore never and mirrors the current selection instead', async () => {
+  it('never loads under restore never and mirrors the current state instead', async () => {
     const memory = createMemoryStorage(snapshot({ q: 'stored' }))
     const { build } = setup({ q: 'url' })
     const state = build(() => useQueryStates(schema).use(withStorage({
@@ -97,7 +97,7 @@ describe('withStorage restoration', () => {
     })
   })
 
-  it('removes storage under restore never when the current selection is empty', async () => {
+  it('removes storage under restore never when the current state is empty', async () => {
     const memory = createMemoryStorage(snapshot({ q: 'stored' }))
     const { build } = setup()
     const state = build(() => useQueryStates(schema).use(withStorage({
@@ -215,7 +215,7 @@ describe('withStorage restoration', () => {
     expect(memory.remove).not.toHaveBeenCalled()
   })
 
-  it('round-trips post-read selection through the write pipeline', async () => {
+  it('round-trips post-read state through the write pipeline', async () => {
     const pipelineModule = (core: QueryCore<typeof schema>) => {
       core.pipeline.tap('read', values => ({
         ...values,

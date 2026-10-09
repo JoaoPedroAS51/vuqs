@@ -295,7 +295,7 @@ describe('lifecycle tracing', () => {
 
     const snapshot = getDebugSnapshot(channel)
     expect(snapshot.queues).toEqual([expect.objectContaining({ overlay: {}, overlayKeys: [], scheduled: false })])
-    expect(snapshot.engines).toEqual([expect.objectContaining({ committedSelected: { value: 'initial' }, values: { value: 'simulated' } })])
+    expect(snapshot.engines).toEqual([expect.objectContaining({ committedExplicitValues: { value: 'initial' }, values: { value: 'simulated' } })])
     expect(events.filter(event => event.code === 'adapter:commit')).toEqual([])
     expect(events.filter(event => event.code === 'gtq:settle')).toHaveLength(1)
   })

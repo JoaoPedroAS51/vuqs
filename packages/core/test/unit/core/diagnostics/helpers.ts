@@ -11,8 +11,8 @@ export function engineSnapshot(id: string, keys: string[] = [], values: Record<s
     id,
     keys,
     managedPaths: keys,
-    committedSelected: values,
-    optimisticSelected: values,
+    committedExplicitValues: values,
+    optimisticExplicitValues: values,
     values,
     defaults: {},
   }

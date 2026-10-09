@@ -1,6 +1,6 @@
 # withStorage <Badge type="tip" text="@vuqs/core/modules" />
 
-Mirrors explicit query selections to storage and can restore a snapshot into an empty selection.
+Mirrors explicit query values to storage and can restore a snapshot into an empty state.
 
 ## Usage
 
@@ -34,7 +34,7 @@ for adaptive, schema, param, and path calls.
 | --- | --- | --- | --- |
 | `key` | `string` | Required | Storage key for the snapshot. |
 | `storage` | `QueryStorage` | Required | Synchronous or asynchronous storage implementation. |
-| `restore` | `StorageRestorePolicy` | `'if-empty'` | Restore only into an empty selection, or mirror without loading with `'never'`. |
+| `restore` | `StorageRestorePolicy` | `'if-empty'` | Restore only into an empty state, or mirror without loading with `'never'`. |
 | `version` | `string` | Absent | Rejects snapshots with a different application version. |
 
 Invalid options or a malformed storage contract throw synchronously during `.use()`.
@@ -54,7 +54,7 @@ A module contributing the same `StorageApi` on either facade. Controls are avail
 
 ## Restore and lifecycle
 
-A non-empty URL or a write intent during loading wins over storage. A valid stored selection restores with one whole-state write only when the URL remains empty. Explicit values equal to defaults are preserved; resolved defaults are not persisted. An empty mirror removes its storage key.
+A non-empty URL or a write intent during loading wins over storage. A valid stored state restores with one whole-state write only when the URL remains empty. Explicit values equal to defaults are preserved; resolved defaults are not persisted. An empty mirror removes its storage key.
 
 On the server, storage is not read and `ready` resolves. Restoration starts after mount in a component, or on a microtask outside one. Scope disposal stops observation and prevents late results from restoring or updating module state.
 

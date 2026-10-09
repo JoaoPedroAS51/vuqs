@@ -201,7 +201,7 @@ object stays absent instead of materializing from child defaults.
 
 Resolution follows the object composition. A present child object resolves its
 own missing children from the applicable defaults. Plain object params keep
-`selected` and `read` as the explicit selection:
+`explicitValues` and `read` as the explicit state:
 
 ```ts
 import { codecs, queryParam, useQueryStates } from '@vuqs/core'
@@ -216,7 +216,7 @@ const filters = queryParam.object('filters', {
 const query = useQueryStates({ filters }).use(withRuntimeDefaults())
 
 // URL: ?filters[range][max]=10
-query.selected.filters // { range: { max: 10 } }
+query.explicitValues.filters // { range: { max: 10 } }
 query.values.filters // { range: { min: 0, max: 10 } }
 ```
 

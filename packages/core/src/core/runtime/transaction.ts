@@ -24,7 +24,7 @@ export type QueryTransactionRequest<TSchema extends QueryStateSchema>
     values: QueryStateWriteValues<TSchema>
   })
   | (QueryTransactionBase & {
-    /** Replaces the complete schema selection; absent or `undefined` entries clear. */
+    /** Replaces the complete schema state; absent or `undefined` entries clear. */
     mode: 'replace'
     values: QueryStateValues<TSchema>
   })

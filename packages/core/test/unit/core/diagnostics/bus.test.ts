@@ -323,7 +323,7 @@ describe('debug bus: binding target', () => {
   })
 })
 
-describe('debug bus: public selection API', () => {
+describe('debug bus: public channel targeting', () => {
   it('routes addDebugReporter/retainDebugHistory to a specific channel', () => {
     const channel = createDebugChannel('rt-public')
     track(retainDebugHistory({ channel, limit: 5 }))

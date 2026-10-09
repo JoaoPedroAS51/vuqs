@@ -107,7 +107,7 @@ describe('createQueryStateEngine: value resolution', () => {
     }
   })
 
-  it('runs the read pipeline after resolving selections and defaults', () => {
+  it('runs the read pipeline after resolving values and defaults', () => {
     const { adapter, engine, scope } = setup({ page: queryParam('page', codecs.integer.withDefault(1)) })
     engine.pipeline.tap('read', values => ({ ...values, page: Number(values.page) + 10 }))
 
@@ -131,7 +131,7 @@ describe('createQueryStateEngine: optimistic overlay', () => {
 
     engine.query.transact({ mode: 'patch', values: { q: undefined } })
 
-    expect(engine.state.selected.value.q).toBeUndefined()
+    expect(engine.state.explicitValues.value.q).toBeUndefined()
     scope.stop()
   })
 })

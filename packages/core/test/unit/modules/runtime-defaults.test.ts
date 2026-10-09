@@ -15,13 +15,13 @@ describe('withRuntimeDefaults', () => {
     region: queryParam('region', codecs.string),
   }
 
-  it('separates selected, defaults, and resolved values', () => {
+  it('separates explicit values, defaults, and resolved values', () => {
     const { build } = setup({ currency: 'EUR' })
     const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
 
     q.setDefaults({ currency: 'USD', region: 'us' })
 
-    expect(q.selected).toEqual({ currency: 'EUR' })
+    expect(q.explicitValues).toEqual({ currency: 'EUR' })
     expect(q.defaults).toEqual({ currency: 'USD', region: 'us' })
     expect(q.values).toEqual({ currency: 'EUR', region: 'us' })
   })
@@ -34,7 +34,7 @@ describe('withRuntimeDefaults', () => {
     q.values.currency = undefined
     await flush()
 
-    expect(q.selected).toEqual({})
+    expect(q.explicitValues).toEqual({})
     expect(q.values).toEqual({ currency: 'USD' })
   })
 
@@ -58,7 +58,7 @@ describe('withRuntimeDefaults', () => {
     expect(used).toBe(currency)
     expect(isRef(currency)).toBe(true)
     expect(currency.value).toBe('EUR')
-    expect(used.selectedValue.value).toBe('EUR')
+    expect(used.explicitValue.value).toBe('EUR')
     expect(used.defaultValue.value).toBe('USD')
 
     currency.clear()
@@ -66,7 +66,7 @@ describe('withRuntimeDefaults', () => {
 
     expect(query.value).toEqual({})
     expect(currency.value).toBe('USD')
-    expect(used.selectedValue.value).toBeUndefined()
+    expect(used.explicitValue.value).toBeUndefined()
 
     used.clearDefault()
 
@@ -83,14 +83,14 @@ describe('withRuntimeDefaults', () => {
     await flush()
 
     expect(query.value).toEqual({ page: '1' })
-    expect(page.selectedValue.value).toBe(1)
+    expect(page.explicitValue.value).toBe(1)
     expect(page.value).toBe(1)
 
     page.value = 5
     await flush()
 
     expect(query.value).toEqual({})
-    expect(page.selectedValue.value).toBeUndefined()
+    expect(page.explicitValue.value).toBeUndefined()
     expect(page.value).toBe(5)
   })
 
@@ -112,7 +112,7 @@ describe('withRuntimeDefaults', () => {
 
     expect(used).toBe(range)
     expect(range.value).toEqual({ from: '2026-01-01', to: '2026-01-31' })
-    expect(used.selectedValue.value).toEqual({ from: '2026-01-01', to: '2026-01-31' })
+    expect(used.explicitValue.value).toEqual({ from: '2026-01-01', to: '2026-01-31' })
     expect(used.defaultValue.value).toEqual({ from: '2026-02-01', to: '2026-02-28' })
   })
 })
@@ -123,11 +123,11 @@ describe('withRuntimeDefaults + codec defaults', () => {
     page: queryParam('page', codecs.integer.withDefault(1)),
   }
 
-  it('uses the codec default as the lowest fallback, keeping selected explicit', () => {
+  it('uses the codec default as the lowest fallback, keeping explicit values separate', () => {
     const { build } = setup()
     const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
 
-    expect(q.selected).toEqual({})
+    expect(q.explicitValues).toEqual({})
     expect(q.defaults).toEqual({ page: 1 }) // codec default
     expect(q.values).toEqual({ page: 1 }) // falls through to the codec default
     expect(q.values.page).toBe(1) // values keeps its codec-default behavior
@@ -143,12 +143,12 @@ describe('withRuntimeDefaults + codec defaults', () => {
     expect(q.values).toEqual({ page: 5 })
   })
 
-  it('the URL selection overrides both defaults', () => {
+  it('the URL state overrides both defaults', () => {
     const { build } = setup({ page: '3' })
     const q = build(() => useQueryStates(schema).use(withRuntimeDefaults()))
     q.setDefaults({ page: 5 })
 
-    expect(q.selected).toEqual({ page: 3 })
+    expect(q.explicitValues).toEqual({ page: 3 })
     expect(q.values).toEqual({ page: 3 })
   })
 })
@@ -166,7 +166,7 @@ describe('withRuntimeDefaults layered clearing coherence', () => {
     q.values.page = 1 // the codec default, but not the effective default (5)
     await flush()
 
-    expect(q.selected).toEqual({ page: 1 }) // kept, not dropped as a default
+    expect(q.explicitValues).toEqual({ page: 1 }) // kept, not dropped as a default
     expect(q.values).toEqual({ page: 1 }) // reads back what was written
   })
 
@@ -178,7 +178,7 @@ describe('withRuntimeDefaults layered clearing coherence', () => {
     q.values.page = 5 // the effective default
     await flush()
 
-    expect(q.selected).toEqual({})
+    expect(q.explicitValues).toEqual({})
     expect(q.values).toEqual({ page: 5 })
   })
 
@@ -190,7 +190,7 @@ describe('withRuntimeDefaults layered clearing coherence', () => {
     q.patch({ page: 5 })
     await flush()
 
-    expect(q.selected).toEqual({})
+    expect(q.explicitValues).toEqual({})
     expect(q.values).toEqual({ page: 5 })
   })
 })

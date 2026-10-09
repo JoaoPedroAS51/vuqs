@@ -22,8 +22,8 @@ declare module '../core/module-system/contract' {
  * @typeParam TSchema - The schema being managed.
  */
 export interface RuntimeDefaultsStatesApi<TSchema extends QueryStateSchema> {
-  /** Explicit URL selections, with no runtime or codec defaults. */
-  selected: Readonly<QueryStateValues<TSchema>>
+  /** Explicit param values, including optimistic writes and the read pipeline, before engine default resolution. */
+  explicitValues: Readonly<QueryStateValues<TSchema>>
   /** Fallback values: runtime defaults from `setDefaults` over codec defaults. */
   defaults: Readonly<QueryStateValues<TSchema>>
   /** Replaces runtime defaults with a snapshot. */
@@ -38,8 +38,8 @@ export interface RuntimeDefaultsStatesApi<TSchema extends QueryStateSchema> {
  * @typeParam TValue - The bound param's value type.
  */
 export interface RuntimeDefaultsStateApi<TValue> {
-  /** Explicit URL selection for this param, with no runtime or codec defaults. */
-  selectedValue: ComputedRef<TValue | undefined>
+  /** Explicit param value, including optimistic writes and the read pipeline, before engine default resolution. */
+  explicitValue: ComputedRef<TValue | undefined>
   /** Fallback value for this param: runtime default over codec default. */
   defaultValue: ComputedRef<TValue | undefined>
   /** Replaces the runtime default for this param. */
@@ -61,7 +61,7 @@ export interface RuntimeDefaultsStateApi<TValue> {
  *   .use(withRuntimeDefaults())
  *
  * setDefaults(await loadSavedPreferences())
- * values.currency // selection over the runtime default over the codec default
+ * values.currency // explicit value over the runtime default over the codec default
  * ```
  *
  * @see https://vuqs.dev/modules/runtime-defaults
@@ -76,7 +76,7 @@ function createRuntimeDefaultsStatesApi<TSchema extends QueryStateSchema>(core: 
   const provided = useRuntimeDefaultsLayer(core)
 
   return {
-    selected: toReadonlyState(core.state.selected),
+    explicitValues: toReadonlyState(core.state.explicitValues),
     defaults: toReadonlyState(core.defaults.resolved),
     setDefaults: (values) => {
       if (isDebugArmed(core.debug)) {
@@ -98,7 +98,7 @@ function createRuntimeDefaultsStateApi<
   const provided = useRuntimeDefaultsLayer(core)
 
   return {
-    selectedValue: computed(() => core.state.selected.value[key] as QueryStateValueAt<TSchema, TKey> | undefined),
+    explicitValue: computed(() => core.state.explicitValues.value[key] as QueryStateValueAt<TSchema, TKey> | undefined),
     defaultValue: computed(() => core.defaults.resolved.value[key] as QueryStateValueAt<TSchema, TKey> | undefined),
     setDefault: (value) => {
       if (isDebugArmed(core.debug)) {

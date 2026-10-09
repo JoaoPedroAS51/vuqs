@@ -26,7 +26,7 @@ function toQueryRefs<TSchema extends QueryStateSchema>(query: QueryBindingSource
 
 - `query: QueryBindingSource<TSchema>`
   - The [`useQueryStates`](/api/composables/use-query-states) composable. For read-only per-field refs
-    over a module's `selected`/`defaults` map, use Vue's `toRefs` directly.
+    over a module's `explicitValues`/`defaults` map, use Vue's `toRefs` directly.
 
 ## Return value
 

@@ -7,7 +7,7 @@ import { withActiveParams } from '../../../src/modules/active-params'
 import { withTestQuery as setup } from '../../helpers/adapter'
 
 describe('withActiveParams grouped', () => {
-  it('exposes empty activity when no param is explicitly selected', () => {
+  it('exposes empty activity when no param is explicitly present', () => {
     const { build } = setup()
     const q = build(() => useQueryStates({
       q: codecs.string,
@@ -31,7 +31,7 @@ describe('withActiveParams grouped', () => {
     expect(q.isActive('page')).toBe(false)
   })
 
-  it('keeps non-default selections in schema order and handles falsy values', () => {
+  it('keeps non-default values in schema order and handles falsy values', () => {
     const { build } = setup({ archived: 'false', enabled: 'false', count: '0', q: 'phone', page: '1' })
     const q = build(() => useQueryStates({
       q: codecs.string,
@@ -94,7 +94,7 @@ describe('withActiveParams grouped', () => {
 })
 
 describe('withActiveParams single', () => {
-  it('exposes activity for a selected param without a default', () => {
+  it('exposes activity for an explicit param without a default', () => {
     const { build } = setup({ status: 'open' })
     const status = build(() => useQueryState('status').use(withActiveParams()))
 
@@ -105,7 +105,7 @@ describe('withActiveParams single', () => {
     expect(status.isActive.value).toBe(false)
   })
 
-  it('compares a single selection with its resolved default', () => {
+  it('compares a single explicit value with its resolved default', () => {
     const { build } = setup({ enabled: 'false' })
     const enabled = build(() => useQueryState('enabled', codecs.boolean.withDefault(false)).use(withActiveParams()))
 

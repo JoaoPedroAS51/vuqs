@@ -85,7 +85,7 @@ describe('withStorage lifecycle', () => {
     const pending = deferred<void>()
     const memory = createMemoryStorage()
     memory.save.mockImplementation(() => pending.promise)
-    const adapter = createTestingAdapter({ searchParams: { q: 'selected' }, hasMemory: true })
+    const adapter = createTestingAdapter({ searchParams: { q: 'phone' }, hasMemory: true })
     const app = createApp({})
     installQueryAdapter(app, adapter)
     const scope = effectScope()

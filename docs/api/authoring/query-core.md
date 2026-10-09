@@ -10,7 +10,7 @@ import { computed } from 'vue'
 
 const withPresence = defineQueryModule({
   queryStates: core => ({
-    present: computed(() => Object.keys(core.state.selected.value)),
+    present: computed(() => Object.keys(core.state.explicitValues.value)),
   }),
 })
 ```
@@ -39,8 +39,8 @@ interface QueryCore<TSchema extends QueryStateSchema> {
 | Property | Contract |
 | --- | --- |
 | `schema` | Normalized definitions managed by the binding. |
-| `state.selected` | Explicit selections plus optimistic writes, after the read pipeline; no defaults. |
-| `state.values` | Resolved selection layered over defaults, after the read pipeline. |
+| `state.explicitValues` | Explicit values plus optimistic writes, after the read pipeline; before engine default resolution. |
+| `state.values` | Resolved values layered over defaults, after the read pipeline. |
 | `defaults.resolved` | Merged codec and registered default layers, after the read pipeline. |
 | `defaults.register(source)` | Registers a reactive default layer and returns its disposer. Later layers win; `undefined` does not shadow lower layers. |
 | `options` | Resolved navigation, throttle, and clearing baseline. |
@@ -58,7 +58,7 @@ and clears explicit `undefined`; a `replace` clears absent or `undefined` entrie
 Both apply their full key set to the optimistic state before emitting one
 transaction start. Its `defaultPolicy` is `'binding'` by default, which applies
 `clearOnDefault`.
-Use `'preserve-explicit'` only for exact selection replay: an explicitly supplied
+Use `'preserve-explicit'` only for exact state replay: an explicitly supplied
 value remains present even when it equals the resolved default. Codecs, the write
 pipeline, replacement clears, navigation, and transaction observation still apply.
 

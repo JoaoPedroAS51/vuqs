@@ -6,14 +6,14 @@ import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults'
 import { withTestQuery } from '../../helpers/adapter'
 
 describe('nested object default resolution', () => {
-  it('resolves a selected child object without filling its selection', () => {
+  it('resolves a present child object without filling its explicit values', () => {
     const filters = queryParam.object('filters', {
       range: queryParam.object('range', { min: codecs.integer.withDefault(0), max: codecs.integer }),
     })
     const test = withTestQuery({ filters: { range: { max: '10' } } })
     const q = test.build(() => useQueryStates({ filters }).use(withRuntimeDefaults()))
 
-    expect(q.selected.filters).toEqual({ range: { max: 10 } })
+    expect(q.explicitValues.filters).toEqual({ range: { max: 10 } })
     expect(q.values.filters).toEqual({ range: { min: 0, max: 10 } })
     expect(test.query.value).toEqual({ filters: { range: { max: '10' } } })
   })
@@ -26,11 +26,11 @@ describe('nested object default resolution', () => {
     const q = withTestQuery({ filters: { limits: { range: { max: '10' } } } })
       .build(() => useQueryStates({ filters }).use(withRuntimeDefaults()))
 
-    expect(q.selected.filters).toEqual({ limits: { range: { max: 10 } } })
+    expect(q.explicitValues.filters).toEqual({ limits: { range: { max: 10 } } })
     expect(q.values.filters).toEqual({ limits: { range: { min: 0, max: 10 } } })
   })
 
-  it('keeps selection above runtime and static child defaults', () => {
+  it('keeps explicit values above runtime and static child defaults', () => {
     const filters = queryParam.object('filters', {
       range: queryParam.object('range', {
         min: codecs.integer.withDefault(0),
@@ -43,7 +43,7 @@ describe('nested object default resolution', () => {
 
     expect(q.values.filters).toEqual({ range: { min: 0, max: 10, step: 2 } })
     q.setDefaults({ filters: { range: { min: 99, max: 20 } } })
-    expect(q.selected.filters).toEqual({ range: { max: 10 } })
+    expect(q.explicitValues.filters).toEqual({ range: { max: 10 } })
     expect(q.values.filters).toEqual({ range: { min: 99, max: 10, step: 2 } })
   })
 
@@ -63,9 +63,9 @@ describe('nested object default resolution', () => {
     present.setDefaults({ filters: { range: { min: 99 } } })
     absent.setDefaults({ filters: { range: { min: 99 } } })
 
-    expect(present.selected.filters).toEqual({ range: { max: 10 } })
+    expect(present.explicitValues.filters).toEqual({ range: { max: 10 } })
     expect(present.values.filters).toEqual({ range: { min: 99, max: 10 } })
-    expect(absent.selected.filters).toEqual({ q: 'phone' })
+    expect(absent.explicitValues.filters).toEqual({ q: 'phone' })
     expect(absent.values.filters).toEqual({ q: 'phone' })
   })
 
@@ -80,7 +80,7 @@ describe('nested object default resolution', () => {
     const q = withTestQuery({ filters: { q: 'phone' } })
       .build(() => useQueryStates({ filters }).use(withRuntimeDefaults()))
 
-    expect(q.selected.filters).toEqual({ q: 'phone' })
+    expect(q.explicitValues.filters).toEqual({ q: 'phone' })
     expect(q.values.filters).toEqual({ q: 'phone', range: { min: 0, max: 10 } })
   })
 

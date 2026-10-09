@@ -45,7 +45,7 @@ describe('withRuntimeDefaults + withStorage', () => {
     await state.storage.flush()
 
     expect(state.values).toEqual({ q: 'preset', page: 2 })
-    expect(state.selected).toEqual({})
+    expect(state.explicitValues).toEqual({})
     expect(memory.save).not.toHaveBeenCalled()
     expect(memory.remove).not.toHaveBeenCalled()
   })
@@ -73,7 +73,7 @@ describe('withRuntimeDefaults + withStorage', () => {
     state.setDefaults({ page: 2 })
 
     expect(test.query.value).toEqual({ page: '1' })
-    expect(state.selected).toEqual({ page: 1 })
+    expect(state.explicitValues).toEqual({ page: 1 })
     expect(state.values.page).toBe(1)
     expect(memory.current()).toEqual(expect.objectContaining({ query: { page: '1' } }))
   })

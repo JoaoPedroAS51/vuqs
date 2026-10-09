@@ -33,7 +33,7 @@ interface QueryParamObjectFactory {
 }
 ```
 
-`QueryParamObjectFactory` and the builder-selection aliases in these signatures are inferred internal types, not package exports.
+`QueryParamObjectFactory` and the conditional builder types in these signatures are inferred internal types, not package exports.
 
 ## Parameters
 
@@ -99,7 +99,7 @@ type PrefixedQueryParamBuilder<TParam extends DefinedQueryParam<any>>
 ```
 
 <details>
-<summary>Builder selection</summary>
+<summary>Conditional builder types</summary>
 
 ```ts
 type AnyDefinedQueryParam = DefinedQueryParam<any>

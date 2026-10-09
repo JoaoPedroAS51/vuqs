@@ -116,7 +116,7 @@ per-field refs, `toQueryRef` (singular) for the object as one value.
 Updates supplied params in one atomic transaction and preserves omitted params:
 
 - **omit** preserves the param.
-- **`undefined`** clears the selection, reverting to its resolved default.
+- **`undefined`** clears the state, reverting to its resolved default.
 - **a value** sets it.
 
 ```ts

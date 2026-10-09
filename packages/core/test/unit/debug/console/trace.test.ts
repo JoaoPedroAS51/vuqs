@@ -152,7 +152,7 @@ describe('console reporter: trace and filters', () => {
     expect(log).not.toHaveBeenCalled()
   })
 
-  it('projects a coalesced summary to the selected binding only', () => {
+  it('projects a coalesced summary only to bindings matching the filter', () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
     const channel = withReporter({ filter: { include: { bindingIds: ['binding-a'] } } })
     const batch = { batchId: 1, transactionIds: [1, 2] }

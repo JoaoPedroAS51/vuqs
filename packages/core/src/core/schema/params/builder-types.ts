@@ -252,7 +252,7 @@ export interface QueryParamBuilderOptions<T> {
   read: (query: ParsedQuery, context?: QueryParamReadContext) => T | undefined
   write: (value: T) => ParsedQueryRaw
   eq?: (a: T, b: T) => boolean
-  resolve?: (selection: T, defaults: T | undefined) => T
+  resolve?: (explicitValue: T, defaults: T | undefined) => T
   defaultValue?: T
   clearOnDefault?: boolean
   presenceGated?: boolean

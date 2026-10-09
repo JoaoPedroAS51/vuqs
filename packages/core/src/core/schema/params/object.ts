@@ -100,16 +100,16 @@ export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
     // Present children resolve recursively; absent presence-gated children stay absent.
     //
     // Clone fallback values so consumers cannot mutate shared defaults.
-    resolve(selection, defaults) {
+    resolve(explicitValue, defaults) {
       const value: Record<string, unknown> = {}
 
       for (const key of childKeys) {
         const child = children[key]
-        const childSelection = selection[key]
+        const explicitChildValue = explicitValue[key]
         const fallback = (defaults as Record<string, unknown> | undefined)?.[key as string] ?? mergedDefault?.[key]
 
-        if (childSelection !== undefined) {
-          value[key] = child.resolve ? child.resolve(childSelection, fallback) : childSelection
+        if (explicitChildValue !== undefined) {
+          value[key] = child.resolve ? child.resolve(explicitChildValue, fallback) : explicitChildValue
           continue
         }
 

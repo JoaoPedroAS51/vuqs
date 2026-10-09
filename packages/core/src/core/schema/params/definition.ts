@@ -17,7 +17,7 @@ export interface DefinedQueryParam<T> {
   /** The query keys this param owns. */
   readonly paths: readonly string[]
   /**
-   * Reads the param's decoded URL selection.
+   * Reads the param's decoded URL value.
    *
    * @returns The decoded value, or `undefined` when absent or invalid.
    */
@@ -31,14 +31,14 @@ export interface DefinedQueryParam<T> {
   /** Compares two values to detect when one equals the default. */
   eq: (a: T, b: T) => boolean
   /**
-   * Resolves a present selection against its defaults.
+   * Resolves a present value against its defaults.
    *
    * Called only when `read` returns a value. Without this resolver,
-   * the selection is used unchanged.
+   * the value is used unchanged.
    *
-   * @returns The selection resolved against the supplied defaults.
+   * @returns The value resolved against the supplied defaults.
    */
-  resolve?: (selection: T, defaults: T | undefined) => T
+  resolve?: (explicitValue: T, defaults: T | undefined) => T
   /** The param's default value, if the codec or builder declared one. */
   readonly defaultValue?: T
   /** Param-level `clearOnDefault` override. */
@@ -67,7 +67,7 @@ export function createDefinedQueryParam<T>(
     read: (query: ParsedQuery, context?: QueryParamReadContext) => T | undefined
     write: (value: T) => ParsedQueryRaw
     eq?: (a: T, b: T) => boolean
-    resolve?: (selection: T, defaults: T | undefined) => T
+    resolve?: (explicitValue: T, defaults: T | undefined) => T
     defaultValue?: T
     clearOnDefault?: boolean
     presenceGated?: boolean

@@ -126,7 +126,7 @@ interface ContextControls<TContext extends string> {
   /**
    * Builds a query for `nextContext` without navigating.
    *
-   * @returns A query retaining unmanaged params and preserved selections valid
+   * @returns A query retaining unmanaged params and preserved values valid
    * in the target context, with the remaining managed params removed.
    */
   buildContextQuery: (currentQuery: ParsedQuery, nextContext: TContext) => ParsedQueryRaw

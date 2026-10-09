@@ -167,7 +167,7 @@ export default defineNuxtModule<ModuleOptions>({
       })
     }
 
-    // Resolve entirely at build time so console prose never enters an unselected target.
+    // Resolve entirely at build time so console prose never enters a disabled target.
     const debug = resolveDebugTargets(options.debug)
     if (targetEnabled(debug.client, nuxt.options.dev)) {
       addPlugin({ src: resolve('./runtime/debug.client'), mode: 'client' })

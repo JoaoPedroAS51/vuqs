@@ -19,7 +19,7 @@ Then open http://localhost:5173.
 | ---------- | ------------ |
 | `/single`  | `useQueryState` with string, integer, float, boolean, literal, array, and date codecs, defaults, and `.clear()` |
 | `/grouped` | `useQueryStates` driving a search/sort/page list, with a per-call `history: 'push' \| 'replace'` override |
-| `/store`   | `withRuntimeDefaults`: URL `selected`, async-loaded `defaults`, and resolved `values` |
+| `/store`   | `withRuntimeDefaults`: URL `explicitValues`, async-loaded `defaults`, and resolved `values` |
 | `/context` | `withContext`: `preserve` / reset / `only` validity across tabs, in one navigation |
 
 ## Package resolution

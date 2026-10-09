@@ -58,7 +58,7 @@ const descriptions: Record<string, string> = {
   invalid: 'Logical params invalid in the new context.',
   policy: 'Configured storage restore policy.',
   outcome: 'Result of the initial restore or mirror decision.',
-  revision: 'Revision of the selection being persisted.',
+  revision: 'Revision of the state being persisted.',
   operation: 'Storage lifecycle operation being attempted or reporting an error.',
   from: 'Revision replaced by a newer pending write.',
   namespace: 'Source tag supplied to the custom logger.',
@@ -72,7 +72,7 @@ const overrides: Partial<Record<DebugEventCode, Record<string, string>>> = {
     kept: 'Logical params preserved in the target context.',
     dropped: 'Logical params removed when building the target query.',
   },
-  'storage:write': { query: 'Serialized explicit selection being mirrored.' },
+  'storage:write': { query: 'Serialized explicit state being mirrored.' },
   'storage:coalesce': { to: 'Revision of the newer pending write.' },
   'module:log': { values: 'Structured console arguments supplied by the module author.' },
   'module:warn': { values: 'Structured console arguments supplied by the module author.' },
@@ -81,7 +81,7 @@ const overrides: Partial<Record<DebugEventCode, Record<string, string>>> = {
 function describe(code: DebugEventCode, name: string): string {
   const description = overrides[code]?.[name]
     ?? (name === 'id' ? 'Binding identifier.' : undefined)
-    ?? (name === 'key' ? (code.startsWith('storage:') ? 'Storage key of the selection mirror.' : 'Logical param name.') : undefined)
+    ?? (name === 'key' ? (code.startsWith('storage:') ? 'Storage key of the state mirror.' : 'Logical param name.') : undefined)
     ?? (name === 'query' ? (code === 'adapter:commit' ? 'Final committed parsed query.' : 'Serialized query prepared by the operation.') : undefined)
     ?? descriptions[name]
 

@@ -14,7 +14,7 @@ import type { QueryStateSchema } from '../schema/schema'
 export interface QueryCore<TSchema extends QueryStateSchema> {
   /** The schema being managed. */
   schema: TSchema
-  /** The resolved reactive reads: `selected` (no defaults) and `values` (resolved). */
+  /** The explicit and default-resolved reactive reads. */
   state: QueryStateReads<TSchema>
   /** The defaults subsystem: read the merge or register a layer. */
   defaults: QueryDefaultsBus<TSchema>

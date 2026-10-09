@@ -12,16 +12,16 @@ import { computed } from 'vue'
 
 declare module '@vuqs/core' {
   interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
-    'my-lib:selection': {
-      state: { api: { selection: ComputedRef<QueryStateValueAt<TSchema, 'value'> | undefined> } }
+    'my-lib:explicit-value': {
+      state: { api: { explicitValue: ComputedRef<QueryStateValueAt<TSchema, 'value'> | undefined> } }
     }
   }
 }
 
-export const withSelection = defineQueryModule({
-  name: 'my-lib:selection',
+export const withExplicitValue = defineQueryModule({
+  name: 'my-lib:explicit-value',
   queryState: (core, key) => ({
-    selection: computed(() => core.state.selected.value[key]),
+    explicitValue: computed(() => core.state.explicitValues.value[key]),
   }),
 })
 ```

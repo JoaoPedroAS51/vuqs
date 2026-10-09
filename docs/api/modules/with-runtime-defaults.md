@@ -1,6 +1,6 @@
 # withRuntimeDefaults <Badge type="tip" text="@vuqs/core/modules" />
 
-Layers runtime defaults below explicit query selections without serializing them.
+Layers runtime defaults below explicit query values without serializing them.
 
 ## Usage
 
@@ -12,7 +12,7 @@ const query = useQueryStates({ perPage: codecs.integer })
   .use(withRuntimeDefaults())
 
 query.setDefaults({ perPage: 20 })
-query.values.perPage // 20 when no explicit selection is present
+query.values.perPage // 20 when no explicit value is present
 ```
 
 ## Type
@@ -35,7 +35,7 @@ A module contributing `RuntimeDefaultsStatesApi<TSchema>` to `useQueryStates`, o
 
 | Member | Grouped API | Single API | Behavior |
 | --- | --- | --- | --- |
-| Explicit selection | `selected` | `selectedValue` | No runtime or codec defaults. The grouped map uses dot access; the single value is a computed ref. |
+| Explicit values | `explicitValues` | `explicitValue` | Includes optimistic writes and the read pipeline, before engine default resolution. The grouped map uses dot access; the single value is a computed ref. |
 | Resolved default | `defaults` | `defaultValue` | Runtime defaults layered over codec defaults. |
 | Set defaults | `setDefaults(values)` | `setDefault(value)` | Replaces the runtime layer; it does not merge. |
 | Clear defaults | `clearDefaults()` | `clearDefault()` | Removes the runtime layer, retaining codec defaults. |
@@ -47,7 +47,7 @@ The effective read remains `query.values` or the single ref's `.value`. Defaults
 
 ```ts
 interface RuntimeDefaultsStatesApi<TSchema extends QueryStateSchema> {
-  selected: Readonly<QueryStateValues<TSchema>>
+  explicitValues: Readonly<QueryStateValues<TSchema>>
   defaults: Readonly<QueryStateValues<TSchema>>
   setDefaults: (values: QueryStateValues<TSchema>) => void
   clearDefaults: () => void
@@ -58,7 +58,7 @@ interface RuntimeDefaultsStatesApi<TSchema extends QueryStateSchema> {
 
 ```ts
 interface RuntimeDefaultsStateApi<TValue> {
-  selectedValue: ComputedRef<TValue | undefined>
+  explicitValue: ComputedRef<TValue | undefined>
   defaultValue: ComputedRef<TValue | undefined>
   setDefault: (value: TValue) => void
   clearDefault: () => void

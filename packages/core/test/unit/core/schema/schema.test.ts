@@ -16,7 +16,7 @@ describe('defineQuerySchema', () => {
 
     expect(normalized.q).not.toBe(codec)
     expect(normalized.q.paths).toEqual(['q'])
-    expect(normalized.q.read({ q: 'selected', other: 'ignored' })).toBe('selected')
+    expect(normalized.q.read({ q: 'phone', other: 'ignored' })).toBe('phone')
   })
 
   it('normalizes codec-shorthand entries and passes defined params through', () => {

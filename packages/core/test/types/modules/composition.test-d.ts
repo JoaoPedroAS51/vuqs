@@ -20,7 +20,7 @@ describe('module composition', () => {
       .use(withContext({ active: tab, preserve: ['q'], only: { category: ['products'] } }))
 
     expectTypeOf(q.values.q).toEqualTypeOf<string | undefined>()
-    expectTypeOf(q.selected.q).toEqualTypeOf<string | undefined>()
+    expectTypeOf(q.explicitValues.q).toEqualTypeOf<string | undefined>()
     expectTypeOf(q.activeContext.value).toEqualTypeOf<'products' | 'orders'>()
     expectTypeOf(q.setDefaults).toBeFunction()
   })

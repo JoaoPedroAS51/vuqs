@@ -103,12 +103,12 @@ export function buildQuery<TSchema extends QueryStateSchema>(
 }
 
 /**
- * Filters selections according to each param's default-clearing policy.
+ * Filters values according to each param's default-clearing policy.
  *
  * @typeParam TSchema - The schema describing the params.
  * @param schema - The param definitions, used for per-param equality and defaults.
  * @param values - The values to filter.
- * @returns A new map without undefined selections or values matching a declared
+ * @returns A new map without undefined values or values matching a declared
  * default, unless the param disables `clearOnDefault`.
  */
 export function dropDefaults<TSchema extends QueryStateSchema>(

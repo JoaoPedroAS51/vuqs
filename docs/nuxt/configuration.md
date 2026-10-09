@@ -57,7 +57,7 @@ These defaults are exposed at `runtimeConfig.public.vuqs.adapter.defaultOptions`
 
 Per-call and composable options take precedence over adapter defaults. Omitted navigation options follow the [option precedence](/guide/query-state/navigation-options#precedence); they do not default to `true`.
 
-See [Routing and adapters](/nuxt/adapter) for router selection, nested query formats, and custom installation.
+See [Routing and adapters](/nuxt/adapter) for router configuration, nested query formats, and custom installation.
 
 ## debug
 
@@ -80,7 +80,7 @@ export default defineNuxtConfig({
 })
 ```
 
-Target selection happens at build time. Debug targets are not public runtime config options. When included, the client plugin reads the browser's persisted console configuration; server plugins do not.
+Debug targets are resolved at build time. Debug targets are not public runtime config options. When included, the client plugin reads the browser's persisted console configuration; server plugins do not.
 
 See [Enabling debugging](/guide/debugging/enabling#nuxt) for persisted overrides, reporter ownership, and SSR lifecycle.
 

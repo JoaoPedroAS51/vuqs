@@ -24,13 +24,13 @@ choose the order that reads most clearly:
 
 ```ts
 // on a group
-const { values, selected, switchTo } = useQueryStates(schema)
-  .use(withRuntimeDefaults()) // adds selected, defaults, setDefaults, clearDefaults
+const { values, explicitValues, switchTo } = useQueryStates(schema)
+  .use(withRuntimeDefaults()) // adds explicitValues, defaults, setDefaults, clearDefaults
   .use(withContext({ active })) // adds activeContext, switchTo, buildContextQuery
 
 // on a single param, merged onto the ref
 const perPage = useQueryState('perPage', codecs.integer)
-  .use(withRuntimeDefaults()) // adds setDefault, clearDefault, selectedValue, defaultValue
+  .use(withRuntimeDefaults()) // adds setDefault, clearDefault, explicitValue, defaultValue
 ```
 
 A module contributes a projection for the group, for a single param, or both. It
@@ -57,7 +57,7 @@ Importing the core never pulls in module code. Under Nuxt, the
 
 | Module | Adds |
 | --- | --- |
-| [`withRuntimeDefaults`](/modules/runtime-defaults) | runtime defaults layered under `values`, plus `selected` / `defaults` |
+| [`withRuntimeDefaults`](/modules/runtime-defaults) | runtime defaults layered under `values`, plus `explicitValues` / `defaults` |
 | [`withContext`](/modules/context) | context-aware param validity, and reset/preserve on a context change |
 | [`withActiveParams`](/modules/active-params) | active keys, count, aggregate flag, and per-param checks against resolved defaults |
 | [`withStorage`](/modules/storage) | exact sync or async storage mirroring, with restore lifecycle controls |

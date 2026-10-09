@@ -35,11 +35,11 @@ describe('queryParam.object', () => {
 
     expect(bounds.paths).toEqual(['bounds.n', 'bounds.e'])
     expect(bounds.read({})).toBeUndefined()
-    expect(bounds.read({ bounds: { e: '20' } })).toEqual({ east: 20 }) // pure selection; the default fills in `values`
+    expect(bounds.read({ bounds: { e: '20' } })).toEqual({ east: 20 }) // explicit values; the default fills in `values`
     expect(bounds.write({ north: 2, east: 20 })).toEqual({ bounds: { n: '2', e: '20' } })
   })
 
-  it('reads a withDefaultsWhenPresent object as a pure selection', () => {
+  it('reads a withDefaultsWhenPresent object as explicit values', () => {
     const bounds = queryParam.object('bounds', {
       north: queryParam('n', codecs.float).withDefault(1),
       east: queryParam('e', codecs.float),
@@ -57,7 +57,7 @@ describe('queryParam.object', () => {
     }).withDefault({ north: 0, east: 20 })
 
     expect(bounds.defaultValue).toEqual({ north: 1, east: 20 })
-    expect(bounds.read({ bounds: { s: '5' } })).toEqual({ south: 5 }) // pure selection
+    expect(bounds.read({ bounds: { s: '5' } })).toEqual({ south: 5 }) // explicit values
   })
 
   it('prefixes an existing object definition', () => {
@@ -110,7 +110,7 @@ describe('queryParam.object', () => {
 
     expect(northEast.defaultValue).toEqual({ lat: 5 })
     expect(northEast.read({})).toBeUndefined()
-    expect(northEast.read({ ne: { lng: '20' } })).toEqual({ lng: 20 }) // pure selection
+    expect(northEast.read({ ne: { lng: '20' } })).toEqual({ lng: 20 }) // explicit values
   })
 
   it('transforms a child object into a public value', () => {
@@ -176,7 +176,7 @@ describe('queryParam.object', () => {
     expect(filter.write({ foo: 'a', bar: 'b' })).toEqual({ foo: 'a', bar: 'b' })
   })
 
-  it('reads a defaulted codec child as a selection, absent object omitted', () => {
+  it('reads a defaulted codec child as an explicit value, absent object omitted', () => {
     const filter = queryParam.object({ page: codecs.integer.withDefault(1) })
 
     expect(filter.read({})).toBeUndefined()
@@ -225,10 +225,10 @@ describe('queryParam.object', () => {
       b: queryParam('b', codecs.string),
     }).withDefault({ a: 'fallback-a' })
 
-    const selected = filter.read({ b: 'x' })!
+    const parsedValue = filter.read({ b: 'x' })!
 
-    expect(selected).toEqual({ b: 'x' })
-    expect(filter.resolve!(selected, filter.defaultValue)).toEqual({ a: 'fallback-a', b: 'x' })
+    expect(parsedValue).toEqual({ b: 'x' })
+    expect(filter.resolve!(parsedValue, filter.defaultValue)).toEqual({ a: 'fallback-a', b: 'x' })
   })
 
   it('omits a child from the written query when its value is absent', () => {

@@ -40,7 +40,7 @@ function releaseNavigation() {
       Search
       <input v-model="search" type="search">
     </label>
-    <output data-testid="selection">{{ search }}</output>
+    <output data-testid="state">{{ search }}</output>
     <output data-testid="guard-status">{{ status }}</output>
     <button @click="guard = 'block'">
       Block navigation

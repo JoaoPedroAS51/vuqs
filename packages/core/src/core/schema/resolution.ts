@@ -23,24 +23,24 @@ export function getStaticQueryDefaults<TSchema extends QueryStateSchema>(
   return codecDefaults
 }
 
-/** Resolves selections over defaults for the captured schema keys. @internal */
+/** Resolves values over defaults for the captured schema keys. @internal */
 export function resolveQueryStateValues<TSchema extends QueryStateSchema>(
   schema: TSchema,
   keys: readonly (keyof TSchema & string)[],
-  selection: Record<string, unknown>,
+  explicitValues: Record<string, unknown>,
   defaults: Record<string, unknown>,
 ): QueryStateValues<TSchema> {
   const resolved: Record<string, unknown> = {}
 
   for (const key of keys) {
     const definition = schema[key]
-    const selectedValue = selection[key]
-    const value = selectedValue !== undefined
+    const explicitValue = explicitValues[key]
+    const value = explicitValue !== undefined
       // Present: a composite composes per child over its default; a scalar is the
-      // selection itself.
+      // explicit value itself.
       ? definition.resolve
-        ? definition.resolve(selectedValue, defaults[key])
-        : selectedValue
+        ? definition.resolve(explicitValue, defaults[key])
+        : explicitValue
       // Absent: the resolved default, unless the param is presence gated (it stays
       // absent). Cloned so a consumer mutation cannot corrupt the shared default.
       : definition.presenceGated

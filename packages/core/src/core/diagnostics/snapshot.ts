@@ -12,8 +12,8 @@ export interface EngineSnapshot {
   readonly id: string
   readonly keys: readonly string[]
   readonly managedPaths: readonly string[]
-  readonly committedSelected: Record<string, unknown>
-  readonly optimisticSelected: Record<string, unknown>
+  readonly committedExplicitValues: Record<string, unknown>
+  readonly optimisticExplicitValues: Record<string, unknown>
   readonly values: Record<string, unknown>
   readonly defaults: Record<string, unknown>
 }

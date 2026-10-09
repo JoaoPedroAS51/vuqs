@@ -34,7 +34,7 @@ describe('queryParam', () => {
     expect(date.eq(new Date('2026-01-01'), new Date('2026-01-01'))).toBe(true)
   })
 
-  it('reads a pure selection, omitting an absent defaulted param', () => {
+  it('reads explicit values, omitting an absent defaulted param', () => {
     const page = queryParam('page', codecs.integer).withDefault(2)
 
     expect(page.defaultValue).toBe(2)

@@ -9,7 +9,7 @@ describe('withRuntimeDefaults inference', () => {
     const q = useQueryState('q').use(withRuntimeDefaults())
 
     expectTypeOf(q.value).toEqualTypeOf<string | undefined>()
-    expectTypeOf(q.selectedValue.value).toEqualTypeOf<string | undefined>()
+    expectTypeOf(q.explicitValue.value).toEqualTypeOf<string | undefined>()
     expectTypeOf(q.defaultValue.value).toEqualTypeOf<string | undefined>()
     expectTypeOf(q.setDefault).parameter(0).toEqualTypeOf<string>()
     expectTypeOf(q.clearDefault).toBeFunction()
@@ -35,7 +35,7 @@ describe('withRuntimeDefaults inference', () => {
     const range = useQueryState(rangeParam).use(withRuntimeDefaults())
 
     expectTypeOf(range.value).toEqualTypeOf<{ from: string, to: string } | undefined>()
-    expectTypeOf(range.selectedValue.value).toEqualTypeOf<{ from: string, to: string } | undefined>()
+    expectTypeOf(range.explicitValue.value).toEqualTypeOf<{ from: string, to: string } | undefined>()
     expectTypeOf(range.setDefault).parameter(0).toEqualTypeOf<{ from: string, to: string }>()
   })
 })

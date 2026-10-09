@@ -1,6 +1,6 @@
 # Storage
 
-Mirrors the explicit query selection to sync or async storage and can restore it
+Mirrors the explicit query state to sync or async storage and can restore it
 into an empty URL. Storage is a durable mirror of URL state, not a default layer.
 
 ## Usage
@@ -62,30 +62,30 @@ stored params.
 
 | State when loading settles | Result |
 | --- | --- |
-| URL selection is non-empty | URL wins and replaces the stored mirror |
+| URL state is non-empty | URL wins and replaces the stored mirror |
 | A write intent occurred during `load` | Current URL state wins, including a no-op clear |
 | URL is empty and the snapshot is valid | The whole snapshot is restored with one `replace` transaction |
 | URL is empty and storage has no snapshot | The URL stays empty |
 | Snapshot or load is invalid | The URL stays unchanged and the controls report an error |
 
 With `restore: 'never'`, the module does not call `load`. It mirrors the current
-selection immediately.
+state immediately.
 
 ### Exact mirror
 
-The module persists the explicit selection after the read pipeline, serialized
+The module persists the explicit state after the read pipeline, serialized
 through the schema:
 
 The snapshot uses the [`StoredQuerySnapshot`](/api/modules/with-storage#storedquerysnapshot) envelope.
 
-Only explicit selections are included, including explicitly present values equal
+Only explicit values are included, including explicitly present values equal
 to a default. Codec defaults, registered default layers, and resolved `values`
-are never persisted. An empty selection removes the storage key instead of saving
+are never persisted. An empty state removes the storage key instead of saving
 an empty envelope.
 
-Restoration writes the stored selection back into the URL. Explicit presence is
+Restoration writes the stored state back into the URL. Explicit presence is
 preserved even when a stored value equals the current resolved default, so a
-later default change cannot reinterpret that selection. The restored selection
+later default change cannot reinterpret that state. The restored state
 runs through the write pipeline, reaches the URL, then runs through the read
 pipeline again.
 
@@ -93,7 +93,7 @@ pipeline again.
 
 The write pump runs at most one storage operation at a time. If state changes
 while a write is in flight, intermediate snapshots coalesce and the latest
-selection wins. Initialization rechecks the source after its first write, so
+state wins. Initialization rechecks the source after its first write, so
 `ready` cannot settle with a stale initial mirror.
 
 ### Operational errors

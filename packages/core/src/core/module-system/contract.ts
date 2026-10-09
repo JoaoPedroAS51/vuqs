@@ -166,8 +166,8 @@ export interface QueryFacadeModule<TFacade, TSchema extends QueryStateSchema, TS
  * ```ts
  * declare module '@vuqs/core' {
  *   interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
- *     'my-lib:selection': {
- *       state: { api: SelectionApi<QueryStateValueAt<TSchema, 'value'>> }
+ *     'my-lib:explicit-value': {
+ *       state: { api: ExplicitValueApi<QueryStateValueAt<TSchema, 'value'>> }
  *     }
  *   }
  * }

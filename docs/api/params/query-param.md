@@ -51,7 +51,7 @@ interface DefinedQueryParam<T> {
   read: (query: ParsedQuery, context?: { onInvalid: (path: string, raw: unknown) => void }) => T | undefined
   write: (value: T) => ParsedQueryRaw
   eq: (a: T, b: T) => boolean
-  resolve?: (selection: T, defaults: T | undefined) => T
+  resolve?: (explicitValue: T, defaults: T | undefined) => T
   readonly defaultValue?: T
   readonly clearOnDefault?: boolean
   readonly presenceGated?: boolean

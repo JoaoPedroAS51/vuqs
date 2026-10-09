@@ -10,7 +10,7 @@ import { deferred, flushMicrotasks, schema, stubBrowserEnvironment } from './hel
 describe('withStorage mirroring', () => {
   beforeEach(stubBrowserEnvironment)
 
-  it('mirrors writes and removes an empty selection', async () => {
+  it('mirrors writes and removes an empty state', async () => {
     const memory = createMemoryStorage()
     const { build } = setup()
     const state = build(() => useQueryStates(schema).use(withStorage({

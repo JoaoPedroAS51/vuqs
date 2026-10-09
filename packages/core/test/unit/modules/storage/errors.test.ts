@@ -80,8 +80,8 @@ describe('withStorage operational errors', () => {
 
   it('resolves flush on remove failure and recovers on a later remove', async () => {
     const failure = new Error('remove failed')
-    const memory = createMemoryStorage(snapshot({ q: 'selected' }))
-    const { build } = setup({ q: 'selected' })
+    const memory = createMemoryStorage(snapshot({ q: 'phone' }))
+    const { build } = setup({ q: 'phone' })
     const state = build(() => useQueryStates(schema).use(withStorage({
       key: 'filters',
       storage: memory.storage,
@@ -112,7 +112,7 @@ describe('withStorage operational errors', () => {
       })),
     }
     const memory = createMemoryStorage()
-    const first = setup({ q: 'selected' })
+    const first = setup({ q: 'phone' })
     const serialization = first.build(() => useQueryStates(brokenSchema).use(withStorage({
       key: 'broken',
       storage: memory.storage,

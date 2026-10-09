@@ -102,11 +102,11 @@ const perPage = useQueryState('perPage', codecs.integer)
   .use(withRuntimeDefaults())
 
 perPage.setDefault(20) // a runtime default, never written to the URL
-perPage.value // reads through it: the selection if present, else 20
+perPage.value // reads through it: the explicit value if present, else 20
 ```
 
 A single-param module adds a per-param API (here `setDefault`, `clearDefault`,
-`selectedValue`, `defaultValue`). Call `.use()` synchronously during setup.
+`explicitValue`, `defaultValue`). Call `.use()` synchronously during setup.
 
 ## Using it in templates
 

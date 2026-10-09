@@ -66,7 +66,7 @@ function setField(key: 'q' | 'category' | 'status' | 'sort', event: Event) {
     <div class="row">
       <span class="k">q</span>
       <div class="control">
-        <input type="text" placeholder="search (survives switch)…" :value="q.selected.q ?? ''" @input="setField('q', $event)">
+        <input type="text" placeholder="search (survives switch)…" :value="q.explicitValues.q ?? ''" @input="setField('q', $event)">
       </div>
       <span class="type">preserved</span>
     </div>
@@ -74,7 +74,7 @@ function setField(key: 'q' | 'category' | 'status' | 'sort', event: Event) {
     <div class="row">
       <span class="k">sort</span>
       <div class="control">
-        <select :value="q.selected.sort ?? ''" @change="setField('sort', $event)">
+        <select :value="q.explicitValues.sort ?? ''" @change="setField('sort', $event)">
           <option value="">
             —
           </option>
@@ -92,7 +92,7 @@ function setField(key: 'q' | 'category' | 'status' | 'sort', event: Event) {
     <div v-if="tab === 'products'" class="row">
       <span class="k">category</span>
       <div class="control">
-        <select :value="q.selected.category ?? ''" @change="setField('category', $event)">
+        <select :value="q.explicitValues.category ?? ''" @change="setField('category', $event)">
           <option value="">
             —
           </option>
@@ -113,7 +113,7 @@ function setField(key: 'q' | 'category' | 'status' | 'sort', event: Event) {
     <div v-else class="row">
       <span class="k">status</span>
       <div class="control">
-        <select :value="q.selected.status ?? ''" @change="setField('status', $event)">
+        <select :value="q.explicitValues.status ?? ''" @change="setField('status', $event)">
           <option value="">
             —
           </option>
@@ -138,7 +138,7 @@ function setField(key: 'q' | 'category' | 'status' | 'sort', event: Event) {
       <div class="url-preview" style="margin-bottom: 4px;">
         {{ q.activeContext.value }}
       </div>
-      <StateBlock label="selected" :value="q.selected" />
+      <StateBlock label="explicitValues" :value="q.explicitValues" />
       <StateBlock label="values" :value="q.values" />
     </template>
   </PageLayout>
