@@ -30,7 +30,7 @@ describe('withContext', () => {
     return { query, tab, q }
   }
 
-  it('drops a field invalid in the active context from values', () => {
+  it('preserves params valid in the active context', () => {
     const { q } = setupContext({ q: 'x', category: 'cpu' })
 
     expect(q.values).toEqual({ q: 'x', category: 'cpu' })
@@ -119,7 +119,7 @@ describe('withContext buildContextQuery', () => {
   }
 
   it('omits a preserved field equal to its codec default (clearOnDefault on by default)', () => {
-    const { query, build } = setup({ q: 'foo' })
+    const { query, build } = setup({ q: 'foo', page: '1' })
     const tab = ref<'products' | 'orders'>('products')
     const q = build(() =>
       useQueryStates(schema).use(

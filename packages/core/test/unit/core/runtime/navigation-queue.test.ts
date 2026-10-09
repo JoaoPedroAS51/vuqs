@@ -611,6 +611,7 @@ describe('throttledQueue.settle', () => {
     queue.settle(['never-pushed'])
 
     expect(queue.overlay.value).toBe(before)
+    expect(queue.overlay.value).toEqual({ q: 'x' })
   })
 
   it('skips a scheduled flush that settle already drained the overlay for', async () => {

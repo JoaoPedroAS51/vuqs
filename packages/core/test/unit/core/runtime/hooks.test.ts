@@ -47,16 +47,17 @@ describe('createQueryHooks', () => {
     consoleError.mockRestore()
   })
 
-  it('snapshots handlers, so a handler unsubscribing mid-dispatch still runs this emit', () => {
+  it('runs a handler removed during dispatch only in the current emit', () => {
     const hooks = createQueryHooks(globalDebugChannel)
     const order: string[] = []
-    let off: () => void = () => {}
 
-    off = hooks.on('test:ping', () => {
-      order.push('a')
-      off()
-    })
+    let offB: () => void
+
     hooks.on('test:ping', () => {
+      order.push('a')
+      offB()
+    })
+    offB = hooks.on('test:ping', () => {
       order.push('b')
     })
 
@@ -64,7 +65,7 @@ describe('createQueryHooks', () => {
     expect(order).toEqual(['a', 'b'])
 
     hooks.emit('test:ping', 2)
-    expect(order).toEqual(['a', 'b', 'b'])
+    expect(order).toEqual(['a', 'b', 'a'])
   })
 
   it('snapshots handlers, so subscribing during a dispatch waits for the next emit', () => {

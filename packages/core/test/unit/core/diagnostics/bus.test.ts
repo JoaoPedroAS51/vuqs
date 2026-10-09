@@ -352,20 +352,43 @@ describe('debug bus: public selection API', () => {
     expect(isDebugArmed()).toBe(true)
   })
 
-  it('applies the default history limit when none is given', () => {
+  it.each(['channel', 'hub'] as const)('applies the default history limit to the %s', (target) => {
     const channel = createDebugChannel('rt-default-limit')
-    track(retainDebugHistory({ channel }))
-    track(retainDebugHistory())
+    const options = target === 'channel' ? { channel } : {}
+    track(retainDebugHistory(options))
 
-    expect(() => channel.debug('gtq:reset')).not.toThrow()
+    for (let index = 0; index < 201; index++) {
+      channel.debug('gtq:settle', { dropped: [String(index)] })
+    }
+
+    const replay: DebugEvent[] = []
+    track(addDebugReporter(event => replay.push(event), { ...options, replay: true }))
+
+    expect(replay.map(event => event.data)).toEqual(
+      Array.from({ length: 200 }, (_, index) => ({ dropped: [String(index + 1)] })),
+    )
   })
 
-  it('clamps non-finite and negative history limits', () => {
+  it.each([
+    { limit: Number.POSITIVE_INFINITY, capacity: 10_000 },
+    { limit: -1, capacity: 0 },
+    { limit: Number.NaN, capacity: 0 },
+    { limit: Number.NEGATIVE_INFINITY, capacity: 0 },
+  ])('clamps history limit $limit to $capacity', ({ limit, capacity }) => {
     const channel = createDebugChannel('rt-clamp')
-    track(retainDebugHistory({ channel, limit: Number.POSITIVE_INFINITY }))
-    track(retainDebugHistory({ channel, limit: -1 }))
+    track(retainDebugHistory({ channel, limit }))
+    track(addDebugReporter(() => {}, { channel }))
 
-    expect(() => channel.debug('gtq:reset')).not.toThrow()
+    for (let index = 0; index <= capacity; index++) {
+      channel.debug('gtq:settle', { dropped: [String(index)] })
+    }
+
+    const replay: DebugEvent[] = []
+    track(addDebugReporter(event => replay.push(event), { channel, replay: true }))
+
+    expect(replay.map(event => event.data)).toEqual(
+      Array.from({ length: capacity }, (_, index) => ({ dropped: [String(index + 1)] })),
+    )
   })
 
   it('does not arm a channel for a zero, negative, or NaN-only history lease', () => {

@@ -190,6 +190,7 @@ describe('withStorage restoration', () => {
     void state.storage.ready.then(() => {
       ready = true
     })
+    await flushMicrotasks()
     expect(ready).toBe(false)
 
     latestWrite.resolve()

@@ -92,10 +92,10 @@ describe('createQueryPipeline', () => {
 })
 
 describe('pickBy / omitBy', () => {
-  it('compose order-independently (set intersection)', () => {
+  it.each([['a', 'b'], ['b', 'a']])('composes filters excluding %s then %s', (first, second) => {
     const pipeline = createQueryPipeline(globalDebugChannel)
-    pipeline.tap('read', pickBy(key => key !== 'a'))
-    pipeline.tap('read', pickBy(key => key !== 'b'))
+    pipeline.tap('read', pickBy(key => key !== first))
+    pipeline.tap('read', pickBy(key => key !== second))
 
     expect(pipeline.run('read', { a: 1, b: 2, c: 3 })).toEqual({ c: 3 })
   })

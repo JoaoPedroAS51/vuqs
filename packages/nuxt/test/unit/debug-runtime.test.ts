@@ -100,9 +100,11 @@ describe('nuxt debug runtime ownership', () => {
       hook: (name: string, callback: () => void) => hooks.set(name, callback),
     })
 
-    expect(mocks.addConsole).toHaveBeenCalledWith({ channel })
+    expect(mocks.addConsole).toHaveBeenCalledExactlyOnceWith({ channel })
+    expect(mocks.addConsole.mock.calls[0]![0].channel).toBe(channel)
     expect([...hooks.keys()]).toEqual(['app:rendered', 'app:error', 'app:redirected'])
     expect(mocks.getChannel).toHaveBeenCalledExactlyOnceWith(adapter)
+    expect(mocks.getChannel.mock.calls[0]![0]).toBe(adapter)
     hooks.get(terminalHook)!()
     expect(release).toHaveBeenCalledOnce()
     hooks.get('app:error')?.()

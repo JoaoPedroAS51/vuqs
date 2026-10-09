@@ -28,7 +28,7 @@ describe('useQueryState', () => {
     expect(page.value).toBe(1)
   })
 
-  it('clears via set and clear', async () => {
+  it('clears the query param via clear', async () => {
     const { query, run } = setup({ q: 'phone' })
     const q = run(() => useQueryState('q', codecs.string))
 

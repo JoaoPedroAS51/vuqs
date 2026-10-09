@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { codecs } from '../../../../../src/core/codecs/catalog'
+import { createCodec } from '../../../../../src/core/codecs/codec'
 import { isCodecBijective } from '../../../../../src/testing'
 
 describe('codecs.arrayOf', () => {
@@ -30,6 +31,19 @@ describe('codecs.arrayOf', () => {
   it('compares element-wise', () => {
     expect(numbers.eq([1, 2], [1, 2])).toBe(true)
     expect(numbers.eq([1, 2], [1, 3])).toBe(false)
+  })
+
+  it('compares items using the child codec equality', () => {
+    const strings = codecs.arrayOf(createCodec({
+      parse: codecs.string.parse,
+      serialize: codecs.string.serialize,
+      eq: (a, b) => a.toLowerCase() === b.toLowerCase(),
+    }))
+
+    expect(strings.eq(['A'], ['a'])).toBe(true)
+    expect(strings.eq(['A'], ['b'])).toBe(false)
+    expect(strings.eq(['A'], ['a', 'b'])).toBe(false)
+    expect(strings.eq(['A', 'b'], ['a'])).toBe(false)
   })
 
   it('is bijective', () => {

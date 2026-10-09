@@ -45,7 +45,10 @@ describe.each([
     plugin.setup!({ vueApp } as NuxtApp)
 
     expect(createAdapter).toHaveBeenCalledExactlyOnceWith({ router, defaultOptions: undefined })
-    expect(mocks.install).toHaveBeenCalledExactlyOnceWith(vueApp, adapter)
+    expect(mocks.install).toHaveBeenCalledOnce()
+    expect(mocks.install.mock.calls[0]![0]).toBe(vueApp)
+    expect(mocks.install.mock.calls[0]![1]).toBe(adapter)
+    expect(createAdapter.mock.calls[0]![0].router).toBe(router)
   })
 
   it('forwards configured defaults to the request router adapter', () => {
@@ -60,6 +63,10 @@ describe.each([
     plugin.setup!({ vueApp } as NuxtApp)
 
     expect(createAdapter).toHaveBeenCalledExactlyOnceWith({ router, defaultOptions })
-    expect(mocks.install).toHaveBeenCalledExactlyOnceWith(vueApp, adapter)
+    expect(createAdapter.mock.calls[0]![0].defaultOptions).toBe(defaultOptions)
+    expect(mocks.install).toHaveBeenCalledOnce()
+    expect(mocks.install.mock.calls[0]![0]).toBe(vueApp)
+    expect(mocks.install.mock.calls[0]![1]).toBe(adapter)
+    expect(createAdapter.mock.calls[0]![0].router).toBe(router)
   })
 })

@@ -1,3 +1,4 @@
+import type { DebugEvent } from '../../../../src/core/diagnostics/bus'
 import type { DebugEventCode, DebugEventMap, DebugScope } from '../../../../src/core/diagnostics/events'
 import { describe, expect, it, vi } from 'vitest'
 import { createConsoleReporter } from '../../../../src/debug/console-reporter'
@@ -232,9 +233,18 @@ describe('console reporter: trace and filters', () => {
     expect(log.mock.calls[1]?.[1]).toMatchObject({ data: { changes: { a: '[Removed]' }, query: {} } })
   })
 
-  it('supports every selector dimension and rejects missing context dimensions', () => {
+  it.each([
+    { name: 'level', mismatch: { level: 'warn' } },
+    { name: 'scope', mismatch: { scope: 'storage' } },
+    { name: 'code', mismatch: { code: 'rd:clear' } },
+    { name: 'runtime', mismatch: { context: { runtimeId: 'other', bindingId: 'b' } } },
+    { name: 'binding', mismatch: { context: { runtimeId: 'rt-console', bindingId: 'other' } } },
+    { name: 'missing runtime', mismatch: { context: { bindingId: 'b' } } },
+    { name: 'missing binding', mismatch: { context: { runtimeId: 'rt-console' } } },
+  ] satisfies Array<{ name: string, mismatch: Partial<DebugEvent> }>)('filters a mismatched $name independently', ({ mismatch }) => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
-    const channel = withReporter({
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const reporter = createConsoleReporter({
       preset: 'trace',
       filter: {
         include: {
@@ -246,13 +256,24 @@ describe('console reporter: trace and filters', () => {
         },
       },
     })
+    const event: DebugEvent = {
+      code: 'rd:set',
+      scope: 'rd',
+      level: 'debug',
+      seq: 1,
+      timestamp: 0,
+      context: { runtimeId: 'rt-console', bindingId: 'b' },
+      data: { defaults: { q: 'x' } },
+    }
 
-    channel.debug('rd:set', { defaults: { q: 'x' } })
-    channel.debug('rd:set', { defaults: { q: 'x' } }, { bindingId: 'b' })
-    channel.warn('storage:error', { key: 'x', operation: 'save', error: null }, { bindingId: 'b' })
+    reporter({ ...event, ...mismatch })
+    expect(log).not.toHaveBeenCalled()
+    expect(warn).not.toHaveBeenCalled()
 
+    reporter(event)
     expect(log).toHaveBeenCalledOnce()
     expect(log.mock.calls[0]?.[0]).toContain('rd:set')
+    expect(warn).not.toHaveBeenCalled()
   })
 
   it('uses lifecycle payloads as trace labels without exposing ids in the message', () => {

@@ -243,7 +243,7 @@ describe('console reporter: payload policy', () => {
 
     channel.debug('rd:set', { defaults: { nested: { q: 'x' } } })
 
-    expect(log.mock.calls[0]?.[1]).not.toBeUndefined()
+    expect(log.mock.calls[0]?.[1]).toBe('[MaxDepth]')
   })
 
   it('never creates User Timing marks as a side effect of console logging', () => {

@@ -72,13 +72,13 @@ describe('queryParam.object', () => {
     expect(northEast.write({ lat: 10, lng: 20 })).toEqual({ ne: { lat: '10', lng: '20' } })
   })
 
-  it('derives the transformed default and equality from the input', () => {
+  it('derives the transformed default from the input', () => {
     const center = queryParam.object('map', {
       lat: queryParam('lat', codecs.float).withDefault(0),
       lng: queryParam('lng', codecs.float).withDefault(0),
     }).transform({
       read(value) {
-        return { point: { lat: value.lat ?? 0, lng: value.lng ?? 0 } }
+        return { point: { lat: value.lat, lng: value.lng } }
       },
       write(value) {
         return { lat: value.point.lat, lng: value.point.lng }
@@ -86,14 +86,19 @@ describe('queryParam.object', () => {
     })
 
     expect(center.defaultValue).toEqual({ point: { lat: 0, lng: 0 } })
-    expect(center.eq(
-      { point: { lat: 0, lng: 0 } },
-      { point: { lat: 0, lng: 0 } },
-    )).toBe(true)
-    expect(center.eq(
-      { point: { lat: 0, lng: 0 } },
-      { point: { lat: 1, lng: 0 } },
-    )).toBe(false)
+    expect(center.read({ map: { lat: '10' } })).toEqual({ point: { lat: 10, lng: 0 } })
+  })
+
+  it('derives transformed equality from the input equality', () => {
+    const center = queryParam.object('map', {
+      lat: codecs.float.withDefault(0),
+    }).withEquality((a, b) => Math.round(a.lat) === Math.round(b.lat)).transform({
+      read: value => ({ point: value.lat }),
+      write: value => ({ lat: value.point }),
+    })
+
+    expect(center.eq({ point: 1.1 }, { point: 1.4 })).toBe(true)
+    expect(center.eq({ point: 1.1 }, { point: 2.4 })).toBe(false)
   })
 
   it('prefixes an existing object while keeping its partial default', () => {
@@ -198,7 +203,7 @@ describe('queryParam.object', () => {
     expect(bounds.eq({ north: 1.1 }, { north: 2.4 })).toBe(false)
   })
 
-  it('keeps a default-valued object param in the URL when keepOnDefault is set', () => {
+  it('disables clearOnDefault on an object param when keepOnDefault is set', () => {
     const bounds = queryParam.object('bounds', {
       north: queryParam('n', codecs.float).withDefault(1),
     }).keepOnDefault()
@@ -220,7 +225,10 @@ describe('queryParam.object', () => {
       b: queryParam('b', codecs.string),
     }).withDefault({ a: 'fallback-a' })
 
-    expect(filter.read({ b: 'x' })).toEqual({ b: 'x' }) // pure selection
+    const selected = filter.read({ b: 'x' })!
+
+    expect(selected).toEqual({ b: 'x' })
+    expect(filter.resolve!(selected, filter.defaultValue)).toEqual({ a: 'fallback-a', b: 'x' })
   })
 
   it('omits a child from the written query when its value is absent', () => {
@@ -229,7 +237,7 @@ describe('queryParam.object', () => {
       b: queryParam('b', codecs.string),
     })
 
-    expect(filter.write({ a: undefined as unknown as string, b: 'x' })).toEqual({ b: 'x' })
+    expect(filter.write({ a: undefined, b: 'x' })).toEqual({ b: 'x' })
   })
 
   it('throws when a prefix is given without children', () => {
@@ -253,10 +261,10 @@ describe('queryParam.object', () => {
     const point = queryParam.object({
       lat: queryParam('lat', codecs.float),
     })
-    const northEast = queryParam.object('ne', point).withEquality((a, b) => a.lat === b.lat)
+    const northEast = queryParam.object('ne', point).withEquality((a, b) => Math.round(a.lat!) === Math.round(b.lat!))
 
-    expect(northEast.eq({ lat: 1 }, { lat: 1 })).toBe(true)
-    expect(northEast.eq({ lat: 1 }, { lat: 2 })).toBe(false)
+    expect(northEast.eq({ lat: 1.1 }, { lat: 1.4 })).toBe(true)
+    expect(northEast.eq({ lat: 1.1 }, { lat: 2.4 })).toBe(false)
   })
 
   it('delegates keepOnDefault through a prefixed param', () => {
@@ -273,6 +281,11 @@ describe('queryParam.object', () => {
       lat: queryParam('lat', codecs.float).withDefault(0),
     })
     const northEast = queryParam.object('ne', point).withDefaultsWhenPresent()
+
+    expect(point.defaultValue).toEqual({ lat: 0 })
+    expect(point.presenceGated).toBe(false)
+    expect(northEast.defaultValue).toBeUndefined()
+    expect(northEast.presenceGated).toBe(true)
 
     expect(northEast.read({})).toBeUndefined()
     expect(northEast.read({ ne: { lat: '1' } })).toEqual({ lat: 1 })
