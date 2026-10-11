@@ -31,12 +31,21 @@ export type {
   DefinedQueryModule,
   DefinedQueryStateModule,
   DefinedQueryStatesModule,
+  PlainQueryModuleFactory,
   QueryFacadeModule,
   QueryModuleFacade,
+  QueryModuleFactory,
   QueryModuleName,
   QueryModuleRegistry,
+  QueryModuleStateApi,
+  QueryModuleStateOptions,
+  QueryModuleStatesApi,
+  QueryModuleStatesOptions,
   QueryStateFacadeModule,
   QueryStateModule,
+  QueryStateNameApiOf,
+  QueryStateNameModule,
+  QueryStateNameModuleFactory,
   QueryStatesFacadeModule,
   QueryStatesModule,
 } from './core/module-system/contract'
@@ -60,7 +69,7 @@ export type {
   QueryTransactionRequest,
 } from './core/runtime/transaction'
 export { buildQuery, dropDefaults, omitManagedKeys, parseQueryStates, serializeQueryStates } from './core/schema/operations'
-export type { DefinedQueryParam, DefinedQueryParamWithDefault } from './core/schema/params/definition'
+export type { DefinedQueryParam, DefinedQueryParamWithDefault, QueryParamReadContext } from './core/schema/params/definition'
 export { queryParam } from './core/schema/params/query-param'
 export type {
   PrefixedQueryParamBuilder,

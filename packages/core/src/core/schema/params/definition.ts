@@ -3,7 +3,7 @@ import type { ParsedQuery, ParsedQueryRaw } from '../../query/types'
 import { structuralEq } from '../../../shared/utils/object'
 import { collectLeafPaths, getPath, setPath } from '../../query/path'
 
-/** Receives diagnostics produced while a param reads a query. @internal */
+/** Receives diagnostics produced while a param reads a query. */
 export interface QueryParamReadContext {
   onInvalid: (path: string, raw: unknown) => void
 }

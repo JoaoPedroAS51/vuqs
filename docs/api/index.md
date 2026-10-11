@@ -85,6 +85,7 @@ Module walkthroughs remain in the [Modules guides](/modules/).
 | [`CodecWithDefault`](/api/codecs#codecwithdefault) |
 | [`DefinedQueryParam`](/api/params/query-param#definedqueryparam) |
 | [`DefinedQueryParamWithDefault`](/api/params/query-param#definedqueryparamwithdefault) |
+| [`QueryParamReadContext`](/api/params/query-param#queryparamreadcontext) |
 | [`QueryParamBuilder`](/api/params/query-param#queryparambuilder) |
 | [`QueryParamBuilderWithDefault`](/api/params/query-param#queryparambuilderwithdefault) |
 | [`QueryParamObjectBuilder`](/api/params/query-param-object#queryparamobjectbuilder) |
@@ -120,8 +121,17 @@ Module walkthroughs remain in the [Modules guides](/modules/).
 | [`QueryStatesFacadeModule`](/api/authoring/define-query-module#module-types) |
 | [`QueryStateFacadeModule`](/api/authoring/define-query-module#module-types) |
 | [`QueryFacadeModule`](/api/authoring/define-query-module#module-types) |
+| [`QueryStateNameModule`](/api/authoring/define-query-module#module-types) |
+| [`QueryStateNameApiOf`](/api/authoring/define-query-module#module-types) |
+| [`QueryModuleFactory`](/api/authoring/define-query-module#module-types) |
+| [`QueryStateNameModuleFactory`](/api/authoring/define-query-module#module-types) |
+| [`PlainQueryModuleFactory`](/api/authoring/define-query-module#module-types) |
 | [`QueryModuleRegistry`](/api/authoring/query-module-registry) |
 | [`QueryModuleName`](/api/authoring/query-module-registry#type) |
+| [`QueryModuleStatesApi`](/api/authoring/query-module-registry#registry-lookups) |
+| [`QueryModuleStateApi`](/api/authoring/query-module-registry#registry-lookups) |
+| [`QueryModuleStatesOptions`](/api/authoring/query-module-registry#registry-lookups) |
+| [`QueryModuleStateOptions`](/api/authoring/query-module-registry#registry-lookups) |
 | [`QueryHooks`](/api/authoring/query-hook-bus#queryhooks) |
 | [`QueryHookBus`](/api/authoring/query-hook-bus) |
 | [`QueryPipeline`](/api/authoring/query-pipeline-bus#querypipeline) |

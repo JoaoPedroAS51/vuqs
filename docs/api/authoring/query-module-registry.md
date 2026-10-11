@@ -54,6 +54,17 @@ Keys are namespaced module names. `QueryModuleName` is their union. Pass a key a
 
 Read the single param value with `QueryStateValueAt<TSchema, 'value'>`. Grouped APIs can key their options and maps against `keyof TSchema`.
 
+## Registry lookups
+
+| Type | Resolves to |
+| --- | --- |
+| `QueryModuleStatesApi<TName, TSchema, TParam>` | The entry's `states.api`, or `object` when it declares no `states` facet. |
+| `QueryModuleStateApi<TName, TSchema, TParam>` | The entry's `state.api`, or `object` when it declares no `state` facet. |
+| `QueryModuleStatesOptions<TName, TSchema, TParam>` | The entry's `states.options`, or `never` when it declares none. |
+| `QueryModuleStateOptions<TName, TSchema, TParam>` | The entry's `state.options`, or `never` when it declares none. |
+
+Registered `defineQueryModule` projections receive and return these types.
+
 ## Related guide
 
 [Value-typed APIs](/modules/authoring#value-typed-single-apis) and [facade-dependent options](/modules/authoring#facade-driven-options).

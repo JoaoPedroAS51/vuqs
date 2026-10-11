@@ -94,7 +94,7 @@ function defineQueryModule(
 ): (...args: any[]) => any
 ```
 
-The option/API aliases and factory types in these declarations are internal names, not package exports. `name` selects a `QueryModuleRegistry` entry; omitting it infers fixed options and API from the projections.
+The factory types are listed under [Module types](#module-types), and the option and API aliases under [registry lookups](/api/authoring/query-module-registry#registry-lookups). `name` selects a `QueryModuleRegistry` entry; omitting it infers fixed options and API from the projections.
 
 ## Parameters
 
@@ -255,6 +255,11 @@ These supporting types are not package exports.
 | `QueryModuleFacade` | `'state'` or `'states'`. |
 | `QueryStatesFacadeModule` / `QueryStateFacadeModule` | Modules carrying a type-only facade marker. |
 | `QueryFacadeModule` | Dual module with an adaptive facade marker. |
+| `QueryStateNameModule<TName>` | Single-only registered module whose `state` API resolves against the bound param. |
+| `QueryStateNameApiOf<TModule, TSchema>` | The `state` API a `QueryStateNameModule` contributes for a schema. |
+| `QueryModuleFactory<TName>` | Factory returned for a registered module with a `states` facet. |
+| `QueryStateNameModuleFactory<TName>` | Factory returned for a single-only registered module. |
+| `PlainQueryModuleFactory<TStatesApi, TStateApi, TOptions, THasStates, THasState>` | Factory returned for a plain module. |
 
 <details>
 <summary>Module declarations</summary>

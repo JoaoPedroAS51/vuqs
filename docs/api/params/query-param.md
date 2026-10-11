@@ -48,7 +48,7 @@ For composite params and prefixed definitions, use [queryParam.object](/api/para
 ```ts
 interface DefinedQueryParam<T> {
   readonly paths: readonly string[]
-  read: (query: ParsedQuery, context?: { onInvalid: (path: string, raw: unknown) => void }) => T | undefined
+  read: (query: ParsedQuery, context?: QueryParamReadContext) => T | undefined
   write: (value: T) => ParsedQueryRaw
   eq: (a: T, b: T) => boolean
   resolve?: (explicitValue: T, defaults: T | undefined) => T
@@ -65,6 +65,16 @@ interface DefinedQueryParamWithDefault<T> extends DefinedQueryParam<T> {
   readonly defaultValue: T
 }
 ```
+
+## QueryParamReadContext
+
+```ts
+interface QueryParamReadContext {
+  onInvalid: (path: string, raw: unknown) => void
+}
+```
+
+Receives diagnostics while a param reads a query. `onInvalid` gets the path and raw value of each present value its codec cannot parse.
 
 ## QueryParamTransform
 

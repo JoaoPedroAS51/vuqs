@@ -133,8 +133,6 @@ export interface QueryStateNameModule<TName extends QueryModuleName>
  * Resolves the `state` API a {@link QueryStateNameModule} contributes, against the
  * concrete single schema `use` binds it to, or `never` when the module carries no
  * registry name.
- *
- * @internal
  */
 export type QueryStateNameApiOf<
   TModule,
@@ -192,8 +190,6 @@ export type SingleParamSchema<TValue> = { value: DefinedQueryParam<TValue> }
 /**
  * The grouped API a registry entry contributes, or `object` when it declares no
  * `states` facet.
- *
- * @internal
  */
 export type QueryModuleStatesApi<
   TName extends QueryModuleName,
@@ -204,8 +200,6 @@ export type QueryModuleStatesApi<
 /**
  * The single-param API a registry entry contributes, or `object` when it declares
  * no `state` facet.
- *
- * @internal
  */
 export type QueryModuleStateApi<
   TName extends QueryModuleName,
@@ -216,8 +210,6 @@ export type QueryModuleStateApi<
 /**
  * The grouped options a registry entry accepts, or `never` when it declares no
  * `states` options.
- *
- * @internal
  */
 export type QueryModuleStatesOptions<
   TName extends QueryModuleName,
@@ -228,8 +220,6 @@ export type QueryModuleStatesOptions<
 /**
  * The single-param options a registry entry accepts, or `never` when it declares
  * no `state` options.
- *
- * @internal
  */
 export type QueryModuleStateOptions<
   TName extends QueryModuleName,
