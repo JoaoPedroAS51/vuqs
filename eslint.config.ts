@@ -84,13 +84,24 @@ const architectureRules: Linter.Config[] = [
           {
             target: [
               core,
-              `${src}/modules`,
               `${src}/adapters`,
               `${src}/debug`,
               `${src}/shared`,
             ],
             from: [
               `${src}/index.ts`,
+              `${src}/modules/index.ts`,
+              `${src}/shared/index.ts`,
+              `${src}/debug.ts`,
+              `${src}/debug-protocol.ts`,
+              `${src}/debug/console.ts`,
+              `${src}/testing.ts`,
+            ],
+            message: 'Internal files must import their owner directly, not a public entrypoint.',
+          },
+          {
+            target: `${src}/modules`,
+            from: [
               `${src}/modules/index.ts`,
               `${src}/shared/index.ts`,
               `${src}/debug.ts`,
@@ -130,6 +141,28 @@ const architectureRules: Linter.Config[] = [
       'no-restricted-imports': ['error', {
         patterns: [
           publicEntrypoints,
+          {
+            group: ['**/runtime/**'],
+            allowTypeImports: true,
+            message: 'Import runtime types only; use the supplied core facets for operations.',
+          },
+        ],
+      }],
+    },
+  },
+  {
+    // Modules anchor their registry augmentation to the core entry
+    name: 'vuqs/module-registry-augmentation',
+    files: [`${src}/modules/**/*.ts`],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [
+          publicEntrypoints,
+          {
+            group: ['../index', '../../index'],
+            allowTypeImports: true,
+            message: 'Modules may import only types from the core entry they augment.',
+          },
           {
             group: ['**/runtime/**'],
             allowTypeImports: true,

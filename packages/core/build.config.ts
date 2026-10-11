@@ -1,10 +1,6 @@
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { defineBuildConfig } from 'unbuild'
-
-// Consumers resolve the registry through the public entry, so augmentations
-// must target that entry rather than a source path or an aliased shared chunk.
-const REGISTRY_AUGMENTATION = /declare module (["'])(?:\.\.?\/)+(?:shared\/core\.[^"']+|core\/module-system\/contract)\1/g
 
 // This label belongs to the opt-in console reporter. Finding it outside `debug.mjs`
 // means a base module included it in another bundle.
@@ -33,30 +29,6 @@ export default defineBuildConfig({
     'build:done': function (ctx) {
       if (ctx.options.stub)
         return
-
-      let retargeted = 0
-
-      for (const file of ['modules/index.d.ts', 'modules/index.d.mts']) {
-        const path = join(ctx.options.outDir, file)
-        let code: string
-
-        try {
-          code = readFileSync(path, 'utf8')
-        }
-        catch {
-          continue
-        }
-
-        const next = code.replace(REGISTRY_AUGMENTATION, 'declare module \'@vuqs/core\'')
-
-        if (next !== code) {
-          writeFileSync(path, next)
-          retargeted++
-        }
-      }
-
-      if (retargeted !== 2)
-        throw new Error('[build] expected to retarget QueryModuleRegistry in both modules declaration artifacts.')
 
       // The console reporter's labels must ship only through the opt-in
       // `@vuqs/core/debug` entry. A stray import from any base module would pull them

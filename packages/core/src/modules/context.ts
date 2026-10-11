@@ -3,6 +3,8 @@ import type { QueryCore } from '../core/module-system/query-core'
 import type { ParsedQuery, ParsedQueryRaw } from '../core/query/types'
 import type { NavigateOptions } from '../core/runtime/adapter'
 import type { QueryStateSchema, QueryStateValues } from '../core/schema/schema'
+// Anchor the registry augmentation to the core entry
+import type {} from '../index'
 import { computed, onScopeDispose, toValue, watch } from 'vue'
 import { emitDebug, isDebugArmed } from '../core/diagnostics/bus'
 import { defineQueryModule } from '../core/module-system/define-query-module'
@@ -16,7 +18,7 @@ declare module '@vuqs/core' {
   }
 }
 
-declare module '../core/module-system/contract' {
+declare module '@vuqs/core' {
   interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
     'vuqs:context': {
       states: {

@@ -1,6 +1,8 @@
 import type { ComputedRef } from 'vue'
 import type { QueryCore } from '../core/module-system/query-core'
 import type { QueryStateSchema, QueryStateValues } from '../core/schema/schema'
+// Anchor the registry augmentation to the core entry
+import type {} from '../index'
 import { computed } from 'vue'
 import { defineQueryModule } from '../core/module-system/define-query-module'
 
@@ -38,7 +40,7 @@ export interface ActiveParamsStateApi {
   isActive: ComputedRef<boolean>
 }
 
-declare module '../core/module-system/contract' {
+declare module '@vuqs/core' {
   // eslint-disable-next-line unused-imports/no-unused-vars -- TParam must match the base registry signature
   interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
     'vuqs:active-params': {

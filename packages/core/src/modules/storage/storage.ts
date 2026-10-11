@@ -2,6 +2,8 @@ import type { ComputedRef, ShallowRef } from 'vue'
 import type { QueryCore } from '../../core/module-system/query-core'
 import type { ParsedQueryRaw } from '../../core/query/types'
 import type { QueryStateSchema } from '../../core/schema/schema'
+// Anchor the registry augmentation to the core entry
+import type {} from '../../index'
 import type { StoredQuerySnapshot } from './snapshot'
 import { computed, getCurrentInstance, onMounted, onScopeDispose, shallowRef, watch } from 'vue'
 import { emitDebug, emitWarn } from '../../core/diagnostics/bus'
@@ -68,7 +70,7 @@ export interface StorageApi {
   storage: StorageControls
 }
 
-declare module '../../core/module-system/contract' {
+declare module '@vuqs/core' {
   // eslint-disable-next-line unused-imports/no-unused-vars -- TParam must match the base registry signature
   interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
     'vuqs:storage': {

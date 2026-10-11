@@ -13,7 +13,7 @@ interface ExplicitValueApi<TValue> {
   resetTo: (value: TValue) => void
 }
 
-declare module '../../../../src/core/module-system/contract' {
+declare module '@vuqs/core' {
   // eslint-disable-next-line unused-imports/no-unused-vars -- TParam must match the base registry signature
   interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
     'test:explicit-value': {
