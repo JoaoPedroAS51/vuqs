@@ -26,6 +26,22 @@ export default defineBuildConfig({
     emitCJS: false,
   },
   hooks: {
+    // Fail the build on declaration warnings
+    'rollup:dts:options': function (ctx, options) {
+      const onwarn = options.onwarn
+
+      options.onwarn = (warning, defaultHandler) => {
+        if (warning.plugin === 'dts') {
+          ctx.warnings.add(warning.message)
+          return
+        }
+
+        if (onwarn)
+          onwarn(warning, defaultHandler)
+        else
+          defaultHandler(warning)
+      }
+    },
     'build:done': function (ctx) {
       if (ctx.options.stub)
         return
