@@ -24,6 +24,8 @@ export default defineConfig({
   ],
 
   themeConfig: {
+    outline: [2, 3],
+
     nav: [
       { text: 'Guide', link: '/guide/getting-started/installation', activeMatch: '^/guide/' },
       { text: 'Modules', link: '/modules/', activeMatch: '^/modules/' },
