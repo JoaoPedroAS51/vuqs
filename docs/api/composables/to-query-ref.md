@@ -37,14 +37,14 @@ function toQueryRef<TSchema extends QueryStateSchema>(query: QueryBindingSource<
   - Reading yields a plain snapshot of the resolved values after the read
     pipeline; `undefined` entries are omitted. The snapshot keeps a stable
     reference while its content is unchanged, so a whole-object `v-model` does not churn identity.
-  - Writing **replaces** the state: params not present in the assigned value are
-    cleared, as are params explicitly set to `undefined`.
+  - Writing **replaces** the state with explicit values: params not present in the assigned value are
+    cleared, as are params explicitly set to `undefined`. A composed param accepts a partial object.
 
 ## QueryRef
 
 ```ts
 interface QueryRef<TSchema extends QueryStateSchema>
-  extends WritableComputedRef<QueryStateValues<TSchema>> {
+  extends WritableComputedRef<QueryStateResolvedValues<TSchema>, QueryStateValues<TSchema>> {
   set: (value: QueryStateValues<TSchema>, options?: NavigateOptions) => void
   clear: (options?: NavigateOptions) => void
 }
@@ -55,7 +55,7 @@ interface QueryRef<TSchema extends QueryStateSchema>
 ```ts
 interface QueryBinding<TSchema extends QueryStateSchema> {
   readonly keys: readonly (keyof TSchema & string)[]
-  readonly read: ComputedRef<QueryStateValues<TSchema>>
+  readonly read: ComputedRef<QueryStateResolvedValues<TSchema>>
   readonly transact: (request: QueryTransactionRequest<TSchema>) => void
 }
 ```

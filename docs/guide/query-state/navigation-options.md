@@ -46,13 +46,49 @@ navigation is throttled.
 
 ### `clearOnDefault`
 
-Whether a value equal to its codec default is **dropped** from the URL. It defaults
+Whether a value equal to its default is **dropped** from the URL. It defaults
 to `true`, so `?page=1` is omitted when 1 is the default.
+
+Dropping is safe removal, not a comparison of the written value with the default.
+A write is dropped only when the writing binding reads exactly what it would read
+with `clearOnDefault: false`: the same complete resolved values, evaluated with the
+binding's current defaults and modules. Two conditions must hold:
+
+- the written value, as the codec serializes and parses it, equals the composed default
+  under the param's equality;
+- removing its keys changes no resolved read, including other params the same write
+  touches.
+
+Examples where the value is kept:
+
+- a partial object such as `{ max: 10 }` against the complete default `{ min: 0, max: 10 }`,
+  because the explicit value differs from the candidate under structural equality;
+- an object declared with `.withDefaultsWhenPresent()`, because removing its last key
+  makes it absent;
+- two params that restore each other through a module: each is safe to drop alone but
+  not together, so both stay.
+
+If the check cannot be completed, for example because a read callback throws while
+evaluating the alternative, the write is kept unchanged.
+
+Codec-owned omission is separate. A codec that serializes a value as absent, such as
+a nullable `null`, omits it with `clearOnDefault: false` too, and `clearOnDefault`
+never adds a representation the codec does not produce. Explicit `clear()` and
+`undefined` writes also remove their keys regardless of the option.
+
+Only the writing binding is compared. Another binding on the same adapter keeps
+its own defaults beneath the shared explicit value, so it can read a different
+fallback after a drop without blocking it.
 
 ```ts
 // Keep defaults in the URL (rarely needed):
 useQueryState('page', codecs.integer.withDefault(1), { clearOnDefault: false })
 ```
+
+A param can opt out with `keepOnDefault()`. The effective setting follows the
+binding option, then the param, then the adapter default, then `true`. A transaction
+that restores state with `defaultPolicy: 'preserve-explicit'` keeps every supplied
+value, including default-equal ones.
 
 | Option | Type | Default | Settable at |
 | --- | --- | --- | --- |

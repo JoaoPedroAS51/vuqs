@@ -33,7 +33,7 @@ interface QueryParamObjectFactory {
 }
 ```
 
-`QueryParamObjectFactory` and the conditional builder types in these signatures are inferred internal types, not package exports.
+`QueryParamObjectFactory` is an internal type; `QueryParamObjectBuilderFor<TChildren>` is `QueryParamObjectBuilder<TChildren>` with no own default and no gate.
 
 ## Parameters
 
@@ -41,101 +41,70 @@ interface QueryParamObjectFactory {
 | --- | --- | --- |
 | `queryParam.object(children)` | Codec or param map. | Composes owned paths into one object value. |
 | `queryParam.object(prefix, children)` | Path prefix and child map. | Prefixes each child's owned path. |
-| `queryParam.object(prefix, param)` | Path prefix and existing definition. | Preserves the builder kind and static default distinction. |
+| `queryParam.object(prefix, param)` | Path prefix and existing definition. | Returns the same builder contract under the prefixed paths. |
 
 ## Return value
 
-An object builder, defaulted when its normalized children contain defaults. Defaulted children are required in its resolved value type; other children remain optional. Child definitions determine the owned URL paths.
+An object builder. Its contracts derive from the child map:
 
-`withDefaultsWhenPresent()` gates child defaults on object presence unless an object-level default was supplied. Object `withDefault` accepts a partial object default. Equality and default clearing follow the param's modifiers.
+- Explicit value: every child optional.
+- Resolved value: children with an applicable static default are required, the others stay optional.
+- Contribution: recursively partial through object children, whole values for other children.
 
+A builder guarantees a defined resolved value when an own `withDefault` was set or a child guarantees one, unless `withDefaultsWhenPresent()` was applied. Child definitions determine the owned URL paths.
+
+`withDefault` replaces the object's own contribution above its children's defaults. `withDefaultsWhenPresent()` conditions every default of the object on decoded presence in any modifier order. `withEquality` receives explicit values, so defaulted children can be absent in both arguments.
 
 ## QueryParamObjectBuilder
 
 ```ts
-interface QueryParamObjectBuilder<T, TDefaultInput = (T extends object ? Partial<T> : T)>
-  extends DefinedQueryParam<T> {
-  withDefault: (defaultValue: TDefaultInput) => QueryParamObjectBuilderWithDefault<T, TDefaultInput>
-  withEquality: (eq: (a: T, b: T) => boolean) => QueryParamObjectBuilder<T, TDefaultInput>
-  keepOnDefault: () => QueryParamObjectBuilder<T, TDefaultInput>
-  withDefaultsWhenPresent: () => QueryParamObjectBuilder<T, TDefaultInput>
-  transform: <TOutput>(transformer: QueryParamTransform<T, TOutput>) => QueryParamBuilder<TOutput>
-}
-```
-
-## QueryParamObjectBuilderWithDefault
-
-```ts
-interface QueryParamObjectBuilderWithDefault<
-  T,
-  TDefaultInput = (T extends object ? Partial<T> : T),
-  THasOwnDefault extends boolean = true,
-> extends DefinedQueryParamWithDefault<T> {
-  withDefault: (defaultValue: TDefaultInput) => QueryParamObjectBuilderWithDefault<T, TDefaultInput, true>
-  withEquality: (eq: (a: T, b: T) => boolean) => QueryParamObjectBuilderWithDefault<T, TDefaultInput, THasOwnDefault>
-  keepOnDefault: () => QueryParamObjectBuilderWithDefault<T, TDefaultInput, THasOwnDefault>
-  withDefaultsWhenPresent: () => THasOwnDefault extends true
-    ? QueryParamObjectBuilderWithDefault<T, TDefaultInput, true>
-    : QueryParamObjectBuilder<T, TDefaultInput>
-  transform: <TOutput>(transformer: QueryParamTransform<T, TOutput>) => QueryParamBuilder<TOutput>
+interface QueryParamObjectBuilder<
+  TChildren extends AnyObjectChildren,
+  THasOwnDefault extends boolean = false,
+  TGated extends boolean = false,
+> extends DefinedQueryParam<
+    ObjectExplicitValue<TChildren>,
+    ObjectResolvedValue<TChildren>,
+    ObjectContribution<TChildren>,
+    ObjectGuaranteed<TChildren, THasOwnDefault, TGated>
+  > {
+  withDefault: (defaultValue: ObjectContribution<TChildren>) => QueryParamObjectBuilder<TChildren, true, TGated>
+  withEquality: (eq: (a: ObjectExplicitValue<TChildren>, b: ObjectExplicitValue<TChildren>) => boolean) => QueryParamObjectBuilder<TChildren, THasOwnDefault, TGated>
+  keepOnDefault: () => QueryParamObjectBuilder<TChildren, THasOwnDefault, TGated>
+  withDefaultsWhenPresent: () => QueryParamObjectBuilder<TChildren, THasOwnDefault, true>
+  transform: <TOutput>(
+    transformer: QueryParamTransform<ObjectResolvedValue<TChildren>, TOutput, ObjectExplicitValue<TChildren>>,
+  ) => QueryParamBuilder<TOutput>
 }
 ```
 
 ## PrefixedQueryParamBuilder
 
 ```ts
-type PrefixedQueryParamBuilder<TParam extends DefinedQueryParam<any>>
-  = TParam extends QueryParamObjectBuilderWithDefault<infer TValue, infer TDefaultInput, infer THasOwnDefault extends boolean>
-    ? QueryParamObjectBuilderWithDefault<TValue, TDefaultInput, THasOwnDefault>
-    : TParam extends QueryParamObjectBuilder<infer TValue, infer TDefaultInput>
-      ? QueryParamObjectBuilder<TValue, TDefaultInput>
-      : TParam extends QueryParamBuilderWithDefault<infer TValue, infer TDefaultInput>
-        ? QueryParamBuilderWithDefault<TValue, TDefaultInput>
-        : TParam extends QueryParamBuilder<infer TValue, infer TDefaultInput>
-          ? QueryParamBuilder<TValue, TDefaultInput>
-          : TParam extends DefinedQueryParamWithDefault<infer TValue>
-            ? QueryParamBuilderWithDefault<TValue>
-            : QueryParamBuilder<QueryStateValueOf<TParam>>
+type PrefixedQueryParamBuilder<TParam extends AnyDefinedQueryParam> = TParam
 ```
 
-<details>
-<summary>Conditional builder types</summary>
+A prefix rewrites query paths only, so the prefixed param keeps its contracts and modifiers.
+
+## Object value types
 
 ```ts
-type AnyDefinedQueryParam = DefinedQueryParam<any>
-
-type AnyObjectChildren = Record<string, AnyDefinedQueryParam>
-
-type DefinedValue<TParam> = TParam extends DefinedQueryParam<infer TValue> ? TValue : never
-
-type Simplify<T> = { [Key in keyof T]: T[Key] } & {}
-
-type RequiredObjectChildren<TChildren extends AnyObjectChildren> = {
-  [Key in keyof TChildren as TChildren[Key] extends DefinedQueryParamWithDefault<any> ? Key : never]: DefinedValue<TChildren[Key]>
+type ObjectExplicitValue<TChildren extends AnyObjectChildren> = {
+  [Key in keyof TChildren]?: ExplicitValueOf<TChildren[Key]>
 }
 
-type OptionalObjectChildren<TChildren extends AnyObjectChildren> = {
-  [Key in keyof TChildren as TChildren[Key] extends DefinedQueryParamWithDefault<any> ? never : Key]?: DefinedValue<TChildren[Key]>
+type ObjectResolvedValue<TChildren extends AnyObjectChildren> = {
+  [Key in GuaranteedChildKeys<TChildren>]: ResolvedValueOf<TChildren[Key]>
+} & {
+  [Key in Exclude<keyof TChildren, GuaranteedChildKeys<TChildren>>]?: ResolvedValueOf<TChildren[Key]>
 }
 
-type ObjectValue<TChildren extends AnyObjectChildren> = Simplify<
-  RequiredObjectChildren<TChildren> & OptionalObjectChildren<TChildren>
->
-
-type QueryParamObjectDefault<TValue> = TValue extends object ? Partial<TValue> : TValue
-
-type HasDefaultedChildren<TChildren extends AnyObjectChildren>
-  = keyof RequiredObjectChildren<TChildren> extends never ? false : true
-
-type QueryParamObjectBuilderFor<TChildren extends AnyObjectChildren>
-  = HasDefaultedChildren<TChildren> extends true
-    ? QueryParamObjectBuilderWithDefault<ObjectValue<TChildren>, QueryParamObjectDefault<ObjectValue<TChildren>>, false>
-    : QueryParamObjectBuilder<ObjectValue<TChildren>, QueryParamObjectDefault<ObjectValue<TChildren>>>
+type ObjectContribution<TChildren extends AnyObjectChildren> = {
+  [Key in keyof TChildren]?: ContributionOf<TChildren[Key]>
+}
 ```
 
-These supporting aliases are not exports from `@vuqs/core`.
-
-</details>
+`GuaranteedChildKeys` selects the children whose param guarantees a resolved value. The mapped types are shown without their `Simplify` wrapper. `ObjectGuaranteed`, `GuaranteedChildKeys` and `Simplify` are internal helpers.
 
 ## Related guide
 

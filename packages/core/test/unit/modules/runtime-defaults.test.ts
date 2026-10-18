@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { isRef } from 'vue'
+import { isRef, ref } from 'vue'
 import { useQueryState } from '../../../src/core/bindings/use-query-state'
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../src/core/codecs/catalog'
+import { defineQueryModule } from '../../../src/core/module-system/define-query-module'
 import { queryParam } from '../../../src/core/schema/params/query-param'
 import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults'
 import { withTestQuery as setup } from '../../helpers/adapter'
@@ -192,5 +193,152 @@ describe('withRuntimeDefaults layered clearing coherence', () => {
 
     expect(q.explicitValues).toEqual({})
     expect(q.values).toEqual({ page: 5 })
+  })
+})
+
+describe('withRuntimeDefaults bindings sharing a schema', () => {
+  const value = queryParam('value', codecs.integer.withDefault(1))
+  const record = queryParam.object('record', {
+    a: queryParam('a', codecs.integer.withDefault(0)),
+    b: queryParam('b', codecs.integer.withDefault(100)),
+  })
+
+  function mountPair(initial: Parameters<typeof setup>[0] = {}) {
+    const test = setup(initial)
+    const a = test.build(() => useQueryStates({ value }).use(withRuntimeDefaults()))
+    const b = test.build(() => useQueryStates({ value }).use(withRuntimeDefaults()))
+
+    return { test, a, b }
+  }
+
+  it('keeps independent contributions over one static default', () => {
+    const { a, b } = mountPair()
+
+    a.setDefaults({ value: 5 })
+    b.setDefaults({ value: 9 })
+    expect([a.values.value, b.values.value]).toEqual([5, 9])
+
+    a.setDefaults({ value: 6 })
+    expect([a.values.value, b.values.value]).toEqual([6, 9])
+
+    a.clearDefaults()
+    expect([a.values.value, b.values.value]).toEqual([1, 9])
+  })
+
+  it('shares an explicit write optimistically and after navigation while defaults stay local', async () => {
+    const { test, a, b } = mountPair()
+
+    a.setDefaults({ value: 5 })
+    b.setDefaults({ value: 9 })
+    a.patch({ value: 7 })
+
+    expect([a.values.value, b.values.value]).toEqual([7, 7])
+    expect(test.query.value).toEqual({})
+
+    await flush()
+    expect(test.query.value).toEqual({ value: '7' })
+    expect([a.values.value, b.values.value]).toEqual([7, 7])
+
+    a.patch({ value: undefined })
+    await flush()
+    expect([a.values.value, b.values.value]).toEqual([5, 9])
+  })
+
+  it('keeps explicit writes isolated between separate adapters', async () => {
+    const first = setup()
+    const second = setup()
+    const a = first.build(() => useQueryStates({ value }).use(withRuntimeDefaults()))
+    const b = second.build(() => useQueryStates({ value }).use(withRuntimeDefaults()))
+
+    a.setDefaults({ value: 5 })
+    b.setDefaults({ value: 9 })
+    a.patch({ value: 7 })
+    await flush()
+
+    expect([a.values.value, b.values.value]).toEqual([7, 9])
+    expect(second.query.value).toEqual({})
+  })
+
+  it('does not let a mutated resolved object corrupt another binding', () => {
+    const shared = queryParam.object('record', {
+      a: queryParam('a', codecs.integer),
+      b: queryParam('b', codecs.integer),
+    }).withDefault({ a: 0, b: 100 })
+    const test = setup()
+    const first = test.build(() => useQueryStates({ record: shared }).use(withRuntimeDefaults()))
+    const second = test.build(() => useQueryStates({ record: shared }).use(withRuntimeDefaults()))
+
+    ;(first.values.record as { a: number }).a = -1
+
+    expect(second.values.record).toEqual({ a: 0, b: 100 })
+  })
+
+  it('reveals the next source for a composed contribution per binding', () => {
+    const test = setup()
+    const first = test.build(() => useQueryStates({ record }).use(withRuntimeDefaults()))
+    const second = test.build(() => useQueryStates({ record }).use(withRuntimeDefaults()))
+
+    first.setDefaults({ record: { a: 5 } })
+
+    expect(first.values.record).toEqual({ a: 5, b: 100 })
+    expect(second.values.record).toEqual({ a: 0, b: 100 })
+  })
+})
+
+describe('withRuntimeDefaults source priority', () => {
+  const schema = {
+    currency: queryParam('currency', codecs.string),
+  }
+
+  it('lets a later source win over its runtime defaults and an earlier source lose to them', () => {
+    const { build } = setup()
+    const earlier = ref<{ currency?: string }>({ currency: 'earlier' })
+    const later = ref<{ currency?: string }>({ currency: 'later' })
+    const q = build(() => useQueryStates(schema)
+      .use(() => ({ api: {}, defaults: [earlier] }))
+      .use(withRuntimeDefaults())
+      .use(() => ({ api: {}, defaults: [later] })))
+
+    q.setDefaults({ currency: 'runtime' })
+    expect(q.values.currency).toBe('later')
+
+    later.value = {}
+    expect(q.values.currency).toBe('runtime')
+
+    q.clearDefaults()
+    expect(q.values.currency).toBe('earlier')
+  })
+
+  it('keeps its precedence slot when cleared and set again', () => {
+    const { build } = setup()
+    const later = ref<{ currency?: string }>({})
+    const q = build(() => useQueryStates(schema)
+      .use(withRuntimeDefaults())
+      .use(() => ({ api: {}, defaults: [later] })))
+
+    q.setDefaults({ currency: 'first' })
+    q.clearDefaults()
+    q.setDefaults({ currency: 'second' })
+    expect(q.values.currency).toBe('second')
+
+    later.value = { currency: 'later' }
+    expect(q.values.currency).toBe('later')
+    later.value = {}
+    expect(q.values.currency).toBe('second')
+  })
+
+  it('keeps the slot of a single-param default', () => {
+    const { build } = setup()
+    const later = ref<{ value?: string }>({})
+    const withLater = defineQueryModule({ state: () => ({ api: {}, defaults: [later] }) })
+    const q = build(() => useQueryState('currency').use(withRuntimeDefaults()).use(withLater()))
+
+    q.setDefault('first')
+    q.clearDefault()
+    q.setDefault('second')
+    expect(q.value).toBe('second')
+
+    later.value = { value: 'later' }
+    expect(q.value).toBe('later')
   })
 })

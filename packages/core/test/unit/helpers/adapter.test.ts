@@ -39,7 +39,7 @@ describe('withTestQuery', () => {
     const disposed = vi.fn()
     fixture.build(() => useQueryStates({ q: codecs.string }).use(() => {
       onScopeDispose(disposed)
-      return {}
+      return { api: {} }
     }))
 
     fixture.dispose()

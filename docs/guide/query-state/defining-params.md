@@ -82,7 +82,7 @@ call for a given modifier wins.
 | Modifier | Effect |
 | --- | --- |
 | `.withDefault(v)` | Sets the param's default, layered over the codec default. |
-| `.withEquality(eq)` | Sets how values compare, which drives `clearOnDefault`. |
+| `.withEquality(eq)` | Sets how explicit values compare, which drives `clearOnDefault`. |
 | `.keepOnDefault()` | Keeps a default-valued write in the URL (param-level `clearOnDefault: false`). |
 | `.transform({ read, write, eq? })` | Maps the param to a different public shape. |
 
@@ -193,25 +193,38 @@ queryParam.object('created', range)
 
 ### Defaults on an object param
 
-`.withDefault()` on an object param takes a **partial** fill, layered under the
-child defaults. By default, a child default resolves the object even when the URL
-holds none of its keys. `.withDefaultsWhenPresent()` gates the child defaults on
-the object being present in the URL (or carrying its own default), so an absent
-object stays absent instead of materializing from child defaults.
+An object resolves each child against the first applicable source, highest first:
 
-Resolution follows the object composition. A present child object resolves its
-own missing children from the applicable defaults. Plain object params keep
-`explicitValues` and `read` as the explicit state:
+1. the explicit URL value,
+2. runtime defaults,
+3. the `.withDefault()` of the enclosing objects, outermost first,
+4. the object's own `.withDefault()`,
+5. the child's default.
+
+`.withDefault()` takes a **partial** contribution: a defined path overrides the
+sources below it, while an omitted or `undefined` path keeps them. A `null` is a
+value and overrides. Repeating `.withDefault()` replaces the previous contribution
+of that object instead of adding to it.
 
 ```ts
-import { codecs, queryParam, useQueryStates } from '@vuqs/core'
-import { withRuntimeDefaults } from '@vuqs/core/modules'
+const range = queryParam.object({
+  min: codecs.integer.withDefault(0),
+  max: codecs.integer.withDefault(100),
+}).withDefault({ min: 10 })
 
+useQueryStates({ range }).values.range // { min: 10, max: 100 }
+```
+
+An object without explicit children resolves from its defaults. `.withDefaultsWhenPresent()`
+conditions **every** default of that object on at least one child being present in
+the URL, whatever the modifier order, so an absent object stays absent:
+
+```ts
 const filters = queryParam.object('filters', {
   range: queryParam.object('range', {
     min: codecs.integer.withDefault(0),
     max: codecs.integer,
-  }),
+  }).withDefaultsWhenPresent(),
 })
 const query = useQueryStates({ filters }).use(withRuntimeDefaults())
 
@@ -220,9 +233,36 @@ query.explicitValues.filters // { range: { max: 10 } }
 query.values.filters // { range: { min: 0, max: 10 } }
 ```
 
-A missing child with `.withDefaultsWhenPresent()` stays absent even when the
-parent is present or a runtime default supplies that child. A child carrying its
-own `.withDefault(...)` can resolve while absent.
+A parent resolves as an object when a source supplies it directly, even as `{}`,
+or when a child resolves a value. Candidates held only by absent gated children
+do not create the parent.
+
+### Explicit and resolved values
+
+A composed param separates three types:
+
+| Type | Children | Where it appears |
+| --- | --- | --- |
+| Explicit | Every child optional | `explicitValues`, `parseQueryStates`, writers, `eq` |
+| Resolved | Children with an applicable default are required | `values`, `.value` |
+| Contribution | Recursively partial through object children | `.withDefault()`, `setDefaults` |
+
+Writers accept the explicit type, so `patch({ range: { max: 10 } })` stores only
+`max` and `min` keeps resolving from its defaults. Assigning a whole object through
+the `values` map keeps the resolved type, so use `patch`, `set` or a ref from
+`toQueryRefs` for partial input. A JSON or transformed child is atomic and always
+needs its complete value.
+
+### Transforms and defaults
+
+A transform maps the resolved object to a public value, so a defined input is
+resolved against its static defaults before `read` runs. `read` is not called while
+the input is absent. The output is atomic: its default is the mapping of the
+input's static default, `.withDefault()` after `.transform()` replaces it, and
+runtime defaults for the output are never passed through `read`.
+
+An input gated with `.withDefaultsWhenPresent()` derives no output default while it
+is absent.
 
 ## Definitions never collide
 

@@ -4,6 +4,7 @@ import { toQueryRefs } from '../../../../src/core/bindings/to-query-refs'
 import { useQueryState } from '../../../../src/core/bindings/use-query-state'
 import { useQueryStates } from '../../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../../src/core/codecs/catalog'
+import { defineQueryModule } from '../../../../src/core/module-system/define-query-module'
 import { queryParam } from '../../../../src/core/schema/params/query-param'
 import { withTestQuery as setup } from '../../../helpers/adapter'
 
@@ -520,5 +521,101 @@ describe('useQueryStates', () => {
       expect(navigate).toHaveBeenCalledTimes(1)
       expect(query.value).toEqual({ q: 'b' })
     })
+  })
+})
+
+describe('useQueryStates explicit partial composed writes', () => {
+  const record = queryParam.object('record', {
+    a: queryParam('a', codecs.integer.withDefault(0)),
+    b: queryParam('b', codecs.integer.withDefault(100)),
+  })
+
+  it('replaces the supplied object representation instead of deep-patching it', async () => {
+    const { query, build } = setup({ record: { a: '7', b: '20' }, other: 'keep' })
+    const q = build(() => useQueryStates({ record }, { clearOnDefault: false }))
+
+    q.patch({ record: { b: 10 } })
+    await flush()
+
+    expect(query.value).toEqual({ record: { b: '10' }, other: 'keep' })
+    expect(q.values.record).toEqual({ a: 0, b: 10 })
+  })
+
+  it('preserves an omitted composed param on patch and clears it on replace', async () => {
+    const { query, build } = setup({ record: { a: '7' }, other: 'keep' })
+    const q = build(() => useQueryStates({ record, text: queryParam('text', codecs.string) }))
+
+    q.patch({ text: 'x' })
+    await flush()
+    expect(query.value).toEqual({ record: { a: '7' }, other: 'keep', text: 'x' })
+
+    q.replace({ text: 'y' })
+    await flush()
+    expect(query.value).toEqual({ other: 'keep', text: 'y' })
+  })
+
+  it('clears a composed param patched with an explicit undefined', async () => {
+    const { query, build } = setup({ record: { a: '7' } })
+    const q = build(() => useQueryStates({ record }))
+
+    q.patch({ record: undefined })
+    await flush()
+
+    expect(query.value).toEqual({})
+    expect(q.values.record).toEqual({ a: 0, b: 100 })
+  })
+})
+
+describe('write policy through every bound writer', () => {
+  type Query = ReturnType<typeof composed>
+
+  function composed() {
+    const { build } = setup({ q: 'old' })
+    const calls: Array<Record<string, unknown>> = []
+    const query = build(() => useQueryStates(schema).use(core => ({
+      api: {},
+      pipeline: [core.pipeline.define('write', (values) => {
+        calls.push({ ...values })
+        return values
+      })],
+    })))
+
+    return { query, calls }
+  }
+
+  it.each<{ name: string, write: (query: Query['query']) => void, expected: Record<string, unknown> }>([
+    { name: 'patch', write: query => query.patch({ q: 'a', sort: 'b' }), expected: { q: 'a', sort: 'b' } },
+    { name: 'replace', write: query => query.replace({ q: 'a', sort: 'b' }), expected: { q: 'a', sort: 'b' } },
+    { name: 'a values map assignment', write: (query) => { query.values.q = 'a' }, expected: { q: 'a' } },
+    { name: 'toQueryRefs', write: (query) => { toQueryRefs(query).q.value = 'a' }, expected: { q: 'a' } },
+    { name: 'toQueryRef', write: (query) => { toQueryRef(query).value = { q: 'a', sort: 'b' } }, expected: { q: 'a', sort: 'b' } },
+  ])('applies the write callbacks once with the complete request for $name', async ({ write, expected }) => {
+    const { query, calls } = composed()
+
+    write(query)
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0]).toEqual(expected)
+    await flush()
+  })
+
+  it('applies the write callbacks once for a single-param setter', async () => {
+    const { build } = setup({ q: 'old' })
+    const calls: Array<Record<string, unknown>> = []
+    const withWrite = defineQueryModule({
+      state: core => ({
+        api: {},
+        pipeline: [core.pipeline.define('write', (values) => {
+          calls.push({ ...values })
+          return values
+        })],
+      }),
+    })
+    const q = build(() => useQueryState('q').use(withWrite()))
+
+    q.set('a')
+
+    expect(calls).toEqual([{ value: 'a' }])
+    await flush()
   })
 })

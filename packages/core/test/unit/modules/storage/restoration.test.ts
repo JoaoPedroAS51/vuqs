@@ -217,15 +217,17 @@ describe('withStorage restoration', () => {
 
   it('round-trips post-read state through the write pipeline', async () => {
     const pipelineModule = (core: QueryCore<typeof schema>) => {
-      core.pipeline.tap('read', values => ({
-        ...values,
-        q: typeof values.q === 'string' ? values.q.toUpperCase() : values.q,
-      }))
-      core.pipeline.tap('write', values => ({
-        ...values,
-        q: typeof values.q === 'string' ? values.q.toLowerCase() : values.q,
-      }))
-      return {}
+      const upper = (values: { readonly q?: string }): { q?: string } => ({ ...values, q: values.q?.toUpperCase() })
+
+      return {
+        api: {},
+        pipeline: [
+          core.pipeline.define('read', upper, { projection: 'explicit' }),
+          core.pipeline.define('read', upper, { projection: 'defaults' }),
+          core.pipeline.define('read', upper, { projection: 'resolved' }),
+          core.pipeline.define('write', values => ({ ...values, q: values.q?.toLowerCase() })),
+        ] as const,
+      }
     }
     const persisted = createMemoryStorage()
     const first = setup({ q: 'source' })
@@ -250,5 +252,31 @@ describe('withStorage restoration', () => {
     expect(second.query.value).toEqual({ q: 'source' })
     expect(target.values.q).toBe('SOURCE')
     expect((restored.current() as StoredQuerySnapshot).query).toEqual({ q: 'SOURCE' })
+  })
+
+  it('restores a stored partial object without materializing its defaulted children', async () => {
+    const nested = {
+      record: queryParam.object('record', {
+        a: queryParam('a', codecs.integer.withDefault(0)),
+        b: queryParam('b', codecs.integer),
+      }),
+    }
+    const memory = createMemoryStorage(snapshot({ record: { b: '10' } }))
+    const { query, build } = setup()
+    const state = build(() => useQueryStates(nested).use(withStorage({
+      key: 'filters',
+      storage: memory.storage,
+    })))
+
+    await state.storage.ready
+    await flushMicrotasks()
+
+    expect(query.value).toEqual({ record: { b: '10' } })
+    expect(state.values.record).toEqual({ a: 0, b: 10 })
+    expect(memory.save).toHaveBeenLastCalledWith('filters', {
+      format: 1,
+      savedAt: 100,
+      query: { record: { b: '10' } },
+    })
   })
 })

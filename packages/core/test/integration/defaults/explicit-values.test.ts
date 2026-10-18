@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../src/core/codecs/catalog'
 import { queryParam } from '../../../src/core/schema/params/query-param'
@@ -232,5 +232,90 @@ describe('default mutation safety', () => {
 
     const q2 = withTestQuery({}).build(() => useQueryStates({ range }))
     expect(q2.values.range).toEqual({ from: 1, to: 2 }) // the shared default is intact
+  })
+})
+
+describe('transformed params and default sources', () => {
+  const range = () => queryParam.object('range', {
+    a: queryParam('a', codecs.integer.withDefault(0)),
+    b: queryParam('b', codecs.integer.withDefault(100)),
+  })
+  const text = {
+    read: (value: { a: number, b: number }) => `${value.a}:${value.b}`,
+    write: (value: string) => {
+      const [a, b] = value.split(':').map(Number)
+      return { a, b }
+    },
+  }
+
+  it.each([
+    ['own default before the gate', () => range().withDefault({ a: 0, b: 100 }).withDefaultsWhenPresent()],
+    ['gate before the own default', () => range().withDefaultsWhenPresent().withDefault({ a: 0, b: 100 })],
+  ])('derives no output default from a gated input with %s', (_name, build) => {
+    const absent = withTestQuery({})
+      .build(() => useQueryStates({ text: build().transform(text) }).use(withRuntimeDefaults()))
+    const present = withTestQuery({ range: { b: '10' } })
+      .build(() => useQueryStates({ text: build().transform(text) }).use(withRuntimeDefaults()))
+
+    expect(absent.explicitValues.text).toBeUndefined()
+    expect(absent.values.text).toBeUndefined()
+    expect(present.values.text).toBe('0:10')
+  })
+
+  it('keeps output defaults independent of the input gate and of the input object', () => {
+    const param = range().withDefaultsWhenPresent().transform(text).withDefault('fallback')
+    const q = withTestQuery({})
+      .build(() => useQueryStates({ text: param }).use(withRuntimeDefaults()))
+
+    expect(q.values.text).toBe('fallback')
+
+    q.setDefaults({ text: 'runtime' })
+    expect(q.values.text).toBe('runtime')
+
+    q.clearDefaults()
+    expect(q.values.text).toBe('fallback')
+  })
+
+  it('shadows a static output default with a runtime output default without running the input transform', () => {
+    const read = vi.fn(text.read)
+    const param = range().transform({ ...text, read }).withDefault('#99')
+    const q = withTestQuery({})
+      .build(() => useQueryStates({ text: param }).use(withRuntimeDefaults()))
+
+    read.mockClear()
+    q.setDefaults({ text: '#20' })
+
+    expect(q.values.text).toBe('#20')
+    expect(read).not.toHaveBeenCalled()
+  })
+
+  it('ends composition at an identity transform output', () => {
+    const base = queryParam.object('range', {
+      a: queryParam('a', codecs.integer.withDefault(1)),
+      b: queryParam('b', codecs.integer.withDefault(100)),
+    })
+    const identity = base.transform({ read: value => value, write: value => value })
+    const present = withTestQuery({ range: { b: '10' } })
+      .build(() => useQueryStates({ range: identity }).use(withRuntimeDefaults()))
+    const absent = withTestQuery({})
+      .build(() => useQueryStates({ range: identity }).use(withRuntimeDefaults()))
+
+    present.setDefaults({ range: { a: 5, b: 100 } })
+    absent.setDefaults({ range: { a: 5, b: 100 } })
+
+    expect(present.explicitValues.range).toEqual({ a: 1, b: 10 })
+    expect(present.values.range).toEqual({ a: 1, b: 10 })
+    expect(absent.values.range).toEqual({ a: 5, b: 100 })
+  })
+
+  it('lets an applicable output default resolve a rejected transform result', () => {
+    const positive = queryParam('n', codecs.integer.withDefault(1))
+      .transform<string>({ read: v => (v > 0 ? `#${v}` : undefined), write: v => Number(v.slice(1)) })
+      .withDefault('fallback')
+    const q = withTestQuery({ n: '0' })
+      .build(() => useQueryStates({ n: positive }).use(withRuntimeDefaults()))
+
+    expect(q.explicitValues.n).toBeUndefined()
+    expect(q.values.n).toBe('fallback')
   })
 })

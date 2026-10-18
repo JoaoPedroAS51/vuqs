@@ -10,8 +10,9 @@ import { debugChannelForAdapter, emitDebug, emitWarn, isDebugArmed } from '../di
 import { normalizeForHistory } from '../diagnostics/normalize'
 import { registerSnapshotSource } from '../diagnostics/snapshot'
 import { cloneQuery } from '../query/object'
-import { collectLeafPaths, deletePath, getPath, pruneEmptyAncestors, setPath } from '../query/path'
+import { collectLeafPaths, getPath } from '../query/path'
 import { runManagedNavigation } from './managed-navigation'
+import { applyOverlay } from './overlay'
 import { getQueryReadLayer } from './read-layer'
 
 // Coalescing several writes in one window: an explicit value carries over, with
@@ -67,7 +68,11 @@ export class ThrottledQueue {
   /** The single optimistic overlay shared by every engine using this adapter. */
   readonly overlay: ShallowRef<Overlay> = shallowRef<Overlay>(Object.create(null) as Overlay)
 
-  /** Completed read-layer values with pending writes applied above them. @internal */
+  /**
+   * Completed read-layer values with pending writes applied above them.
+   *
+   * @internal
+   */
   readonly readOverlay: Readonly<Ref<Readonly<Overlay>>>
 
   private readonly debug: DebugChannel
@@ -106,7 +111,13 @@ export class ThrottledQueue {
     }))
   }
 
-  /** Keeps committed-query observation alive for one engine binding. @internal */
+  /**
+   * Keeps committed-query observation alive for one engine binding.
+   *
+   * @returns An idempotent function that releases the binding's observation ownership.
+   *
+   * @internal
+   */
   retainBinding(): () => void {
     this.bindingOwners++
     this.ensureAdapterObserver()
@@ -263,7 +274,7 @@ export class ThrottledQueue {
   }
 
   /**
-   * Clears pending writes, registered read layers, and scheduled flushes.
+   * Clears pending writes, read-layer values, and scheduled flushes.
    */
   reset(): void {
     this.readLayer?.reset()
@@ -486,19 +497,13 @@ export class ThrottledQueue {
     }
 
     const current = toValue(this.adapter.query)
-    const next = cloneQuery(current)
+    const flushed: Overlay = {}
 
     for (const path of paths) {
-      const delta = this.overlay.value[path]
-
-      if (delta === null) {
-        deletePath(next, path)
-        pruneEmptyAncestors(next, path)
-      }
-      else {
-        setPath(next, path, delta)
-      }
+      flushed[path] = this.overlay.value[path]
     }
+
+    const next = applyOverlay(current, flushed)
 
     if (armed) {
       emitDebug(

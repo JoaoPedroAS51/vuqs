@@ -32,36 +32,58 @@ type ParsedQueryRaw = Record<string, ParsedQueryValue>
 ## QueryStateSchema
 
 ```ts
-type QueryStateSchema = Record<string, DefinedQueryParam<any>>
+type QueryStateSchema = Record<string, AnyDefinedQueryParam>
 ```
 
 ## QueryStateSchemaInput
 
 ```ts
-type QueryStateSchemaInput = Record<string, Codec<any> | DefinedQueryParam<any>>
+type QueryStateSchemaInput = Record<string, Codec<any> | AnyDefinedQueryParam>
+```
+
+## Value contracts of a param
+
+```ts
+type ExplicitValueOf<TParam> = /* the decoded value before default resolution */
+type ResolvedValueOf<TParam> = /* the value after applicable defaults, when defined */
+type ContributionOf<TParam> = /* the value a default source can supply */
+type GuaranteedOf<TParam> = /* true when a static default guarantees a resolved value */
 ```
 
 ## QueryStateValues
 
 ```ts
 type QueryStateValues<TSchema extends QueryStateSchema> = {
-  [Key in keyof TSchema]?: QueryStateValueOf<TSchema[Key]> | undefined
+  [Key in keyof TSchema]?: ExplicitValueOf<TSchema[Key]> | undefined
 }
 ```
 
 ## QueryStateWriteValues
 
 ```ts
-type QueryStateWriteValues<TSchema extends QueryStateSchema> = {
-  [Key in keyof TSchema]?: QueryStateValueOf<TSchema[Key]> | undefined
+type QueryStateWriteValues<TSchema extends QueryStateSchema> = QueryStateValues<TSchema>
+```
+
+## QueryStateResolvedValues
+
+```ts
+type QueryStateResolvedValues<TSchema extends QueryStateSchema> = {
+  [Key in keyof TSchema]?: ResolvedValueOf<TSchema[Key]> | undefined
+}
+```
+
+## QueryStateContributions
+
+```ts
+type QueryStateContributions<TSchema extends QueryStateSchema> = {
+  [Key in keyof TSchema]?: ContributionOf<TSchema[Key]> | undefined
 }
 ```
 
 ## QueryStateValueOf
 
 ```ts
-type QueryStateValueOf<TDefinition>
-  = TDefinition extends DefinedQueryParam<infer TValue> ? TValue : never
+type QueryStateValueOf<TDefinition> = ExplicitValueOf<TDefinition>
 ```
 
 ## QueryStateValueAt
@@ -73,22 +95,42 @@ type QueryStateValueAt<TSchema extends QueryStateSchema, TKey extends string>
     : never
 ```
 
+## QueryStateContributionAt
+
+```ts
+type QueryStateContributionAt<TSchema extends QueryStateSchema, TKey extends string>
+  = TSchema extends { [Key in TKey]: infer TDefinition }
+    ? ContributionOf<TDefinition>
+    : never
+```
+
 ## QueryStateRefValue
 
 ```ts
-type QueryStateRefValue<TDefinition extends DefinedQueryParam<any>>
-  = TDefinition extends DefinedQueryParamWithDefault<any>
-    ? QueryStateValueOf<TDefinition>
-    : QueryStateValueOf<TDefinition> | undefined
+type QueryStateRefValue<TDefinition extends AnyDefinedQueryParam>
+  = [GuaranteedOf<TDefinition>] extends [true]
+    ? ResolvedValueOf<TDefinition>
+    : ResolvedValueOf<TDefinition> | undefined
+```
+
+## QueryStateRefInput
+
+```ts
+type QueryStateRefInput<TDefinition extends AnyDefinedQueryParam>
+  = [GuaranteedOf<TDefinition>] extends [true]
+    ? ExplicitValueOf<TDefinition>
+    : ExplicitValueOf<TDefinition> | undefined
 ```
 
 `ParsedQuery` is the adapter's input; `ParsedQueryRaw` is serialized output. They share the same recursive node shape.
 
 `QueryStateSchemaInput` accepts codecs or definitions. `QueryStateSchema` contains normalized definitions. Use [defineQuerySchema](/api/params/define-query-schema) when deriving types from codec shorthand.
 
-`QueryStateValues` and `QueryStateWriteValues` contain optional decoded values, including explicit `undefined`. Writer behavior determines omission semantics: `patch` and the serializer preserve omitted params; `replace` and whole-object refs clear them.
+`QueryStateValues` and `QueryStateWriteValues` hold explicit values: a composed param keeps its defaulted children optional, and explicit `undefined` is allowed. Writer behavior determines omission semantics: `patch` and the serializer preserve omitted params; `replace` and whole-object refs clear them.
 
-`QueryStateRefValue` resolves the static default distinction: a defaulted param yields `T`; another param yields `T | undefined`. Module read policies can affect which values are present at runtime.
+`QueryStateResolvedValues` holds the values after applicable defaults. `QueryStateContributions` is what `setDefaults` and registered default sources accept.
+
+`QueryStateRefValue` resolves the static default distinction: a param that guarantees a value yields the resolved type; another param yields it with `undefined`. `QueryStateRefInput` is the matching write type. Module read policies can affect which values are present at runtime.
 
 ## Related types
 

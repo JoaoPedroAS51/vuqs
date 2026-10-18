@@ -1,8 +1,11 @@
 import { describe, expect, it, onTestFinished } from 'vitest'
+import { useQueryStates } from '../../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../../src/core/codecs/catalog'
 import { addDebugReporter } from '../../../../src/core/diagnostics/bus'
 import { queryParam } from '../../../../src/core/schema/params/query-param'
 import { createSerializer } from '../../../../src/core/schema/serializer'
+import { withRuntimeDefaults } from '../../../../src/modules/runtime-defaults'
+import { withTestQuery } from '../../../helpers/adapter'
 
 const schema = {
   q: queryParam('q', codecs.string),
@@ -162,5 +165,60 @@ describe('createSerializer', () => {
     expect(() => (serialize as (base: unknown, values: unknown) => unknown)('?q=x', {})).toThrow(
       /string base requires the `parse` option/,
     )
+  })
+
+  describe('composed defaults and presence gates', () => {
+    const range = () => queryParam.object('range', {
+      a: queryParam('a', codecs.integer.withDefault(0)),
+      b: queryParam('b', codecs.integer.withDefault(100)),
+    })
+
+    it('omits a complete value equal to the composed default and keeps the base', () => {
+      const serialize = createSerializer({ range: range() })
+
+      expect(serialize({ keep: 'me' }, { range: { a: 0, b: 100 } })).toEqual({ keep: 'me' })
+      expect(createSerializer({ range: range() }, { clearOnDefault: false })({ range: { a: 0, b: 100 } })).toEqual({
+        range: { a: '0', b: '100' },
+      })
+    })
+
+    it('serializes a partial composed value without injecting defaulted children', () => {
+      expect(createSerializer({ range: range() })({ range: { b: 10 } })).toEqual({ range: { b: '10' } })
+    })
+
+    it.each([
+      ['own default before the gate', () => range().withDefault({ a: 0, b: 100 }).withDefaultsWhenPresent()],
+      ['gate before the own default', () => range().withDefaultsWhenPresent().withDefault({ a: 0, b: 100 })],
+    ])('keeps the presence of a gated object equal to its candidates with %s', (_name, build) => {
+      expect(createSerializer({ range: build() })({ range: { a: 0, b: 100 } })).toEqual({
+        range: { a: '0', b: '100' },
+      })
+    })
+
+    it('keeps an ungated parent whose gated descendant omission would hide the descendant', () => {
+      const child = queryParam.object('child', {
+        a: queryParam('a', codecs.integer.withDefault(1)),
+      }).withDefaultsWhenPresent()
+      const parent = queryParam.object('parent', { child })
+
+      expect(createSerializer({ parent })({ parent: { child: { a: 1 } } })).toEqual({
+        parent: { child: { a: '1' } },
+      })
+    })
+  })
+
+  describe('static source scope', () => {
+    it('does not acquire runtime defaults registered by a binding', () => {
+      const { build } = withTestQuery()
+      const page = queryParam('page', codecs.integer.withDefault(1))
+      const binding = build(() => useQueryStates({ page }).use(withRuntimeDefaults()))
+      binding.setDefaults({ page: 5 })
+
+      const serialize = createSerializer({ page })
+
+      expect(binding.values.page).toBe(5)
+      expect(serialize({ page: 5 })).toEqual({ page: '5' })
+      expect(serialize({ page: 1 })).toEqual({})
+    })
   })
 })

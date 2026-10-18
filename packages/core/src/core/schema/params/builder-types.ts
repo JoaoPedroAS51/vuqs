@@ -1,56 +1,112 @@
 import type { ParsedQuery, ParsedQueryRaw } from '../../query/types'
-import type { DefinedQueryParam, DefinedQueryParamWithDefault, QueryParamReadContext } from './definition'
+import type { AnyDefinedQueryParam, DefinedQueryParam, paramChildren, ParamContract, paramContract, ParamStructure, QueryParamReadContext } from './definition'
 
 /** @internal */
 export type Simplify<T> = { [Key in keyof T]: T[Key] } & {}
 
 /** @internal */
-export type AnyDefinedQueryParam = DefinedQueryParam<any>
-
-/** @internal */
 export type AnyObjectChildren = Record<string, AnyDefinedQueryParam>
 
-/** @internal */
-export type DefinedValue<TParam> = TParam extends DefinedQueryParam<infer TValue> ? TValue : never
-
-type RequiredObjectChildren<TChildren extends AnyObjectChildren> = {
-  [Key in keyof TChildren as TChildren[Key] extends DefinedQueryParamWithDefault<any> ? Key : never]: DefinedValue<TChildren[Key]>
-}
-
-type OptionalObjectChildren<TChildren extends AnyObjectChildren> = {
-  [Key in keyof TChildren as TChildren[Key] extends DefinedQueryParamWithDefault<any> ? never : Key]?: DefinedValue<TChildren[Key]>
-}
+/**
+ * The declared object children of a composed param, or `never` for an atomic param.
+ *
+ * @typeParam TParam - The param to read the children from.
+ */
+export type ChildrenOf<TParam>
+  = TParam extends { readonly [paramChildren]?: infer TChildren }
+    ? unknown extends TChildren ? never : Extract<TChildren, AnyObjectChildren>
+    : never
 
 /**
- * The value type of an object param, built from its children.
+ * The decoded value of a param before default resolution.
+ *
+ * @typeParam TParam - The param to read the contract from.
+ */
+export type ExplicitValueOf<TParam>
+  = TParam extends { readonly [paramContract]?: ParamContract<infer TExplicit, any, any, any> } ? TExplicit : never
+
+/**
+ * The value of a param after applicable defaults, when it is defined.
+ *
+ * @typeParam TParam - The param to read the contract from.
+ */
+export type ResolvedValueOf<TParam>
+  = TParam extends { readonly [paramContract]?: ParamContract<any, infer TResolved, any, any> } ? TResolved : never
+
+/**
+ * The value a default source can supply for a param.
+ *
+ * @typeParam TParam - The param to read the contract from.
+ */
+export type ContributionOf<TParam>
+  = TParam extends { readonly [paramContract]?: ParamContract<any, any, infer TContribution, any> } ? TContribution : never
+
+/**
+ * Whether an applicable static default guarantees a defined resolved value.
+ *
+ * @typeParam TParam - The param to read the contract from.
+ */
+export type GuaranteedOf<TParam>
+  = TParam extends { readonly [paramContract]?: ParamContract<any, any, any, infer TGuaranteed> } ? TGuaranteed : never
+
+type GuaranteedChildKeys<TChildren extends AnyObjectChildren> = {
+  [Key in keyof TChildren]: [GuaranteedOf<TChildren[Key]>] extends [true] ? Key : never
+}[keyof TChildren]
+
+type OptionalChildKeys<TChildren extends AnyObjectChildren> = Exclude<keyof TChildren, GuaranteedChildKeys<TChildren>>
+
+/**
+ * The explicit value of an object param: every declared child is optional.
  *
  * @typeParam TChildren - The child param map.
  */
-export type ObjectValue<TChildren extends AnyObjectChildren> = Simplify<
-  RequiredObjectChildren<TChildren> & OptionalObjectChildren<TChildren>
+export type ObjectExplicitValue<TChildren extends AnyObjectChildren> = Simplify<{
+  [Key in keyof TChildren]?: ExplicitValueOf<TChildren[Key]>
+}>
+
+/**
+ * The resolved value of an object param: children with an applicable static
+ * default guarantee are required.
+ *
+ * @typeParam TChildren - The child param map.
+ */
+export type ObjectResolvedValue<TChildren extends AnyObjectChildren> = Simplify<
+  { [Key in GuaranteedChildKeys<TChildren>]: ResolvedValueOf<TChildren[Key]> }
+  & { [Key in OptionalChildKeys<TChildren>]?: ResolvedValueOf<TChildren[Key]> }
 >
 
+/**
+ * The default contribution of an object param: recursively partial through
+ * declared object children, with whole values for atomic children.
+ *
+ * @typeParam TChildren - The child param map.
+ */
+export type ObjectContribution<TChildren extends AnyObjectChildren> = Simplify<{
+  [Key in keyof TChildren]?: ContributionOf<TChildren[Key]>
+}>
+
 /** @internal */
-export type HasDefaultedChildren<TChildren extends AnyObjectChildren>
-  = keyof RequiredObjectChildren<TChildren> extends never ? false : true
+export type ObjectGuaranteed<
+  TChildren extends AnyObjectChildren,
+  THasOwnDefault extends boolean,
+  TGated extends boolean,
+> = TGated extends true
+  ? false
+  : THasOwnDefault extends true
+    ? true
+    : [GuaranteedChildKeys<TChildren>] extends [never] ? false : true
 
 /**
- * The accepted default for a param: a partial fill for object values, the value
- * itself otherwise.
+ * The mapping passed to `transform`: the resolved input is read into the public
+ * value and the public value is written back as an explicit input.
  *
- * @typeParam TValue - The param's value type.
- */
-export type QueryParamObjectDefault<TValue> = TValue extends object ? Partial<TValue> : TValue
-
-/**
- * The read/write mapping passed to {@link QueryParamBuilder.transform}.
- *
- * @typeParam TInput - The source value type.
+ * @typeParam TInput - The resolved input value type.
  * @typeParam TOutput - The public value type.
+ * @typeParam TWrite - The explicit input value type produced by `write`.
  */
-export interface QueryParamTransform<TInput, TOutput> {
+export interface QueryParamTransform<TInput, TOutput, TWrite = TInput> {
   read: (value: TInput) => TOutput | undefined
-  write: (value: TOutput) => TInput
+  write: (value: TOutput) => TWrite
   eq?: (a: TOutput, b: TOutput) => boolean
 }
 
@@ -58,30 +114,32 @@ export interface QueryParamTransform<TInput, TOutput> {
  * A param definition with immutable, chainable modifiers.
  *
  * @typeParam T - The param's value type.
- * @typeParam TDefaultInput - The type accepted by `withDefault`.
+ * @typeParam TContribution - The type a default source or `withDefault` accepts.
+ * @typeParam TGuaranteed - `true` once a default guarantees a defined resolved value.
  */
-export interface QueryParamBuilder<T, TDefaultInput = T> extends DefinedQueryParam<T> {
+export interface QueryParamBuilder<T, TContribution = T, TGuaranteed extends boolean = false>
+  extends DefinedQueryParam<T, T, TContribution, TGuaranteed> {
   /**
-   * Sets the param's default, layered over the codec default.
+   * Sets the param's static default, replacing the previous static default.
    *
    * @returns A new builder with this default.
    */
-  withDefault: (defaultValue: TDefaultInput) => QueryParamBuilderWithDefault<T, TDefaultInput>
+  withDefault: (defaultValue: TContribution) => QueryParamBuilder<T, TContribution, true>
   /**
-   * Sets how the value is compared, which drives `clearOnDefault`.
+   * Sets the equality function for defined explicit values.
    *
    * @returns A new builder using `eq`.
    */
-  withEquality: (eq: (a: T, b: T) => boolean) => QueryParamBuilder<T, TDefaultInput>
+  withEquality: (eq: (a: T, b: T) => boolean) => QueryParamBuilder<T, TContribution, TGuaranteed>
   /**
    * Keeps a default-valued write in the URL: param-level `clearOnDefault: false`.
    *
    * @returns A new builder that retains default-valued writes.
    */
-  keepOnDefault: () => QueryParamBuilder<T, TDefaultInput>
+  keepOnDefault: () => QueryParamBuilder<T, TContribution, TGuaranteed>
   /**
-   * Maps the param to a different public shape, deriving its default and equality
-   * from the source unless overridden.
+   * Maps the param to a different public shape. A defined mapping of the static
+   * input default provides the output default unless `withDefault` replaces it.
    *
    * @returns A new builder for the transformed value.
    */
@@ -89,158 +147,83 @@ export interface QueryParamBuilder<T, TDefaultInput = T> extends DefinedQueryPar
 }
 
 /**
- * A {@link QueryParamBuilder} whose definition carries a default.
- * Modifiers return new builders without changing the original.
+ * A {@link QueryParamBuilder} whose definition guarantees a defined resolved value.
  *
  * @typeParam T - The param's value type.
- * @typeParam TDefaultInput - The type accepted by `withDefault`.
+ * @typeParam TContribution - The type a default source or `withDefault` accepts.
  */
-export interface QueryParamBuilderWithDefault<T, TDefaultInput = T>
-  extends DefinedQueryParamWithDefault<T> {
-  /**
-   * Replaces the current default.
-   *
-   * @returns A new builder with this default.
-   */
-  withDefault: (defaultValue: TDefaultInput) => QueryParamBuilderWithDefault<T, TDefaultInput>
-  /**
-   * Sets how the value is compared, which drives `clearOnDefault`.
-   *
-   * @returns A new builder using `eq`.
-   */
-  withEquality: (eq: (a: T, b: T) => boolean) => QueryParamBuilderWithDefault<T, TDefaultInput>
-  /**
-   * Keeps a default-valued write in the URL: param-level `clearOnDefault: false`.
-   *
-   * @returns A new builder that retains default-valued writes.
-   */
-  keepOnDefault: () => QueryParamBuilderWithDefault<T, TDefaultInput>
-  /**
-   * Maps the param to a different public shape, deriving its default and equality
-   * from the source unless overridden.
-   *
-   * @returns A new builder for the transformed value.
-   */
-  transform: <TOutput>(transformer: QueryParamTransform<T, TOutput>) => QueryParamBuilder<TOutput>
-}
+export type QueryParamBuilderWithDefault<T, TContribution = T> = QueryParamBuilder<T, TContribution, true>
 
 /**
  * An immutable builder for a composed object param, produced by `queryParam.object`.
  *
- * @typeParam T - The object value type.
- * @typeParam TDefaultInput - The type accepted by `withDefault`, a partial fill.
+ * @typeParam TChildren - The child param map.
+ * @typeParam THasOwnDefault - `true` once `withDefault` supplied an own contribution.
+ * @typeParam TGated - `true` once `withDefaultsWhenPresent` conditioned every default on presence.
  */
-export interface QueryParamObjectBuilder<T, TDefaultInput = QueryParamObjectDefault<T>>
-  extends DefinedQueryParam<T> {
+export interface QueryParamObjectBuilder<
+  TChildren extends AnyObjectChildren,
+  THasOwnDefault extends boolean = false,
+  TGated extends boolean = false,
+> extends DefinedQueryParam<
+    ObjectExplicitValue<TChildren>,
+    ObjectResolvedValue<TChildren>,
+    ObjectContribution<TChildren>,
+    ObjectGuaranteed<TChildren, THasOwnDefault, TGated>
+  > {
+  /** Type-only carrier of the declared children, used for logical path inference. */
+  readonly [paramChildren]?: TChildren
   /**
-   * Sets a partial object default, layered under the child defaults.
+   * Sets an own contribution above the children's defaults. Repeating it replaces
+   * the previous own contribution.
    *
-   * @returns A new builder with this default.
+   * @returns A new builder with this contribution.
    */
-  withDefault: (defaultValue: TDefaultInput) => QueryParamObjectBuilderWithDefault<T, TDefaultInput>
+  withDefault: (defaultValue: ObjectContribution<TChildren>) => QueryParamObjectBuilder<TChildren, true, TGated>
   /**
-   * Sets how the object value is compared, which drives `clearOnDefault`.
+   * Sets the equality function for defined explicit objects.
    *
    * @returns A new builder using `eq`.
    */
-  withEquality: (eq: (a: T, b: T) => boolean) => QueryParamObjectBuilder<T, TDefaultInput>
+  withEquality: (
+    eq: (a: ObjectExplicitValue<TChildren>, b: ObjectExplicitValue<TChildren>) => boolean,
+  ) => QueryParamObjectBuilder<TChildren, THasOwnDefault, TGated>
   /**
    * Keeps a default-valued write in the URL: param-level `clearOnDefault: false`.
    *
    * @returns A new builder that retains default-valued writes.
    */
-  keepOnDefault: () => QueryParamObjectBuilder<T, TDefaultInput>
+  keepOnDefault: () => QueryParamObjectBuilder<TChildren, THasOwnDefault, TGated>
   /**
-   * Applies child defaults only when the object is present in the URL or carries its own default.
+   * Conditions every default of the object on decoded explicit presence, in any
+   * modifier order.
    *
-   * @returns A new builder with presence-gated child defaults.
+   * @returns A new builder whose defaults apply only to a present object.
    */
-  withDefaultsWhenPresent: () => QueryParamObjectBuilder<T, TDefaultInput>
+  withDefaultsWhenPresent: () => QueryParamObjectBuilder<TChildren, THasOwnDefault, true>
   /**
-   * Maps the object to a different public shape, deriving its default and equality from the source unless overridden.
-   *
-   * @returns A new builder for the transformed value.
-   */
-  transform: <TOutput>(transformer: QueryParamTransform<T, TOutput>) => QueryParamBuilder<TOutput>
-}
-
-/**
- * A {@link QueryParamObjectBuilder} whose resolved value carries a default.
- * Modifiers return new builders without changing the original.
- *
- * @typeParam T - The object value type.
- * @typeParam TDefaultInput - The type accepted by `withDefault`, a partial fill.
- * @typeParam THasOwnDefault - `true` when an object-level `withDefault` set the
- * default, `false` when only child defaults did.
- */
-export interface QueryParamObjectBuilderWithDefault<
-  T,
-  TDefaultInput = QueryParamObjectDefault<T>,
-  THasOwnDefault extends boolean = true,
-> extends DefinedQueryParamWithDefault<T> {
-  /**
-   * Sets a partial object default, marking the object as owning its default.
-   *
-   * @returns A new builder with this default.
-   */
-  withDefault: (defaultValue: TDefaultInput) => QueryParamObjectBuilderWithDefault<T, TDefaultInput, true>
-  /**
-   * Sets how the object value is compared, which drives `clearOnDefault`.
-   *
-   * @returns A new builder using `eq`.
-   */
-  withEquality: (eq: (a: T, b: T) => boolean) => QueryParamObjectBuilderWithDefault<T, TDefaultInput, THasOwnDefault>
-  /**
-   * Keeps a default-valued write in the URL: param-level `clearOnDefault: false`.
-   *
-   * @returns A new builder that retains default-valued writes.
-   */
-  keepOnDefault: () => QueryParamObjectBuilderWithDefault<T, TDefaultInput, THasOwnDefault>
-  /**
-   * Applies child defaults only on presence; stays defaulted only if an object-level default was set.
-   *
-   * @returns A new builder with presence-gated child defaults.
-   */
-  withDefaultsWhenPresent: () => THasOwnDefault extends true
-    ? QueryParamObjectBuilderWithDefault<T, TDefaultInput, true>
-    : QueryParamObjectBuilder<T, TDefaultInput>
-  /**
-   * Maps the object to a different public shape, deriving its default and equality from the source unless overridden.
+   * Maps the resolved object to a different public shape.
    *
    * @returns A new builder for the transformed value.
    */
-  transform: <TOutput>(transformer: QueryParamTransform<T, TOutput>) => QueryParamBuilder<TOutput>
+  transform: <TOutput>(
+    transformer: QueryParamTransform<ObjectResolvedValue<TChildren>, TOutput, ObjectExplicitValue<TChildren>>,
+  ) => QueryParamBuilder<TOutput>
 }
 
 /**
- * The object builder type for a given child map: defaulted when any child is,
- * plain otherwise.
+ * The object builder type for a given child map.
  *
  * @internal
  */
-export type QueryParamObjectBuilderFor<TChildren extends AnyObjectChildren>
-  = HasDefaultedChildren<TChildren> extends true
-    ? QueryParamObjectBuilderWithDefault<ObjectValue<TChildren>, QueryParamObjectDefault<ObjectValue<TChildren>>, false>
-    : QueryParamObjectBuilder<ObjectValue<TChildren>, QueryParamObjectDefault<ObjectValue<TChildren>>>
+export type QueryParamObjectBuilderFor<TChildren extends AnyObjectChildren> = QueryParamObjectBuilder<TChildren>
 
 /**
- * The builder type produced by prefixing an existing param, preserving the source
- * builder's kind and default state.
+ * The concrete builder type retained when a param's query paths are prefixed.
  *
  * @typeParam TParam - The param being prefixed.
  */
-export type PrefixedQueryParamBuilder<TParam extends AnyDefinedQueryParam>
-  = TParam extends QueryParamObjectBuilderWithDefault<infer TValue, infer TDefaultInput, infer THasOwnDefault extends boolean>
-    ? QueryParamObjectBuilderWithDefault<TValue, TDefaultInput, THasOwnDefault>
-    : TParam extends QueryParamObjectBuilder<infer TValue, infer TDefaultInput>
-      ? QueryParamObjectBuilder<TValue, TDefaultInput>
-      : TParam extends QueryParamBuilderWithDefault<infer TValue, infer TDefaultInput>
-        ? QueryParamBuilderWithDefault<TValue, TDefaultInput>
-        : TParam extends QueryParamBuilder<infer TValue, infer TDefaultInput>
-          ? QueryParamBuilder<TValue, TDefaultInput>
-          : TParam extends DefinedQueryParamWithDefault<infer TValue>
-            ? QueryParamBuilderWithDefault<TValue>
-            : QueryParamBuilder<DefinedValue<TParam>>
+export type PrefixedQueryParamBuilder<TParam extends AnyDefinedQueryParam> = TParam
 
 /**
  * The raw executable pieces a builder wraps.
@@ -252,8 +235,9 @@ export interface QueryParamBuilderOptions<T> {
   read: (query: ParsedQuery, context?: QueryParamReadContext) => T | undefined
   write: (value: T) => ParsedQueryRaw
   eq?: (a: T, b: T) => boolean
-  resolve?: (explicitValue: T, defaults: T | undefined) => T
-  defaultValue?: T
+  resolve?: (explicitValue: T | undefined, defaultValue: T | undefined) => T | undefined
+  defaultValue?: unknown
   clearOnDefault?: boolean
   presenceGated?: boolean
+  structure?: ParamStructure
 }

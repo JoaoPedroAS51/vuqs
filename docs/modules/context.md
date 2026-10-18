@@ -75,6 +75,11 @@ switchTo('orders') // one navigation: new route + reconciled query
 switchTo('orders', { history: 'push' }) // per-call options are forwarded to `navigate`
 ```
 
+The context union comes from `active`. An unannotated inline `navigate` callback
+receives it as `target` without widening to `string`, and `activeContext`,
+`switchTo` and `buildContextQuery` use the same union. A callback that requires a
+context outside the union is a type error.
+
 `switchTo` calls the configured `navigate` function, such as `router.push` or
 Nuxt's `navigateTo`, instead of the vuqs adapter. Adapter installation scope does
 not affect context switching.

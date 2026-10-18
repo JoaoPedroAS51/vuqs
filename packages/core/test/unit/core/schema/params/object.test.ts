@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { codecs } from '../../../../../src/core/codecs/catalog'
+import { getParamStructure } from '../../../../../src/core/schema/params/definition'
 import { queryParam } from '../../../../../src/core/schema/params/query-param'
+import { resolveParamValue } from '../../../../../src/core/schema/resolution'
 
 describe('queryParam.object', () => {
   it.each([
@@ -49,14 +51,14 @@ describe('queryParam.object', () => {
     expect(bounds.read({ bounds: { e: '20' } })).toEqual({ east: 20 })
   })
 
-  it('reports its merged default (child defaults over the object-level default)', () => {
+  it('reports its composed default (object-level default over child defaults)', () => {
     const bounds = queryParam.object('bounds', {
       north: queryParam('n', codecs.float).withDefault(1),
       south: queryParam('s', codecs.float),
       east: queryParam('e', codecs.float),
     }).withDefault({ north: 0, east: 20 })
 
-    expect(bounds.defaultValue).toEqual({ north: 1, east: 20 })
+    expect(bounds.defaultValue).toEqual({ north: 0, east: 20 })
     expect(bounds.read({ bounds: { s: '5' } })).toEqual({ south: 5 }) // explicit values
   })
 
@@ -92,7 +94,7 @@ describe('queryParam.object', () => {
   it('derives transformed equality from the input equality', () => {
     const center = queryParam.object('map', {
       lat: codecs.float.withDefault(0),
-    }).withEquality((a, b) => Math.round(a.lat) === Math.round(b.lat)).transform({
+    }).withEquality((a, b) => Math.round(a.lat ?? 0) === Math.round(b.lat ?? 0)).transform({
       read: value => ({ point: value.lat }),
       write: value => ({ lat: value.point }),
     })
@@ -228,7 +230,7 @@ describe('queryParam.object', () => {
     const parsedValue = filter.read({ b: 'x' })!
 
     expect(parsedValue).toEqual({ b: 'x' })
-    expect(filter.resolve!(parsedValue, filter.defaultValue)).toEqual({ a: 'fallback-a', b: 'x' })
+    expect(resolveParamValue(filter, parsedValue, getParamStructure(filter)?.staticCandidate)).toEqual({ a: 'fallback-a', b: 'x' })
   })
 
   it('omits a child from the written query when its value is absent', () => {
@@ -284,10 +286,231 @@ describe('queryParam.object', () => {
 
     expect(point.defaultValue).toEqual({ lat: 0 })
     expect(point.presenceGated).toBe(false)
-    expect(northEast.defaultValue).toBeUndefined()
+    expect(northEast.defaultValue).toEqual({ lat: 0 })
     expect(northEast.presenceGated).toBe(true)
 
     expect(northEast.read({})).toBeUndefined()
     expect(northEast.read({ ne: { lat: '1' } })).toEqual({ lat: 1 })
+  })
+})
+
+describe('queryParam.object static default composition', () => {
+  const pair = () => ({
+    a: queryParam('a', codecs.integer),
+    b: queryParam('b', codecs.integer),
+  })
+
+  describe('object contributions', () => {
+    it('lets an object default override a child static default', () => {
+      const object = queryParam.object({
+        a: queryParam('a', codecs.integer.withDefault(1)),
+        b: queryParam('b', codecs.integer),
+      }).withDefault({ a: 9, b: 2 })
+
+      expect(object.defaultValue).toEqual({ a: 9, b: 2 })
+    })
+
+    it('keeps inherited child defaults for omitted children without mutating the children', () => {
+      const a = queryParam('a', codecs.integer.withDefault(1))
+      const b = queryParam('b', codecs.integer.withDefault(2))
+      const object = queryParam.object({ a, b }).withDefault({ a: 9 })
+
+      expect(object.defaultValue).toEqual({ a: 9, b: 2 })
+      expect(a.defaultValue).toBe(1)
+      expect(b.defaultValue).toBe(2)
+    })
+
+    it('falls through on undefined and overrides with a supported null', () => {
+      const child = queryParam('a', codecs.integer.nullable().withDefault(1))
+      const object = queryParam.object({ a: child })
+
+      expect(object.withDefault({ a: undefined }).defaultValue).toEqual({ a: 1 })
+      expect(object.withDefault({ a: null }).defaultValue).toEqual({ a: null })
+    })
+
+    it('replaces an override and reveals the original child defaults', () => {
+      const object = queryParam.object({
+        a: queryParam('a', codecs.integer.withDefault(1)),
+        b: queryParam('b', codecs.integer.withDefault(2)),
+      })
+      const first = object.withDefault({ a: 9 })
+      const second = first.withDefault({ b: 8 })
+
+      expect(second.defaultValue).toEqual({ a: 1, b: 8 })
+      expect(first.defaultValue).toEqual({ a: 9, b: 2 })
+      expect(object.defaultValue).toEqual({ a: 1, b: 2 })
+    })
+
+    it('replaces the own fill instead of accumulating repeated declarations', () => {
+      const withChildDefault = queryParam.object({
+        a: queryParam('a', codecs.integer.withDefault(1)),
+        b: queryParam('b', codecs.integer),
+        c: queryParam('c', codecs.integer),
+      })
+      const first = withChildDefault.withDefault({ b: 2 })
+
+      expect(first.withDefault({ c: 3 }).defaultValue).toEqual({ a: 1, c: 3 })
+      expect(first.defaultValue).toEqual({ a: 1, b: 2 })
+
+      const bare = queryParam.object(pair()).withDefault({ a: 0, b: 100 })
+
+      expect(bare.withDefault({ a: 10 }).defaultValue).toEqual({ a: 10 })
+      expect(bare.defaultValue).toEqual({ a: 0, b: 100 })
+    })
+
+    it('reveals an inherited child default when its own override is replaced', () => {
+      const object = queryParam.object({
+        a: queryParam('a', codecs.integer),
+        b: queryParam('b', codecs.integer.withDefault(100)),
+      })
+
+      expect(object.withDefault({ a: 0, b: 200 }).withDefault({ a: 10 }).defaultValue).toEqual({ a: 10, b: 100 })
+    })
+  })
+
+  describe('enclosing contributions', () => {
+    it('lets an enclosing contribution override supplied descendant paths', () => {
+      const inner = queryParam.object({
+        a: queryParam('a', codecs.integer),
+        b: queryParam('b', codecs.integer),
+      }).withDefault({ a: 1 })
+      const outer = queryParam.object({ inner }).withDefault({ inner: { a: 0, b: 2 } })
+
+      expect(outer.defaultValue).toEqual({ inner: { a: 0, b: 2 } })
+      expect(queryParam.object('p', outer).defaultValue).toEqual({ inner: { a: 0, b: 2 } })
+    })
+
+    it('combines independent static contributions', () => {
+      const inner = queryParam.object({
+        a: queryParam('a', codecs.integer),
+        b: queryParam('b', codecs.integer),
+      }).withDefault({ a: 1 })
+
+      expect(queryParam.object({ inner }).withDefault({ inner: { b: 2 } }).defaultValue).toEqual({
+        inner: { a: 1, b: 2 },
+      })
+    })
+
+    it('overrides one child and preserves its sibling', () => {
+      const nested = queryParam.object({
+        a: queryParam('a', codecs.integer.withDefault(0)),
+        b: queryParam('b', codecs.integer.withDefault(100)),
+      })
+      const outer = queryParam.object({ nested }).withDefault({ nested: { a: 10 } })
+
+      expect(outer.defaultValue).toEqual({ nested: { a: 10, b: 100 } })
+    })
+
+    it('does not mutate a reused child object', () => {
+      const nested = queryParam.object({
+        a: queryParam('a', codecs.integer.withDefault(0)),
+        b: queryParam('b', codecs.integer.withDefault(100)),
+      })
+      const first = queryParam.object({ nested }).withDefault({ nested: { a: 10 } })
+      const second = queryParam.object({ nested }).withDefault({ nested: { a: 20 } })
+
+      expect(first.defaultValue).toEqual({ nested: { a: 10, b: 100 } })
+      expect(second.defaultValue).toEqual({ nested: { a: 20, b: 100 } })
+      expect(nested.defaultValue).toEqual({ a: 0, b: 100 })
+    })
+
+    it('follows source precedence from the param through the enclosing object', () => {
+      const nested = queryParam.object({
+        a: queryParam('a', codecs.integer.withDefault(20)),
+        b: queryParam('b', codecs.integer),
+      }).withDefault({ a: 10 })
+      const outer = queryParam.object({ nested }).withDefault({ nested: { a: 0, b: 100 } })
+
+      expect(outer.defaultValue).toEqual({ nested: { a: 0, b: 100 } })
+    })
+  })
+
+  describe('presence gate', () => {
+    it.each([
+      ['own default before the gate', () => queryParam.object(pair()).withDefault({ b: 2 }).withDefaultsWhenPresent()],
+      ['gate before the own default', () => queryParam.object(pair()).withDefaultsWhenPresent().withDefault({ b: 2 })],
+    ])('keeps the gate and the own candidate with %s', (_name, build) => {
+      const object = build()
+
+      expect(object.presenceGated).toBe(true)
+      expect(object.defaultValue).toEqual({ b: 2 })
+    })
+
+    it('keeps the gate when the own contribution is replaced', () => {
+      const gated = queryParam.object(pair()).withDefault({ a: 1, b: 100 }).withDefaultsWhenPresent()
+      const replaced = gated.withDefault({ a: 5 })
+
+      expect(replaced.presenceGated).toBe(true)
+      expect(replaced.defaultValue).toEqual({ a: 5 })
+      expect(gated.presenceGated).toBe(true)
+      expect(gated.defaultValue).toEqual({ a: 1, b: 100 })
+    })
+
+    it('keeps an enclosing contribution to a gated child as a candidate', () => {
+      const record = queryParam.object(pair()).withDefaultsWhenPresent()
+      const container = queryParam.object({ record }).withDefault({ record: { a: 9 } })
+
+      expect(container.presenceGated).toBe(false)
+      expect(container.defaultValue).toEqual({ record: { a: 9 } })
+    })
+
+    it.each([
+      ['unprefixed', (param: ReturnType<typeof queryParam.object>) => param],
+      ['prefixed', (param: ReturnType<typeof queryParam.object>) => queryParam.object('p', param)],
+    ])('carries gated child candidates through a %s ungated container', (_name, wrap) => {
+      const record = queryParam.object({ a: queryParam('a', codecs.integer.withDefault(1)) }).withDefaultsWhenPresent()
+      const container = wrap(queryParam.object({ record }))
+
+      expect(container.presenceGated).toBe(false)
+      expect(container.defaultValue).toEqual({ record: { a: 1 } })
+    })
+  })
+})
+
+describe('transformed param defaults', () => {
+  const range = () => queryParam.object({
+    a: queryParam('a', codecs.integer.withDefault(0)),
+    b: queryParam('b', codecs.integer.withDefault(100)),
+  })
+  const text = {
+    read: (value: { a: number, b: number }) => `${value.a}:${value.b}`,
+    write: (value: string) => {
+      const [a, b] = value.split(':').map(Number)
+      return { a, b }
+    },
+  }
+
+  it('derives an output default from an applicable static input default', () => {
+    expect(range().transform(text).defaultValue).toBe('0:100')
+  })
+
+  it.each([
+    ['own default before the gate', () => range().withDefault({ a: 0, b: 100 }).withDefaultsWhenPresent()],
+    ['gate before the own default', () => range().withDefaultsWhenPresent().withDefault({ a: 0, b: 100 })],
+  ])('derives no output default from a gated input with %s', (_name, build) => {
+    expect(build().transform(text).defaultValue).toBeUndefined()
+  })
+
+  it('resolves explicit input against the gated static candidate before transforming', () => {
+    const param = range().withDefault({ a: 0, b: 100 }).withDefaultsWhenPresent().transform(text)
+
+    expect(param.read({})).toBeUndefined()
+    expect(param.read({ b: '10' })).toBe('0:10')
+  })
+
+  it('does not call the transform without a decoded input', () => {
+    const read = vi.fn(text.read)
+    const param = range().transform({ ...text, read })
+    read.mockClear()
+
+    expect(param.read({})).toBeUndefined()
+    expect(read).not.toHaveBeenCalled()
+  })
+
+  it('replaces the derived default with an output default declared after the transform', () => {
+    const param = range().transform(text).withDefault('7:7')
+
+    expect(param.defaultValue).toBe('7:7')
+    expect(param.read({ b: '10' })).toBe('0:10')
   })
 })

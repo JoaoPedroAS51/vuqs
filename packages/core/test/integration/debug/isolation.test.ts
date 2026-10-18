@@ -6,10 +6,11 @@ import { installQueryAdapter } from '../../../src/core/bindings/adapter-provider
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../src/core/codecs/catalog'
 import { addDebugReporter, getDebugChannel } from '../../../src/core/diagnostics/bus'
+import { queryParam } from '../../../src/core/schema/params/query-param'
 import { withContext } from '../../../src/modules/context'
 import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults'
 import { withTestQuery } from '../../helpers/adapter'
-import { resetDebugState, trackReporter } from '../../helpers/debug'
+import { flush, resetDebugState, trackReporter } from '../../helpers/debug'
 
 afterEach(resetDebugState)
 
@@ -102,5 +103,29 @@ describe('adapter isolation', () => {
     )
     expect(rdSetFor('a')?.context?.bindingId).toBe(idA)
     expect(rdSetFor('b')?.context?.bindingId).toBe(idB)
+  })
+
+  it.each([false, true])('produces identical state and navigation with diagnostics armed=%s', async (armed) => {
+    if (armed) {
+      trackReporter(addDebugReporter(() => {}))
+    }
+    const value = queryParam('value', codecs.integer.withDefault(1))
+    const test = withTestQuery()
+    const first = test.build(() => useQueryStates({ value }).use(withRuntimeDefaults()))
+    const second = test.build(() => useQueryStates({ value }).use(withRuntimeDefaults()))
+
+    first.setDefaults({ value: 5 })
+    second.setDefaults({ value: 9 })
+    first.patch({ value: 7 })
+    await flush()
+
+    expect(test.query.value).toEqual({ value: '7' })
+    expect([first.values.value, second.values.value]).toEqual([7, 7])
+
+    first.patch({ value: undefined })
+    await flush()
+
+    expect(test.query.value).toEqual({})
+    expect([first.values.value, second.values.value]).toEqual([5, 9])
   })
 })

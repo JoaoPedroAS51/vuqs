@@ -1,10 +1,11 @@
+import type { ComputedRef } from 'vue'
 import type { DebugChannelHandle } from '../diagnostics/bus'
 import type { ParsedQuery } from '../query/types'
-import type { QueryDefaultsBus, QueryStateReads, ResolvedQueryStateOptions } from '../runtime/engine'
+import type { QueryStateReads, ResolvedQueryStateOptions } from '../runtime/engine'
 import type { QueryHookBus } from '../runtime/hooks'
-import type { QueryPipelineBus } from '../runtime/pipeline'
+import type { QueryPipelineBus } from '../runtime/pipeline/contract'
 import type { QueryTransactionBus, QueryTransactionRequest } from '../runtime/transaction'
-import type { QueryStateSchema } from '../schema/schema'
+import type { QueryStateContributions, QueryStateSchema } from '../schema/schema'
 
 /**
  * The shared core passed to query modules.
@@ -12,19 +13,22 @@ import type { QueryStateSchema } from '../schema/schema'
  * @typeParam TSchema - The schema being managed.
  */
 export interface QueryCore<TSchema extends QueryStateSchema> {
-  /** The schema being managed. */
-  schema: TSchema
+  /** The schema topology being managed. */
+  readonly schema: Readonly<TSchema>
   /** The explicit and default-resolved reactive reads. */
   state: QueryStateReads<TSchema>
-  /** The defaults subsystem: read the merge or register a layer. */
-  defaults: QueryDefaultsBus<TSchema>
-  /** The resolved per-instance behavior baseline (`history`/`scroll`/`throttleMs`/`clearOnDefault`). */
-  options: ResolvedQueryStateOptions
-  /** The transform pipeline: `tap` to contribute, `run` to shape a derived value map. */
-  pipeline: QueryPipelineBus
+  /** The composed default candidates, with the `defaults` read projections applied. */
+  defaults: {
+    /** Composed static and runtime defaults after projection. Presence gates do not hide candidates. */
+    readonly candidates: ComputedRef<QueryStateContributions<TSchema>>
+  }
+  /** The resolved per-instance behavior baseline. */
+  readonly options: Readonly<ResolvedQueryStateOptions>
+  /** Declares pipeline descriptors for the module to return from setup. */
+  pipeline: QueryPipelineBus<TSchema>
   /** The notification bus: one module emits an event, others react. */
   hooks: QueryHookBus
-  /** The observation channel for this adapter's runtime; attach reporters or retain history. */
+  /** The adapter runtime's observation channel, attributed to this binding. */
   debug: DebugChannelHandle
   /** The query I/O boundary: read the current query or transact atomically. */
   query: {

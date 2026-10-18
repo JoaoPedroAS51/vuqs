@@ -1,7 +1,7 @@
 # Storage
 
 Mirrors the explicit query state to sync or async storage and can restore it
-into an empty URL. Storage is a durable mirror of URL state, not a default layer.
+into an empty URL. Storage is a durable mirror of URL state, not a default source.
 
 ## Usage
 
@@ -79,7 +79,7 @@ through the schema:
 The snapshot uses the [`StoredQuerySnapshot`](/api/modules/with-storage#storedquerysnapshot) envelope.
 
 Only explicit values are included, including explicitly present values equal
-to a default. Codec defaults, registered default layers, and resolved `values`
+to a default. Static defaults, installed default sources, and resolved `values`
 are never persisted. An empty state removes the storage key instead of saving
 an empty envelope.
 
@@ -111,8 +111,8 @@ gates, not error channels. Read `status.value` and `error.value` for the outcome
 
 On the server, storage is not read and `ready` resolves with URL state unchanged.
 In a component, restoration begins after mount. Outside a component, it begins on
-a microtask so the complete synchronous `.use()` chain can register its layers
-and transforms first.
+a microtask so the complete synchronous `.use()` chain can install its default sources
+and pipeline registrations first.
 
 Disposing the owning scope stops observation. A late async result cannot restore
 or update module state after disposal.

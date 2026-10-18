@@ -1,12 +1,13 @@
-import type { QueryParamBuilder, QueryParamBuilderOptions, QueryParamBuilderWithDefault, QueryParamTransform } from './builder-types'
-import { structuralEq } from '../../../shared/utils/object'
-import { createDefinedQueryParam } from './definition'
+import type { QueryParamBuilder, QueryParamBuilderOptions, QueryParamTransform } from './builder-types'
+import type { AnyDefinedQueryParam } from './definition'
+import { resolveParamValue } from '../resolution'
+import { createDefinedQueryParam, getParamStructure } from './definition'
 
 /** @internal */
-export function createQueryParamBuilder<T, TDefaultInput = T>(
+export function createQueryParamBuilder<T, TContribution = T, TGuaranteed extends boolean = boolean>(
   options: QueryParamBuilderOptions<T>,
-): QueryParamBuilder<T, TDefaultInput> | QueryParamBuilderWithDefault<T, TDefaultInput> {
-  const defined = createDefinedQueryParam({
+): QueryParamBuilder<T, TContribution, TGuaranteed> {
+  const defined = createDefinedQueryParam<T, T, TContribution, TGuaranteed>({
     paths: options.paths,
     read: options.read,
     write: options.write,
@@ -15,57 +16,70 @@ export function createQueryParamBuilder<T, TDefaultInput = T>(
     defaultValue: options.defaultValue,
     clearOnDefault: options.clearOnDefault,
     presenceGated: options.presenceGated,
+    structure: options.structure,
   })
 
-  const builder = {
+  return {
     ...defined,
-    withDefault(defaultValue: TDefaultInput) {
-      return createQueryParamBuilder<T, TDefaultInput>({
+    withDefault(defaultValue: TContribution) {
+      return createQueryParamBuilder<T, TContribution, true>({
         ...options,
-        defaultValue: defaultValue as unknown as T,
-      }) as QueryParamBuilderWithDefault<T, TDefaultInput>
+        defaultValue,
+        structure: undefined,
+      })
     },
     withEquality(eq: (a: T, b: T) => boolean) {
-      return createQueryParamBuilder<T, TDefaultInput>({
+      return createQueryParamBuilder<T, TContribution, TGuaranteed>({
         ...options,
         eq,
       })
     },
     keepOnDefault() {
-      return createQueryParamBuilder<T, TDefaultInput>({
+      return createQueryParamBuilder<T, TContribution, TGuaranteed>({
         ...options,
         clearOnDefault: false,
       })
     },
     transform<TOutput>(transformer: QueryParamTransform<T, TOutput>) {
-      const inputEq = options.eq ?? structuralEq
-
-      return createQueryParamBuilder<TOutput>({
-        paths: options.paths,
-        read(query, context) {
-          // Preserve absence so the transformed param can resolve its own default.
-          // Present objects need static defaults before the transform reads them.
-          const parsedValue = options.read(query, context)
-
-          if (parsedValue === undefined) {
-            return undefined
-          }
-
-          const resolved = options.resolve ? options.resolve(parsedValue, options.defaultValue) : parsedValue
-
-          return transformer.read(resolved)
-        },
-        write(value) {
-          return options.write(transformer.write(value))
-        },
-        eq: transformer.eq ?? ((a, b) => inputEq(transformer.write(a), transformer.write(b))),
-        defaultValue: options.defaultValue === undefined
-          ? undefined
-          : transformer.read(options.defaultValue),
-        clearOnDefault: options.clearOnDefault,
-      })
+      return createTransformedQueryParam<TOutput>(defined, defined.eq, transformer)
     },
   }
+}
 
-  return builder as QueryParamBuilder<T, TDefaultInput> | QueryParamBuilderWithDefault<T, TDefaultInput>
+/**
+ * Wraps a param so its resolved value is mapped to a different public shape.
+ *
+ * A defined decoded input is resolved against the input's static candidate before
+ * mapping; an absent decoded input skips mapping. The output is atomic. Its static
+ * default is derived separately by mapping the input's absent-input resolution
+ * when that resolution is defined.
+ *
+ * @internal
+ */
+export function createTransformedQueryParam<TOutput>(
+  input: AnyDefinedQueryParam,
+  inputEq: (a: any, b: any) => boolean,
+  transformer: QueryParamTransform<any, TOutput, any>,
+): QueryParamBuilder<TOutput> {
+  const inputCandidate = getParamStructure(input)?.staticCandidate
+  const derived = resolveParamValue(input, undefined, inputCandidate)
+
+  return createQueryParamBuilder<TOutput, TOutput, false>({
+    paths: input.paths,
+    read(query, context) {
+      const decoded = input.read(query, context)
+
+      if (decoded === undefined) {
+        return undefined
+      }
+
+      return transformer.read(resolveParamValue(input, decoded, inputCandidate))
+    },
+    write(value) {
+      return input.write(transformer.write(value))
+    },
+    eq: transformer.eq ?? ((a, b) => inputEq(transformer.write(a), transformer.write(b))),
+    defaultValue: derived === undefined ? undefined : transformer.read(derived),
+    clearOnDefault: input.clearOnDefault,
+  })
 }

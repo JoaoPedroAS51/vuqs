@@ -9,6 +9,7 @@ import { resetQueryRuntime } from '../../../../src/core/runtime/adapter-runtime'
 import { createQueryStateEngine } from '../../../../src/core/runtime/engine'
 import { parseQueryStates } from '../../../../src/core/schema/operations'
 import { queryParam } from '../../../../src/core/schema/params/query-param'
+import { installWrite } from '../../../helpers/pipeline'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
 
@@ -201,7 +202,7 @@ describe('query transactions', () => {
       page: queryParam('page', codecs.integer.withDefault(1)),
       q: queryParam('q', codecs.string),
     })
-    engine.pipeline.tap('write', values => ({
+    installWrite(engine, values => ({
       ...values,
       page: typeof values.page === 'number' ? values.page + 1 : values.page,
     }))
@@ -257,7 +258,7 @@ describe('query transactions', () => {
     const { engine } = createEngine(adapter, schema)
     const starts = vi.fn()
     engine.query.transactions.observe({ start: starts })
-    engine.pipeline.tap('write', (values) => {
+    installWrite(engine, (values) => {
       if ('sort' in values) {
         throw new Error('cannot serialize sort')
       }
@@ -386,5 +387,160 @@ describe('query transactions', () => {
 
     expect(parseQueryStates(schema, {})).toEqual({})
     expect(parseQueryStates(schema, { q: 'sale' })).toEqual({ q: 'sale' })
+  })
+})
+
+describe('full-request write policy', () => {
+  const wide = {
+    q: queryParam('q', codecs.string),
+    sort: queryParam('filters.sort', codecs.string),
+    page: queryParam('page', codecs.integer),
+  }
+
+  it('runs each write callback once with every param of the request', () => {
+    const adapter = createTestingAdapter({ hasMemory: true })
+    const { engine } = createEngine(adapter, wide)
+    const write = vi.fn((values: Record<string, unknown>) => values)
+    installWrite(engine, write)
+
+    engine.query.transact({ mode: 'patch', values: { q: 'sale', sort: 'name' } })
+
+    expect(write).toHaveBeenCalledOnce()
+    expect(write.mock.calls[0]![0]).toEqual({ q: 'sale', sort: 'name' })
+  })
+
+  it('applies a param added by a callback in the same transaction', async () => {
+    const adapter = createTestingAdapter({ hasMemory: true })
+    const { engine } = createEngine(adapter, wide)
+    const starts = vi.fn()
+    engine.query.transactions.observe({ start: starts })
+    installWrite(engine, values => ({ ...values, sort: 'added' }))
+
+    engine.query.transact({ mode: 'patch', values: { q: 'sale' } })
+
+    expect(starts).toHaveBeenCalledOnce()
+    expect(starts.mock.calls[0]![0].keys).toEqual(['q', 'sort'])
+    await flush()
+    expect(adapter.query.value).toEqual({ q: 'sale', filters: { sort: 'added' } })
+  })
+
+  it('clears a param introduced by an earlier callback and removed by a later one', async () => {
+    const adapter = createTestingAdapter({
+      searchParams: { 'filters.sort': 'old', 'page': '3' },
+      hasMemory: true,
+    })
+    const { engine } = createEngine(adapter, wide)
+    installWrite(engine, values => ({ ...values, sort: 'introduced' }))
+    installWrite(engine, ({ sort: _sort, ...rest }) => rest, { optional: [['sort']] })
+
+    engine.query.transact({ mode: 'patch', values: { q: 'sale' } })
+
+    await flush()
+    expect(adapter.query.value).toEqual({ q: 'sale', page: '3' })
+  })
+
+  it('leaves a param the patch and callbacks never touched unchanged', async () => {
+    const adapter = createTestingAdapter({ searchParams: { page: '3' }, hasMemory: true })
+    const { engine } = createEngine(adapter, wide)
+    installWrite(engine, values => values)
+
+    engine.query.transact({ mode: 'patch', values: { q: 'sale' } })
+
+    await flush()
+    expect(adapter.query.value).toEqual({ q: 'sale', page: '3' })
+  })
+
+  it('rejects an output key outside the schema before any publication', async () => {
+    const onUrlUpdate = vi.fn()
+    const adapter = createTestingAdapter({ onUrlUpdate })
+    const { engine } = createEngine(adapter, wide)
+    const starts = vi.fn()
+    engine.query.transactions.observe({ start: starts })
+    installWrite(engine, values => ({ ...values, unknown: 'value' }))
+
+    expect(() => engine.query.transact({ mode: 'patch', values: { q: 'sale' } })).toThrow(/unknown/)
+
+    expect(engine.state.explicitValues.value).toEqual({})
+    expect(starts).not.toHaveBeenCalled()
+    await flush()
+    expect(onUrlUpdate).not.toHaveBeenCalled()
+  })
+
+  it('publishes no earlier part when a later param fails to serialize', async () => {
+    const failing = createCodec<string>({
+      parse: raw => typeof raw === 'string' ? raw : undefined,
+      serialize: () => {
+        throw new Error('cannot encode')
+      },
+    })
+    const onUrlUpdate = vi.fn()
+    const adapter = createTestingAdapter({ onUrlUpdate })
+    const { engine } = createEngine(adapter, { q: queryParam('q', codecs.string), bad: queryParam('bad', failing) })
+    const starts = vi.fn()
+    engine.query.transactions.observe({ start: starts })
+
+    expect(() => engine.query.transact({ mode: 'patch', values: { q: 'sale', bad: 'x' } })).toThrow('cannot encode')
+
+    expect(engine.state.explicitValues.value).toEqual({})
+    expect(starts).not.toHaveBeenCalled()
+    await flush()
+    expect(onUrlUpdate).not.toHaveBeenCalled()
+  })
+
+  it('hands callbacks the request as supplied, including explicit undefined and set metadata only', () => {
+    const adapter = createTestingAdapter({ searchParams: { q: 'old' }, hasMemory: true })
+    const { engine } = createEngine(adapter, wide)
+    const origin = Symbol('module')
+    const seen: Array<{ request: Record<string, unknown>, values: Record<string, unknown> }> = []
+    installWrite(engine, (values, context) => {
+      seen.push({ request: context.request, values })
+      return values
+    }, { optional: [['q']] })
+
+    engine.query.transact({ mode: 'patch', values: { q: undefined, page: 2 }, origin, navigation: { history: 'push' }, defaultPolicy: 'preserve-explicit' })
+    engine.query.transact({ mode: 'replace', values: { page: 4 } })
+
+    expect(seen[0]!.request).toEqual({ mode: 'patch', values: { q: undefined, page: 2 }, origin, navigation: { history: 'push' }, defaultPolicy: 'preserve-explicit' })
+    expect(Object.hasOwn(seen[0]!.request.values as object, 'q')).toBe(true)
+    expect(Object.keys(seen[1]!.request)).toEqual(['mode', 'values'])
+    expect(seen[1]!.values).toEqual({ page: 4 })
+  })
+
+  it('shows every callback the same effective query, including earlier optimistic writes', () => {
+    const adapter = createTestingAdapter({ hasMemory: true })
+    const { engine } = createEngine(adapter, wide)
+    const queries: unknown[] = []
+    installWrite(engine, (values, context) => {
+      queries.push(context.query)
+      return { ...values, sort: 'one' }
+    })
+    installWrite(engine, (values, context) => {
+      queries.push(context.query)
+      return values
+    })
+
+    engine.query.transact({ mode: 'patch', values: { q: 'first' } })
+    queries.length = 0
+    engine.query.transact({ mode: 'patch', values: { page: 2 } })
+
+    expect(queries).toHaveLength(2)
+    expect(queries[0]).toBe(queries[1])
+    expect(queries[0]).toMatchObject({ q: 'first' })
+  })
+
+  it('clears omitted params in a replacement while callbacks see only the supplied values', async () => {
+    const adapter = createTestingAdapter({ searchParams: { q: 'old', page: '3' }, hasMemory: true })
+    const { engine } = createEngine(adapter, wide)
+    const seen: unknown[] = []
+    installWrite(engine, (values) => {
+      seen.push({ ...values })
+      return values
+    })
+
+    engine.query.transact({ mode: 'replace', values: { sort: 'name' } })
+
+    await flush()
+    expect(seen).toEqual([{ sort: 'name' }])
+    expect(adapter.query.value).toEqual({ filters: { sort: 'name' } })
   })
 })

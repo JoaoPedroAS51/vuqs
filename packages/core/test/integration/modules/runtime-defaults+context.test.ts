@@ -57,4 +57,46 @@ describe('withRuntimeDefaults + withContext', () => {
     expect(q.defaults.category).toBeUndefined()
     expect(q.values.category).toBeUndefined()
   })
+
+  it('resets the runtime defaults in either composition order', async () => {
+    const schema = { q: queryParam('q', codecs.string) }
+    const { build } = setup()
+    const tab = ref<'products' | 'orders'>('products')
+    const q = build(() =>
+      useQueryStates(schema)
+        .use(withContext({ active: tab }))
+        .use(withRuntimeDefaults()),
+    )
+
+    q.setDefaults({ q: 'preset' })
+    expect(q.values.q).toBe('preset')
+
+    tab.value = 'orders'
+    await nextTick()
+    await flush()
+
+    expect(q.defaults).toEqual({})
+    expect(q.values.q).toBeUndefined()
+  })
+
+  it('leaves another module\'s default source in place on a context change', async () => {
+    const schema = { q: queryParam('q', codecs.string) }
+    const { build } = setup()
+    const tab = ref<'products' | 'orders'>('products')
+    const q = build(() =>
+      useQueryStates(schema)
+        .use(() => ({ api: {}, defaults: [{ q: 'sibling' }] }))
+        .use(withRuntimeDefaults())
+        .use(withContext({ active: tab })),
+    )
+
+    q.setDefaults({ q: 'preset' })
+    expect(q.values.q).toBe('preset')
+
+    tab.value = 'orders'
+    await nextTick()
+    await flush()
+
+    expect(q.values.q).toBe('sibling')
+  })
 })

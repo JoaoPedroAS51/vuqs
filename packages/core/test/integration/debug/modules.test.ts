@@ -8,6 +8,7 @@ import { useQueryState } from '../../../src/core/bindings/use-query-state'
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../src/core/codecs/catalog'
 import { addDebugReporter } from '../../../src/core/diagnostics/bus'
+import { createDebugLogger } from '../../../src/core/diagnostics/logger'
 import { withContext } from '../../../src/modules/context'
 import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults'
 import { withStorage } from '../../../src/modules/storage/storage'
@@ -97,6 +98,58 @@ describe('module tracing', () => {
 
     expect(events).toContainEqual(['rd:register', expect.objectContaining({ state: 'registered' })])
     expect(events).toContainEqual(['rd:register', expect.objectContaining({ state: 'disposed' })])
+  })
+
+  it('attributes an external module log to the binding and runtime of its writes', () => {
+    const seen: DebugEvent[] = []
+    trackReporter(addDebugReporter(event => seen.push(event)))
+    const { build } = withTestQuery()
+    const query = build(() => useQueryStates({ q: codecs.string }).use((core) => {
+      const log = createDebugLogger('my-module', { target: core.debug })
+
+      return {
+        api: {
+          write: () => {
+            log.debug('writing %s', 'a')
+            log.warn('careful')
+            core.query.transact({ mode: 'patch', values: { q: 'a' } })
+          },
+        },
+      }
+    }))
+
+    query.write()
+
+    const logged = seen.filter(event => event.code === 'module:log' || event.code === 'module:warn')
+    const write = seen.find(event => event.code === 'binding:set')
+
+    expect(logged.map(event => event.code)).toEqual(['module:log', 'module:warn'])
+    expect(logged[0]?.data).toEqual({ namespace: 'my-module', message: 'writing %s', values: ['a'] })
+    expect(write?.context?.bindingId).toBeDefined()
+    expect(write?.context?.runtimeId).toBeDefined()
+    for (const event of logged) {
+      expect(event.context?.bindingId).toBe(write?.context?.bindingId)
+      expect(event.context?.runtimeId).toBe(write?.context?.runtimeId)
+    }
+  })
+
+  it('keeps two bindings\' module logs apart', () => {
+    const seen: DebugEvent[] = []
+    trackReporter(addDebugReporter(event => seen.push(event)))
+    const { build } = withTestQuery()
+    const make = () => build(() => useQueryStates({ q: codecs.string }).use(core => ({
+      api: { log: () => createDebugLogger('my-module', { target: core.debug }).debug('hi') },
+    })))
+    const first = make()
+    const second = make()
+
+    first.log()
+    second.log()
+
+    const logged = seen.filter(event => event.code === 'module:log')
+    expect(logged).toHaveLength(2)
+    expect(logged[0]?.context?.bindingId).not.toBe(logged[1]?.context?.bindingId)
+    expect(logged[0]?.context?.runtimeId).toBe(logged[1]?.context?.runtimeId)
   })
 
   it('traces setDefaults when armed', () => {

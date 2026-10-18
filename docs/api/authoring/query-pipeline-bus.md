@@ -1,36 +1,44 @@
 # QueryPipelineBus <Badge type="info" text="@vuqs/core" />
 
-Registers pure transforms for reads, writes, and serialized navigation output.
+Creates the pipeline descriptors a module returns to reshape reads and writes.
 
 ## Usage
 
 ```ts
-import { defineQueryModule } from '@vuqs/core'
-import { omitBy } from '@vuqs/core/shared'
-import { onScopeDispose } from 'vue'
+import type { QueryCore } from '@vuqs/core'
+import { codecs, defineQueryModule, defineQuerySchema } from '@vuqs/core'
+
+const schema = defineQuerySchema({ page: codecs.integer, q: codecs.string })
 
 const withHiddenPage = defineQueryModule({
-  queryStates: (core) => {
-    const stop = core.pipeline.tap('read', omitBy(key => key === 'page'))
-    onScopeDispose(stop)
-    return {}
-  },
+  states: (core: QueryCore<typeof schema>) => ({
+    api: {},
+    pipeline: [
+      core.pipeline.define('read', ({ page: _page, ...rest }) => rest, {
+        projection: 'resolved',
+        presence: { optional: [['page']] },
+      }),
+    ],
+  }),
 })
 ```
 
 ## Type
 
 ```ts
-interface QueryPipelineBus {
-  tap: <Stage extends QueryPipelineStage>(
-    stage: Stage | Stage[],
-    transform: QueryPipeline[Stage],
-    options?: { enforce?: Enforce },
-  ) => () => void
-  run: <Stage extends QueryPipelineStage>(
-    stage: Stage,
-    value: Parameters<QueryPipeline[Stage]>[0],
-  ) => ReturnType<QueryPipeline[Stage]>
+interface QueryPipelineBus<TSchema extends QueryStateSchema = QueryStateSchema> {
+  define: {
+    <TProjection extends ReadProjection, const TOptional extends readonly PipelinePath<TSchema>[], const TRequired extends readonly PipelinePath<TSchema>[], TEnforce extends Enforce>(
+      stage: 'read',
+      callback: (values: PipelineView<TSchema, …>, context: PipelineReadContext<TSchema, TProjection>) => …,
+      options: PipelineReadOptions<TProjection, TOptional, TRequired, TEnforce>,
+    ): PipelineDescriptor<'read', TProjection, TOptional, TRequired, TEnforce>
+    <const TOptional extends readonly PipelinePath<TSchema>[], const TRequired extends readonly PipelinePath<TSchema>[], TEnforce extends Enforce>(
+      stage: 'write',
+      callback: (values: PipelineView<TSchema, 'explicit'>, context: PipelineWriteContext<TSchema>) => …,
+      options?: PipelineWriteOptions<TOptional, TRequired, TEnforce>,
+    ): PipelineDescriptor<'write', undefined, TOptional, TRequired, TEnforce>
+  }
 }
 ```
 
@@ -38,11 +46,33 @@ interface QueryPipelineBus {
 
 | Method | Parameters | Return value |
 | --- | --- | --- |
-| `tap(stage, transform, options?)` | One stage or an array of stages, its transform, optional `enforce`. | Disposer that unregisters the transform. |
-| `run(stage, value)` | Stage and matching input. | The stage's transformed result. |
+| `define(stage, callback, options)` | `'read'` with a `projection` option, or `'write'`; a callback `(values, context) => nextValues`; optional `presence.optional`, `presence.required` and `enforce`. | An inert descriptor typed with its presence effects. |
 
-Transforms must be pure. Reading reactive sources is supported; mutation, navigation, and side effects are not. `enforce` defaults to `'default'`: `pre`, then `default`, then `post`. Within a band, registration order is retained.
+`define` only creates a descriptor. A module installs it by returning it in the `pipeline` member of its setup result; a descriptor that is not returned has no effect, and the core assigns it a registration identity. The bus offers no way to run a stage or install a descriptor outside a result.
 
+Callbacks must be pure. Reading reactive sources is supported; mutation, navigation, and side effects are not. Navigation is not a stage. `enforce` defaults to `'default'`: `pre`, then `default`, then `post`. Within a band, installation order is retained.
+
+
+## Descriptor types
+
+```ts
+type ReadProjection = 'explicit' | 'defaults' | 'resolved'
+
+type PipelinePath<TSchema extends QueryStateSchema> = /* tuples of logical keys through declared children */
+
+interface PipelineDescriptor<TStage, TProjection, TOptional, TRequired, TEnforce> {
+  readonly stage: TStage
+  readonly projection: TProjection
+  readonly optional: TOptional
+  readonly required: TRequired
+  readonly enforce: TEnforce
+}
+
+type OrderedPipelineDescriptors<TDescriptors extends readonly unknown[]> = /* pre, default, post, then installation order */
+type ApplyPipelineEffects<TBase, TDescriptors extends readonly unknown[]> = /* the base read after the ordered presence effects */
+```
+
+`ApplyPipelineEffects` applies only descriptors of the resolved projection. A conditional declaration guarantees the paths every alternative names, and a widened list guarantees nothing while still admitting absence. `PipelineView`, `PipelineReadContext`, `PipelineWriteContext`, `PipelineWriteRequest`, `PipelinePresence`, `PipelineReadOptions` and `PipelineWriteOptions` describe the callback inputs and options; see [Writing a module](/modules/authoring#callback-inputs-and-results).
 
 ## QueryPipeline
 
@@ -50,7 +80,6 @@ Transforms must be pure. Reading reactive sources is supported; mutation, naviga
 interface QueryPipeline {
   read: (values: QueryValues) => QueryValues
   write: (values: QueryValues) => QueryValues
-  navigate: (query: ParsedQueryRaw) => ParsedQueryRaw
 }
 ```
 

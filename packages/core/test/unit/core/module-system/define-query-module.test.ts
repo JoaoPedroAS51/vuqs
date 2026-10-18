@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { useQueryState } from '../../../../src/core/bindings/use-query-state'
 import { useQueryStates } from '../../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../../src/core/codecs/catalog'
@@ -10,8 +10,8 @@ describe('defineQueryModule targeted call form', () => {
   it('uses an array of paths to distinguish a target from module options', () => {
     const { build } = setup()
     const factory = defineQueryModule({
-      queryStates: (_core, options: unknown) => ({ received: options }),
-      queryState: (_core, _key, options: unknown) => ({ received: options }),
+      states: (_core, options: unknown) => ({ api: { received: options } }),
+      state: (_core, _key, options: unknown) => ({ api: { received: options } }),
     })
     const target = factory({ paths: ['q'] })
     const options = { paths: 'q' }
@@ -26,8 +26,8 @@ describe('defineQueryModule targeted call form', () => {
   it('accepts a key as the first argument, stripping the grouped projection', () => {
     const { build } = setup()
     const module = defineQueryModule({
-      queryStates: () => ({ grouped: true }),
-      queryState: (_core, _key, options: { label: string }) => ({ label: options.label }),
+      states: () => ({ api: { grouped: true } }),
+      state: (_core, _key, options: { label: string }) => ({ api: { label: options.label } }),
     })
 
     const targeted = module('q', { label: 'targeted' })
@@ -43,7 +43,7 @@ describe('defineQueryModule targeted call form', () => {
     const { build } = setup()
     const param = queryParam('q', codecs.string)
     const module = defineQueryModule({
-      queryState: (_core, _key, options: { label: string }) => ({ label: options.label }),
+      state: (_core, _key, options: { label: string }) => ({ api: { label: options.label } }),
     })
 
     const single = build(() => useQueryState(param).use(module(param, { label: 'targeted' })))
@@ -56,7 +56,7 @@ describe('defineQueryModule targeted call form', () => {
   it('rejects useQueryState when a grouped-only module is targeted', () => {
     const { build } = setup()
     const groupedOnly = defineQueryModule({
-      queryStates: () => ({ grouped: true }),
+      states: () => ({ api: { grouped: true } }),
     })
 
     const targeted = (groupedOnly as unknown as (key: string, options: object) => object)('q', {})
@@ -69,7 +69,7 @@ describe('defineQueryModule targeted call form', () => {
   it('rejects useQueryState when a single-only module receives a schema', () => {
     const { build } = setup()
     const singleOnly = defineQueryModule({
-      queryState: (_core, key) => ({ boundKey: key }),
+      state: (_core, key) => ({ api: { boundKey: key } }),
     })
 
     const result = (singleOnly as unknown as (schema: object, options: object) => object)({ q: 'schema' }, {})
@@ -81,18 +81,42 @@ describe('defineQueryModule targeted call form', () => {
   })
 })
 
-describe('use() collision guard', () => {
-  it('keeps a single-only module non-callable, matching its non-grouped type', () => {
+describe('defineQueryModule configuration', () => {
+  it('defers setup until installation and runs only the selected facade', () => {
     const { build } = setup()
-    const singleOnly = defineQueryModule({
-      queryState: (_core, key) => ({ boundKey: key }),
-    })
+    const states = vi.fn((_core: unknown, _options: { label: string }) => ({ api: { grouped: true } }))
+    const state = vi.fn((_core: unknown, _key: unknown, _options: { label: string }) => ({ api: { single: true } }))
+    const module = defineQueryModule({ states, state })
 
-    // The single facade composes it; the type rejects it on useQueryStates,
-    // and at runtime it is not a callable grouped module.
-    const single = build(() => useQueryState('q').use(singleOnly()))
+    const configured = module({ label: 'x' })
 
-    expect(single.boundKey).toBe('value')
-    expect(typeof singleOnly()).toBe('object')
+    expect(states).not.toHaveBeenCalled()
+    expect(state).not.toHaveBeenCalled()
+
+    build(() => useQueryStates({ q: codecs.string }).use(configured))
+    expect(states).toHaveBeenCalledOnce()
+    expect(state).not.toHaveBeenCalled()
+
+    build(() => useQueryState('q').use(module({ label: 'y' })))
+    expect(state).toHaveBeenCalledOnce()
+  })
+
+  it('exposes the actual setup callbacks as the definition', () => {
+    const states = () => ({ api: {} })
+    const state = () => ({ api: {} })
+    const module = defineQueryModule({ states, state })
+
+    expect(module.definition.states).toBe(states)
+    expect(module.definition.state).toBe(state)
+  })
+
+  it('supports a module with one facade and an API-only result', () => {
+    const { build } = setup()
+    const single = defineQueryModule({ state: (_core, key) => ({ api: { boundKey: key } }) })
+    const grouped = defineQueryModule({ states: () => ({ api: { grouped: true } }) })
+
+    expect(build(() => useQueryState('q').use(single())).boundKey).toBe('value')
+    expect(build(() => useQueryStates({ q: codecs.string }).use(grouped())).grouped).toBe(true)
+    expect(typeof single()).toBe('object')
   })
 })

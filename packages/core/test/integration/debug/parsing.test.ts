@@ -101,3 +101,43 @@ describe('parse visibility', () => {
     ])
   })
 })
+
+describe('parse visibility during default omission evaluation', () => {
+  it('keeps invalid-input observations local to the actual read', async () => {
+    const events = captureEvents()
+    const query = ref<ParsedQuery>({ page: 'bad', other: 'x' })
+    const app = createApp({})
+    const adapter = createTestingAdapter({ searchParams: query.value, hasMemory: true })
+    installQueryAdapter(app, adapter)
+    const state = app.runWithContext(() => useQueryStates({
+      page: queryParam('page', codecs.integer.withDefault(1)),
+      other: codecs.string,
+    }))
+
+    void state.values.page
+    const before = events.filter(([code]) => code === 'engine:parse-miss').length
+
+    state.patch({ other: 'y' })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    void state.values.page
+
+    expect(before).toBe(1)
+    expect(events.filter(([code]) => code === 'engine:parse-miss')).toHaveLength(1)
+  })
+
+  it('emits no setter event for the evaluated alternatives', async () => {
+    const events = captureEvents()
+    const adapter = createTestingAdapter({ hasMemory: true })
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const state = app.runWithContext(() => useQueryStates({
+      page: queryParam('page', codecs.integer.withDefault(1)),
+    }))
+
+    state.patch({ page: 1 })
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(events.filter(([code]) => code === 'binding:set')).toHaveLength(1)
+    expect(events.filter(([code]) => code === 'engine:clear-on-default')).toHaveLength(1)
+  })
+})

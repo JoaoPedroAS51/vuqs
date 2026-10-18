@@ -1,5 +1,6 @@
 import type { ComputedRef, ShallowRef } from 'vue'
 import type { QueryCore } from '../../core/module-system/query-core'
+import type { ModuleOptions } from '../../core/module-system/registry'
 import type { ParsedQueryRaw } from '../../core/query/types'
 import type { QueryStateSchema } from '../../core/schema/schema'
 // Anchor the registry augmentation to the core entry
@@ -30,7 +31,7 @@ export interface QueryStorage {
   load: (key: string) => Awaitable<StoredQuerySnapshot | undefined>
   /** Saves one non-empty snapshot. */
   save: (key: string, snapshot: StoredQuerySnapshot) => Awaitable<void>
-  /** Removes an empty snapshot. */
+  /** Removes the snapshot stored under `key`. */
   remove: (key: string) => Awaitable<void>
 }
 
@@ -43,7 +44,11 @@ export interface StorageOptions {
   key: string
   /** Sync or async persistence implementation. */
   storage: QueryStorage
-  /** Restore only into an empty state, or never restore. Defaults to `if-empty`. */
+  /**
+   * Restores only into an empty state, or skips restoration.
+   *
+   * @default 'if-empty'
+   */
   restore?: StorageRestorePolicy
   /** Application version that must match a stored snapshot before restore. */
   version?: string
@@ -71,11 +76,11 @@ export interface StorageApi {
 }
 
 declare module '@vuqs/core' {
-  // eslint-disable-next-line unused-imports/no-unused-vars -- TParam must match the base registry signature
-  interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
+  // eslint-disable-next-line unused-imports/no-unused-vars -- the params must match the base registry signature
+  interface QueryModuleRegistry<TSchema extends QueryStateSchema, TOptions, TInference = unknown> {
     'vuqs:storage': {
-      states: { options: StorageOptions, api: StorageApi }
-      state: { options: StorageOptions, api: StorageApi }
+      states: (options: ModuleOptions<TOptions, StorageOptions>) => typeof withStorage.definition.states<TSchema>
+      state: (options: ModuleOptions<TOptions, StorageOptions>) => typeof withStorage.definition.state<TSchema>
     }
   }
 }
@@ -90,15 +95,15 @@ declare module '@vuqs/core' {
  */
 export const withStorage = /* @__PURE__ */ defineQueryModule({
   name: 'vuqs:storage',
-  queryStates: <TSchema extends QueryStateSchema>(
+  states: <TSchema extends QueryStateSchema>(
     core: QueryCore<TSchema>,
     options: StorageOptions,
-  ): StorageApi => createStorageApi(core, options),
-  queryState: <TSchema extends QueryStateSchema>(
+  ): { api: StorageApi } => ({ api: createStorageApi(core, options) }),
+  state: <TSchema extends QueryStateSchema>(
     core: QueryCore<TSchema>,
     _key: keyof TSchema & string,
     options: StorageOptions,
-  ): StorageApi => createStorageApi(core, options),
+  ): { api: StorageApi } => ({ api: createStorageApi(core, options) }),
 })
 
 interface PendingStorageWrite {

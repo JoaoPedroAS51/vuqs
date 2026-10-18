@@ -125,6 +125,23 @@ patch({ sort: undefined }) // clear sort
 patch({ q: 'phone' }, { history: 'push' }) // with per-call options
 ```
 
+A supplied object **replaces** that param's representation instead of merging into
+it. With `record.a=7&record.b=20` in the URL, `patch({ record: { b: 10 } })`
+leaves only `record.b=10`; the omitted child falls back to its default on read.
+Omitting `record` from the patch keeps the whole representation. Partial objects
+are accepted for composed params, and `undefined` clears them:
+
+```ts
+patch({ record: { b: 10 } }) // record.a=7 is dropped, a reads its default
+patch({ record: undefined }) // clear the whole record
+```
+
+A [module](/modules/) can add or remove params while the write is prepared. The
+write callbacks run once over the complete request, a param they introduce joins
+the same transaction, and a param they remove is cleared rather than left as it
+was. A param the request and the callbacks never touch is preserved. The same
+rules apply to `values` assignments, `toQueryRefs` and single-param setters.
+
 ### `replace`: whole-state write
 
 Sets the given params and **clears every param absent or explicitly `undefined`**,
@@ -142,6 +159,23 @@ replace({ q: 'laptop', page: undefined }) // q set, page + sort cleared
 clear() // every param back to its default, one navigation (replace({}))
 clear({ history: 'push' }) // with options
 ```
+
+## Reads after composing modules
+
+[Modules](/modules/) can change what a param reads, for example by making it
+absent in some context. `use` returns the composable with the reads that follow
+those effects, so capture the end of the chain and read through it:
+
+```ts
+const query = useQueryStates(schema)
+  .use(withContext({ active, only: { page: ['products'] } }))
+
+query.values.page // number | undefined, even though `page` has a static default
+```
+
+A reference kept before a `.use()` call observes the same binding at runtime but
+keeps the earlier types. Refs from `toQueryRefs(query)` follow the same read
+types as `values`, and the write types stay the params' explicit values.
 
 ## Coalescing: many writes, one navigation
 

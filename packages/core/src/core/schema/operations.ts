@@ -102,44 +102,6 @@ export function buildQuery<TSchema extends QueryStateSchema>(
   return mergeQueries(omitManagedKeys(schema, currentQuery), serializeQueryStates(schema, values))
 }
 
-/**
- * Filters values according to each param's default-clearing policy.
- *
- * @typeParam TSchema - The schema describing the params.
- * @param schema - The param definitions, used for per-param equality and defaults.
- * @param values - The values to filter.
- * @returns A new map without undefined values or values matching a declared
- * default, unless the param disables `clearOnDefault`.
- */
-export function dropDefaults<TSchema extends QueryStateSchema>(
-  schema: TSchema,
-  values: QueryStateValues<TSchema>,
-): QueryStateValues<TSchema> {
-  const result: QueryStateValues<TSchema> = {}
-
-  for (const key of keysOf(schema)) {
-    const value = values[key]
-
-    if (value === undefined) {
-      continue
-    }
-
-    const definition = schema[key]
-
-    if (
-      definition.clearOnDefault !== false
-      && definition.defaultValue !== undefined
-      && definition.eq(value, definition.defaultValue)
-    ) {
-      continue
-    }
-
-    result[key] = value
-  }
-
-  return result
-}
-
 function keysOf<TSchema extends QueryStateSchema>(schema: TSchema): Array<keyof TSchema & string> {
   return Object.keys(schema) as Array<keyof TSchema & string>
 }

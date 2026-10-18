@@ -48,3 +48,27 @@ describe('toQueryRefs coherence with withRuntimeDefaults', () => {
     expect(q.values).toEqual({ page: 5 })
   })
 })
+
+describe('toQueryRefs partial composed writes with runtime defaults', () => {
+  const record = queryParam.object('record', {
+    a: queryParam('a', codecs.integer.withDefault(0)),
+    b: queryParam('b', codecs.integer.withDefault(100)),
+  })
+
+  it('stores only the supplied children and keeps the omitted ones dynamic', async () => {
+    const test = setup()
+    const q = test.build(() => useQueryStates({ record }).use(withRuntimeDefaults()))
+    const refs = toQueryRefs(q)
+
+    refs.record.set({ b: 10 })
+    await flush()
+
+    expect(test.query.value).toEqual({ record: { b: '10' } })
+    expect(q.explicitValues.record).toEqual({ b: 10 })
+    expect(refs.record.value).toEqual({ a: 0, b: 10 })
+
+    q.setDefaults({ record: { a: 7 } })
+    expect(refs.record.value).toEqual({ a: 7, b: 10 })
+    expect(q.explicitValues.record).toEqual({ b: 10 })
+  })
+})

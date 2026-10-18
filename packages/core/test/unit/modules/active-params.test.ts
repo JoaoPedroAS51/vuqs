@@ -116,3 +116,45 @@ describe('withActiveParams single', () => {
     expect(enabled.isActive.value).toBe(true)
   })
 })
+
+describe('withActiveParams projected comparison', () => {
+  it('compares the projected explicit value with the projected candidate', () => {
+    const { build } = setup({ status: 'ALL' })
+    const q = build(() => useQueryStates({ status: codecs.string.withDefault('all') })
+      .use((core) => {
+        const upper = (values: { readonly status?: string }): { status?: string } => ({
+          ...values,
+          status: values.status?.toUpperCase(),
+        })
+
+        return {
+          api: {},
+          pipeline: [
+            core.pipeline.define('read', upper, { projection: 'explicit' }),
+            core.pipeline.define('read', upper, { projection: 'defaults' }),
+            core.pipeline.define('read', upper, { projection: 'resolved' }),
+          ],
+        }
+      })
+      .use(withActiveParams()))
+
+    expect(q.isActive('status')).toBe(false)
+  })
+
+  it('treats an explicit value hidden by a projection as inactive', () => {
+    const { build } = setup({ status: 'open' })
+    const q = build(() => useQueryStates({ status: codecs.string.withDefault('all') })
+      .use(core => ({
+        api: {},
+        pipeline: [
+          core.pipeline.define('read', ({ status: _status, ...rest }) => rest, {
+            projection: 'explicit',
+            presence: { optional: [['status']] },
+          }),
+        ],
+      }))
+      .use(withActiveParams()))
+
+    expect(q.isActive('status')).toBe(false)
+  })
+})

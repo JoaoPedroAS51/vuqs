@@ -81,6 +81,47 @@ describe('withStorage lifecycle', () => {
     expect(memory.load).not.toHaveBeenCalled()
   })
 
+  it('never loads or writes when its installation fails', async () => {
+    const memory = createMemoryStorage(snapshot({ q: 'stored' }))
+    const adapter = createTestingAdapter({ searchParams: { q: 'phone' }, hasMemory: true })
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const scope = effectScope()
+    onTestFinished(() => scope.stop())
+    const query = app.runWithContext(() => scope.run(() => useQueryStates(schema).use(() => ({ api: { storage: true } }))))!
+
+    expect(() => query.use(withStorage({ key: 'filters', storage: memory.storage }))).toThrow(/module key "storage"/)
+
+    adapter.query.value = { q: 'changed' }
+    await flushMicrotasks()
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(memory.load).not.toHaveBeenCalled()
+    expect(memory.save).not.toHaveBeenCalled()
+    expect(memory.remove).not.toHaveBeenCalled()
+  })
+
+  it('stops mirroring once the binding that installed it is disposed', async () => {
+    const memory = createMemoryStorage()
+    const adapter = createTestingAdapter({ searchParams: { q: 'phone' }, hasMemory: true })
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const scope = effectScope()
+    onTestFinished(() => scope.stop())
+    const query = app.runWithContext(() => scope.run(() => useQueryStates(schema)))!
+    const state = query.use(withStorage({ key: 'filters', storage: memory.storage, restore: 'never' }))
+
+    await flushMicrotasks()
+    await state.storage.flush()
+    expect(memory.save).toHaveBeenCalledOnce()
+
+    scope.stop()
+    adapter.query.value = { q: 'after' }
+    await flushMicrotasks()
+
+    expect(memory.save).toHaveBeenCalledOnce()
+  })
+
   it.each(['resolve', 'reject'] as const)('ignores an in-flight write that %s after disposal', async (outcome) => {
     const pending = deferred<void>()
     const memory = createMemoryStorage()
@@ -194,7 +235,7 @@ describe('withStorage lifecycle', () => {
           .use(withStorage({ key: 'filters', storage: memory.storage }))
           .use(() => {
             composed = true
-            return {}
+            return { api: {} }
           })
         controls = state.storage
 

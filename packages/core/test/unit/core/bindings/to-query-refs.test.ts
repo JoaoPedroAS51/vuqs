@@ -63,3 +63,26 @@ describe('toQueryRefs over the composable', () => {
     expect(Object.keys(toQueryRefs(query))).toEqual(['q', 'page'])
   })
 })
+
+describe('toQueryRefs explicit partial composed writes', () => {
+  const record = queryParam.object('record', {
+    a: queryParam('a', codecs.integer.withDefault(0)),
+    b: queryParam('b', codecs.integer.withDefault(100)),
+  })
+
+  it.each(['set', 'value assignment'] as const)('writes a partial object through %s', async (mode) => {
+    const { query, build } = setup({})
+    const refs = toQueryRefs(build(() => useQueryStates({ record })))
+
+    if (mode === 'set') {
+      refs.record.set({ b: 10 })
+    }
+    else {
+      refs.record.value = { b: 10 }
+    }
+    await flush()
+
+    expect(query.value).toEqual({ record: { b: '10' } })
+    expect(refs.record.value).toEqual({ a: 0, b: 10 })
+  })
+})

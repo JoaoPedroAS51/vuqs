@@ -1,24 +1,27 @@
-import type { ComputedRef, MaybeRefOrGetter } from 'vue'
+import type { ComputedRef } from 'vue'
 import type { DebugChannelHandle } from '../diagnostics/bus'
 import type { ParsedQuery } from '../query/types'
 import type { QueryParamReadContext } from '../schema/params/definition'
-import type { QueryStateSchema, QueryStateValues } from '../schema/schema'
+import type { QueryStateContributions, QueryStateResolvedValues, QueryStateSchema, QueryStateValues } from '../schema/schema'
 import type { NavigateOptions, QueryAdapter } from './adapter'
+import type { InstallationRegistry } from './installations'
 import type { Overlay } from './overlay'
-import type { QueryPipelineBus, QueryValues } from './pipeline'
+import type { QueryPipelineRuntime } from './pipeline/pipeline'
 import type { QueryTransactionBus, QueryTransactionRequest } from './transaction'
-import { computed, onScopeDispose, shallowRef, toValue } from 'vue'
-import { definedOnly, structuralEq } from '../../shared/utils/object'
+import { computed, onScopeDispose, toValue } from 'vue'
+import { structuralEq } from '../../shared/utils/object'
 import { bindDebugTarget, emitDebug, emitWarn, isDebugArmed } from '../diagnostics/bus'
 import { normalizeForHistory } from '../diagnostics/normalize'
 import { registerSnapshotSource } from '../diagnostics/snapshot'
-import { cloneQuery } from '../query/object'
-import { deletePath, getPath, pruneEmptyAncestors, setPath } from '../query/path'
-import { parseQueryStates, serializeQueryStates } from '../schema/operations'
-import { getStaticQueryDefaults, resolveQueryStateValues } from '../schema/resolution'
+import { getPath } from '../query/path'
+import { parseQueryStates } from '../schema/operations'
+import { composeDefaultCandidates } from '../schema/resolution'
 import { assertUniquePaths, getManagedKeys } from '../schema/schema'
 import { createQueryTransactionBus, getQueryRuntime } from './adapter-runtime'
-import { createQueryPipeline } from './pipeline'
+import { createQueryEvaluation } from './evaluation'
+import { createInstallationRegistry } from './installations'
+import { applyOverlay } from './overlay'
+import { createQueryPipeline } from './pipeline/pipeline'
 
 /**
  * Options for {@link createQueryStateEngine}.
@@ -36,9 +39,18 @@ export interface QueryStateEngineOptions<TSchema extends QueryStateSchema> exten
   schema: TSchema
   /** The query source and navigate function, resolved from the provided adapter. */
   adapter: QueryAdapter
-  /** Coalesce writes within this many ms into one navigation. Defaults to a microtask. */
+  /**
+   * Coalesces writes within this many ms into one navigation (`0` uses a microtask).
+   *
+   * @default 0
+   */
   throttleMs?: number
-  /** Drop a value from the URL when it equals its resolved default. Defaults to `true`. */
+  /**
+   * Allows default-equal writes to omit their URL representation when the binding
+   * reads the same value afterward. Overrides the param and adapter settings.
+   *
+   * @default The param setting, then `adapterClearOnDefault`, then `true`.
+   */
   clearOnDefault?: boolean
   /** Adapter-level default for `clearOnDefault`. */
   adapterClearOnDefault?: boolean
@@ -50,13 +62,13 @@ export interface QueryStateEngineOptions<TSchema extends QueryStateSchema> exten
  * `history`/`scroll` through `query.transact`.
  */
 export interface ResolvedQueryStateOptions {
-  /** Replace the current history entry instead of pushing a new one. */
+  /** The history mode used unless a write overrides it. */
   history?: NavigateOptions['history']
   /** Whether the navigation should scroll. */
   scroll?: NavigateOptions['scroll']
   /** The write-coalescing window in ms (`0` means one microtask). */
   throttleMs: number
-  /** Whether a write drops a param that equals its resolved default. */
+  /** The default-omission policy baseline; omission also requires preserving the complete read. */
   clearOnDefault: boolean
 }
 
@@ -68,37 +80,31 @@ export interface ResolvedQueryStateOptions {
 export interface QueryStateReads<TSchema extends QueryStateSchema> {
   /** Decoded values including optimistic writes and the read pipeline, before engine default resolution. */
   explicitValues: ComputedRef<QueryStateValues<TSchema>>
-  /** Resolved values: explicit values layered over {@link QueryDefaultsBus.resolved}. */
-  values: ComputedRef<QueryStateValues<TSchema>>
+  /** Param values after default resolution and the resolved read projection. */
+  values: ComputedRef<QueryStateResolvedValues<TSchema>>
 }
 
 /**
- * The defaults subsystem: read the merged default layers, or contribute one.
+ * The defaults subsystem: read the composed candidates.
  *
  * @typeParam TSchema - The schema whose params the engine tracks.
+ *
+ * @internal
  */
 export interface QueryDefaultsBus<TSchema extends QueryStateSchema> {
-  /** The merged default layers (codec base + registered), read pipeline applied. */
-  resolved: ComputedRef<QueryStateValues<TSchema>>
-  /**
-   * Registers a reactive default layer above codec defaults. Later registrations win.
-   *
-   * @returns A function that removes the layer.
-   */
-  register: (source: MaybeRefOrGetter<QueryStateValues<TSchema>>) => () => void
+  /** The composed default candidates (static + installed sources), read pipeline applied. */
+  candidates: ComputedRef<QueryStateContributions<TSchema>>
 }
 
 /**
- * The reactive core behind URL-bound state, used by {@link useQueryState} and
- * {@link useQueryStates}, organized into facets: `state` (reads), `defaults`
- * (subsystem), `query` (I/O), `options` (resolved behavior), and `pipeline`.
+ * Reactive reads, transactions, and module installations for a bound query schema.
  *
  * @typeParam TSchema - The schema whose params the engine tracks.
  */
 export interface QueryStateEngine<TSchema extends QueryStateSchema> {
   /** The resolved reactive reads. */
   state: QueryStateReads<TSchema>
-  /** The defaults subsystem: read the merge or register a layer. */
+  /** The defaults subsystem. */
   defaults: QueryDefaultsBus<TSchema>
   /** The query I/O boundary. */
   query: {
@@ -112,9 +118,14 @@ export interface QueryStateEngine<TSchema extends QueryStateSchema> {
   /** The resolved per-instance behavior baseline. */
   options: ResolvedQueryStateOptions
   /** The transform pipeline applied to reads and writes. */
-  pipeline: QueryPipelineBus
+  pipeline: QueryPipelineRuntime<TSchema>
   /** This binding's debug handle: the adapter channel bound to this binding's id. */
   debug: DebugChannelHandle
+  /**
+   * The active module installations: default sources and pipeline registrations join and
+   * leave as complete installations.
+   */
+  installations: InstallationRegistry
 }
 
 /**
@@ -122,7 +133,7 @@ export interface QueryStateEngine<TSchema extends QueryStateSchema> {
  *
  * @typeParam TSchema - The schema whose params the engine tracks.
  * @param options - Schema, resolved adapter, and the coalescing and default rules.
- * @returns The engine facets: `state`, `defaults`, `query`, `options`, `pipeline`, `debug`.
+ * @returns An engine scoped to this binding and sharing the adapter's query runtime.
  */
 export function createQueryStateEngine<TSchema extends QueryStateSchema>(
   options: QueryStateEngineOptions<TSchema>,
@@ -144,12 +155,11 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
 
   const runtime = getQueryRuntime(adapter)
   const releaseRuntime = runtime.queue.retainBinding()
-  // A binding-scoped view over the adapter channel: every event this engine, its
-  // pipeline, and its binding emit carries this binding's id without a call site
-  // having to thread it.
+  // Attribute events to this binding on the shared adapter channel.
   const debug = bindDebugTarget(runtime.debug, { bindingId: id })
   const lastInvalidRaw = new Map<string, unknown>()
-  const pipeline = createQueryPipeline(debug)
+  const installations = createInstallationRegistry()
+  const pipeline = createQueryPipeline(schema, installations.snapshot)
   const readOverlay = runtime.queue.readOverlay
   const transactions = createQueryTransactionBus(runtime, schema)
 
@@ -160,36 +170,19 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     clearOnDefault: clearOnDefault ?? adapterClearOnDefault ?? true,
   }
 
-  const codecDefaults = getStaticQueryDefaults(schema, keys)
-
-  // Later layers override defaults without clearing earlier values with undefined.
-  const layers = shallowRef<Array<MaybeRefOrGetter<QueryStateValues<TSchema>>>>([])
-
-  function register(source: MaybeRefOrGetter<QueryStateValues<TSchema>>): () => void {
-    layers.value = [...layers.value, source]
-
-    return () => {
-      layers.value = layers.value.filter(layer => layer !== source)
-    }
-  }
-
-  const mergedDefaults = computed<Record<string, unknown>>(() => {
-    const merged: Record<string, unknown> = { ...codecDefaults }
-
-    for (const source of layers.value) {
-      Object.assign(merged, definedOnly(toValue(source) as Record<string, unknown>))
-    }
-
-    return merged
-  })
-
-  const resolvedDefaults = computed<QueryStateValues<TSchema>>(
-    () => pipeline.run('read', { ...mergedDefaults.value }) as QueryStateValues<TSchema>,
-  )
+  // Later sources compose over the static candidates; an omitted or undefined path
+  // keeps the lower source. Each registration has its own identity, so removing one
+  // never removes another that shares its source.
+  const candidates = computed(() => composeDefaultCandidates(
+    schema,
+    keys,
+    // Source order is installation order, then occurrence order within an installation.
+    installations.snapshot.value.flatMap(installation => installation.defaults).map(({ source }) => toValue(source) ?? {}),
+  ))
 
   // Read layers and pending writes share one projection across bindings, preserving
   // consistent reads when a completed write moves out of the pending queue.
-  const optimisticQuery = computed<ParsedQuery>((previous) => {
+  const decodingQuery = computed<ParsedQuery>((previous) => {
     const query = toValue(adapter.query)
     const current = readOverlay.value
 
@@ -211,23 +204,15 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
       }
     }
 
-    const next = cloneQuery(query)
+    const managed: Overlay = {}
 
     for (const path of managedPaths) {
-      if (!(path in current)) {
-        continue
-      }
-
-      const delta = current[path]
-
-      if (delta === null) {
-        deletePath(next, path)
-        pruneEmptyAncestors(next, path)
-      }
-      else {
-        setPath(next, path, delta)
+      if (path in current) {
+        managed[path] = current[path]
       }
     }
+
+    const next = applyOverlay(query, managed)
 
     return next
   })
@@ -246,7 +231,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
         }
       },
     }
-    const parsed = parseQueryStates(schema, optimisticQuery.value, context) as Record<string, unknown>
+    const parsed = parseQueryStates(schema, decodingQuery.value, context) as Record<string, unknown>
 
     for (const path of lastInvalidRaw.keys()) {
       if (!invalid.has(path)) {
@@ -257,87 +242,35 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     return parsed
   })
 
-  const explicitValues = computed<QueryStateValues<TSchema>>(
-    () => definedOnly(pipeline.run('read', { ...parsedValues.value })) as QueryStateValues<TSchema>,
-  )
-
-  // Resolve present objects per child so partial values preserve layered defaults.
-  const values = computed<QueryStateValues<TSchema>>(() => {
-    const resolved = resolveQueryStateValues(schema, keys, parsedValues.value, mergedDefaults.value)
-
-    return pipeline.run('read', resolved) as QueryStateValues<TSchema>
-  })
-
-  function serializeParam(
-    key: keyof TSchema & string,
-    value: unknown,
-    defaultPolicy: QueryTransactionRequest<TSchema>['defaultPolicy'],
-    clearedOnDefault?: Array<{ key: string, paths: readonly string[], defaultValue: unknown }>,
-  ): Overlay {
-    const definition = schema[key]
-    const single: QueryStateSchema = { [key]: definition }
-
-    let map: QueryStateValues<QueryStateSchema> = value === undefined ? {} : { [key]: value }
-
-    if (
-      defaultPolicy !== 'preserve-explicit'
-      && !definition.presenceGated
-      && shouldClearOnDefault(definition)
-      && value !== undefined
-    ) {
-      const defaultValue = resolvedDefaults.value[key]
-
-      if (defaultValue !== undefined && definition.eq(value, defaultValue)) {
-        clearedOnDefault?.push({ key, paths: [...definition.paths], defaultValue })
-        map = {}
-      }
-    }
-
-    map = pipeline.run('write', map as QueryValues) as QueryStateValues<QueryStateSchema>
-
-    const raw = serializeQueryStates(single, map)
-    const deltas: Overlay = {}
-
-    for (const path of definition.paths) {
-      const written = getPath(raw, path)
-      deltas[path] = written === undefined ? null : written
-    }
-
-    return deltas
+  const readEffectiveQuery = (): ParsedQuery => applyOverlay(toValue(adapter.query), readOverlay.value)
+  const evaluation = createQueryEvaluation({ schema, keys, runPipeline: pipeline.run })
+  const writeInputs = {
+    getQuery: readEffectiveQuery,
+    getCandidates: () => candidates.value,
+    shouldClearOnDefault: (key: keyof TSchema & string) =>
+      clearOnDefault ?? schema[key].clearOnDefault ?? adapterClearOnDefault ?? true,
   }
 
-  function shouldClearOnDefault(definition: TSchema[keyof TSchema & string]): boolean {
-    return clearOnDefault ?? definition.clearOnDefault ?? adapterClearOnDefault ?? true
-  }
+  const resolvedDefaults = computed(() => evaluation.projectCandidates(candidates.value, readEffectiveQuery))
+  const explicitValues = computed(() => evaluation.projectExplicit(parsedValues.value, readEffectiveQuery))
+  const values = computed(() => evaluation.projectResolved(parsedValues.value, candidates.value, readEffectiveQuery))
 
   function transact(request: QueryTransactionRequest<TSchema>): void {
     const input = request.values as Record<string, unknown>
 
-    for (const key of Object.keys(input)) {
-      if (!Object.hasOwn(schema, key)) {
-        throw new Error(`[vuqs] cannot write unknown query-state key "${key}".`)
-      }
-    }
+    // Prepare the complete transaction before mutating the shared runtime.
+    const prepared = evaluation.prepareWrite(request, writeInputs)
 
-    const touchedKeys = request.mode === 'replace'
-      ? keys
-      : keys.filter(key => Object.hasOwn(input, key))
-
-    if (touchedKeys.length === 0) {
+    if (prepared === undefined) {
       return
     }
 
-    const deltas: Overlay = {}
-    const clearedOnDefault = isDebugArmed(debug)
-      ? [] as Array<{ key: string, paths: readonly string[], defaultValue: unknown }>
-      : undefined
-
-    // Serialize the complete transaction before mutating the shared runtime. A
-    // codec or pipeline error therefore cannot leave a partial optimistic write.
-    for (const key of touchedKeys) {
-      const value = input[key]
-      Object.assign(deltas, serializeParam(key, value, request.defaultPolicy, clearedOnDefault))
-    }
+    const { touched: touchedKeys, deltas } = prepared
+    const clearedOnDefault = prepared.omitted.map(({ key, defaultValue }) => ({
+      key,
+      paths: [...schema[key].paths],
+      defaultValue,
+    }))
 
     const resolvedOptions: NavigateOptions = {
       history: request.navigation?.history ?? history,
@@ -353,8 +286,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
       // write with the queue events it produces.
       if (debugContext !== undefined) {
         const touchedPaths = touchedKeys.flatMap(key => schema[key].paths)
-        // User equality/pipeline code may arm the channel after the initial cost guard.
-        for (const decision of clearedOnDefault ?? []) {
+        for (const decision of clearedOnDefault) {
           emitDebug(debug, 'engine:clear-on-default', { id, keys, ...decision }, debugContext)
         }
         emitDebug(
@@ -369,21 +301,23 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
   }
 
   // Register even when debug is disarmed so late observers can inspect existing engines.
-  const stopSnapshot = registerSnapshotSource(debug, 'engine', () => ({
-    id,
-    keys: [...keys],
-    managedPaths: [...managedPaths],
-    committedExplicitValues: normalizeForHistory(
-      definedOnly(pipeline.run('read', {
-        ...parseQueryStates(schema, toValue(adapter.query)),
-      })),
-    ) as Record<string, unknown>,
-    optimisticExplicitValues: normalizeForHistory(explicitValues.value) as Record<string, unknown>,
-    // Deeply detach and bound: a devtools consumer must not be able to mutate the
-    // engine's live values/caches through the snapshot.
-    values: normalizeForHistory(values.value) as Record<string, unknown>,
-    defaults: normalizeForHistory(resolvedDefaults.value) as Record<string, unknown>,
-  }))
+  const stopSnapshot = registerSnapshotSource(debug, 'engine', () => {
+    const query = toValue(adapter.query)
+
+    return {
+      id,
+      keys: [...keys],
+      managedPaths: [...managedPaths],
+      committedExplicitValues: normalizeForHistory(
+        evaluation.projectExplicit(parseQueryStates(schema, query), () => query),
+      ) as Record<string, unknown>,
+      optimisticExplicitValues: normalizeForHistory(explicitValues.value) as Record<string, unknown>,
+      // Deeply detach and bound: a devtools consumer must not be able to mutate the
+      // engine's live values/caches through the snapshot.
+      values: normalizeForHistory(values.value) as Record<string, unknown>,
+      defaults: normalizeForHistory(resolvedDefaults.value) as Record<string, unknown>,
+    }
+  })
   // Engines created by the composables own an effect scope. `failSilently` avoids a
   // warning for direct, scope-less construction, where cleanup falls to GC.
   onScopeDispose(() => {
@@ -393,11 +327,21 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
 
   return {
     state: { explicitValues, values },
-    defaults: { resolved: resolvedDefaults, register },
+    defaults: { candidates: resolvedDefaults },
     query: { current: () => toValue(adapter.query), transact, transactions },
     options: resolvedOptions,
     pipeline,
     debug,
+    installations: {
+      snapshot: installations.snapshot,
+      publish: (installation) => {
+        for (const { descriptor } of installation.pipeline) {
+          emitDebug(debug, 'pipeline:tap', { stages: [descriptor.stage], enforce: descriptor.enforce })
+        }
+        installations.publish(installation)
+      },
+      remove: installations.remove,
+    },
   }
 }
 

@@ -1,7 +1,7 @@
 import type { ParsedQuery } from '../query/types'
 import type { NavigateOptions } from '../runtime/adapter'
 import type { Overlay } from '../runtime/overlay'
-import type { Enforce, QueryPipelineStage } from '../runtime/pipeline'
+import type { Enforce, QueryPipelineStage } from '../runtime/pipeline/contract'
 
 /**
  * Every debug event code mapped to the payload it carries. An `undefined` payload

@@ -37,12 +37,12 @@ function defineQuerySchema<const TSchema extends QueryStateSchemaInput>(schema: 
 
 ```ts
 type NormalizeQueryStateSchema<TSchema extends QueryStateSchemaInput> = {
-  [Key in keyof TSchema]: TSchema[Key] extends DefinedQueryParam<any>
+  [Key in keyof TSchema]: TSchema[Key] extends AnyDefinedQueryParam
     ? TSchema[Key]
     : TSchema[Key] extends Codec<infer TValue>
-      ? TSchema[Key] extends { readonly defaultValue: infer TDefault }
-        ? DefinedQueryParamWithDefault<TDefault>
-        : DefinedQueryParam<TValue>
+      ? TSchema[Key] extends { readonly defaultValue: TValue }
+        ? DefinedQueryParam<TValue, TValue, TValue, true>
+        : DefinedQueryParam<TValue, TValue, TValue, false>
       : never
 }
 ```

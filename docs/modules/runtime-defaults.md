@@ -52,28 +52,30 @@ interaction that uses this signal.
 
 ### Default precedence
 
-`withRuntimeDefaults` registers a runtime-default layer on the core's
-[layered defaults](/modules/authoring#layered-defaults). The codec defaults are the
-base, the runtime defaults sit above them, and an explicit param value sits above
-both. The bound `values` resolve through that stack, so `values` **is** the
+`withRuntimeDefaults` returns a runtime-default source from its setup, installed
+among the core's [default sources](/modules/authoring#default-sources). The static
+defaults are the base, the runtime defaults sit above them, and an explicit param
+value sits above both. The source keeps its position when it is replaced or cleared,
+so a source installed after it keeps priority. The bound `values` resolve through that stack, so `values` **is** the
 effective read.
 
 | State | Meaning |
 | --- | --- |
 | `explicitValues` | Decoded param values, including optimistic writes and the read pipeline, before engine default resolution. |
-| `defaults` | Runtime defaults over codec defaults, with the read pipeline applied. |
+| `defaults` | The composed default candidates: runtime defaults over static defaults, with the read pipeline applied. |
 | `values` | Values resolved against defaults, with the read pipeline applied. |
 
 `explicitValues` can change before navigation completes. A read pipeline can also
 remove or transform values, so this map is not a snapshot of the committed URL.
 Object transforms may resolve static child defaults during decoding.
 
-Objects resolve defaults per child. The engine applies the read pipeline separately
-to explicit values and to values resolved against defaults.
-
-Precedence runs **explicit value → runtime default → codec default**. An explicit value
-always wins; clearing it reveals the runtime default, and clearing the runtime
-default reveals the codec default, if the param has one. Your UI reads `values`.
+A composed object resolves defaults per child. A runtime contribution is partial:
+`setDefaults({ record: { a: 99 } })` overrides `a` and keeps the static defaults of
+the other children. Each `setDefaults` call replaces the previous runtime
+contribution, and `clearDefaults` empties it. Precedence runs **explicit value →
+runtime default → static default**: an explicit value always wins, clearing it
+reveals the runtime default, and clearing the runtime default reveals the static one.
+Your UI reads `values`.
 
 ### Writes use the resolved default
 
@@ -135,7 +137,7 @@ Selecting `archived` writes `?status=archived`; clearing it restores the default
 ## Debugging
 
 When [vuqs debug logging](/guide/debugging/enabling) is enabled, the module
-logs under `[vuqs rd]`. The stream includes default-layer registration and
+logs under `[vuqs rd]`. The stream includes default-source registration and
 disposal, `setDefaults`/`clearDefaults`, and resets caused by `context:change`.
 
 ## Nuxt

@@ -1,6 +1,6 @@
 import type { NavigateOptions } from '../runtime/adapter'
-import type { QueryStateRefValue, QueryStateSchema } from '../schema/schema'
-import type { QueryBindingSource } from './binding'
+import type { QueryStateRefInput, QueryStateSchema } from '../schema/schema'
+import type { QueryBindingSource, QueryReadMap, QueryReadShape } from './binding'
 import type { QueryStateRef } from './use-query-state'
 import { computed } from 'vue'
 import { transactQueryKey } from './binding'
@@ -10,9 +10,10 @@ import { transactQueryKey } from './binding'
  * per schema param.
  *
  * @typeParam TSchema - The schema the binding exposes.
+ * @typeParam TRead - The read value of each param after module effects.
  */
-export type ToQueryRefs<TSchema extends QueryStateSchema> = {
-  [Key in keyof TSchema]: QueryStateRef<QueryStateRefValue<TSchema[Key]>>
+export type ToQueryRefs<TSchema extends QueryStateSchema, TRead extends QueryReadShape<TSchema> = QueryReadMap<TSchema>> = {
+  [Key in keyof TSchema]: QueryStateRef<TRead[Key], QueryStateRefInput<TSchema[Key]>>
 }
 
 /**
@@ -32,9 +33,9 @@ export type ToQueryRefs<TSchema extends QueryStateSchema> = {
  * q.clear()
  * ```
  */
-export function toQueryRefs<TSchema extends QueryStateSchema>(
-  query: QueryBindingSource<TSchema>,
-): ToQueryRefs<TSchema> {
+export function toQueryRefs<TSchema extends QueryStateSchema, TRead extends QueryReadShape<TSchema>>(
+  query: QueryBindingSource<TSchema, TRead>,
+): ToQueryRefs<TSchema, TRead> {
   const { binding } = query
   const result: Record<string, unknown> = {}
 
@@ -50,5 +51,5 @@ export function toQueryRefs<TSchema extends QueryStateSchema>(
     })
   }
 
-  return result as ToQueryRefs<TSchema>
+  return result as ToQueryRefs<TSchema, TRead>
 }

@@ -1,27 +1,32 @@
 # QueryModuleRegistry <Badge type="info" text="@vuqs/core" />
 
-Registers schema-, value-, or facade-dependent options and API through TypeScript module augmentation.
+Registers a module's options contract and specialized setup through TypeScript module augmentation.
 
 ## Usage
 
 ```ts
-import type { QueryStateSchema, QueryStateValueAt } from '@vuqs/core'
 import type { ComputedRef } from 'vue'
+import type { QueryCore, QueryStateSchema, QueryStateValueAt } from '@vuqs/core'
 import { defineQueryModule } from '@vuqs/core'
 import { computed } from 'vue'
 
 declare module '@vuqs/core' {
-  interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
+  interface QueryModuleRegistry<TSchema extends QueryStateSchema, TOptions, TInference = unknown> {
     'my-lib:explicit-value': {
-      state: { api: { explicitValue: ComputedRef<QueryStateValueAt<TSchema, 'value'> | undefined> } }
+      state: () => typeof withExplicitValue.definition.state<TSchema>
     }
   }
 }
 
 export const withExplicitValue = defineQueryModule({
   name: 'my-lib:explicit-value',
-  queryState: (core, key) => ({
-    explicitValue: computed(() => core.state.explicitValues.value[key]),
+  state: <TSchema extends QueryStateSchema>(
+    core: QueryCore<TSchema>,
+    key: keyof TSchema & string,
+  ): { api: { explicitValue: ComputedRef<QueryStateValueAt<TSchema, 'value'> | undefined> } } => ({
+    api: {
+      explicitValue: computed(() => core.state.explicitValues.value[key] as QueryStateValueAt<TSchema, 'value'> | undefined),
+    },
   }),
 })
 ```
@@ -29,42 +34,51 @@ export const withExplicitValue = defineQueryModule({
 ## Type
 
 ```ts
-interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {}
+interface QueryModuleRegistry<TSchema extends QueryStateSchema, TOptions, TInference = unknown> {}
 
-type QueryModuleName = keyof QueryModuleRegistry<QueryStateSchema, string>
+type QueryModuleName = keyof QueryModuleRegistry<QueryStateSchema, unknown>
+
+type ModuleOptions<TProvided, TContract> = unknown extends TProvided
+  ? TContract
+  : Extract<TProvided, TContract>
 ```
 
 ## Type parameters
 
 | Parameter | Meaning |
 | --- | --- |
-| `TSchema extends QueryStateSchema` | Schema supplied by the composing facade. A `state` facet receives the single schema `{ value: DefinedQueryParam<TValue> }`. |
-| `TParam extends string` | Extra string type inferred by the factory, such as a context identifier union. |
+| `TSchema extends QueryStateSchema` | Schema supplied by the composing facade. A `state` signature receives the single schema `{ value: DefinedQueryParam }`. |
+| `TOptions` | The options the module was configured with, or `unknown` while the factory infers them. |
+| `TInference` | The source an option callback is contextualized by, inferred independently of `TOptions`. Modules without such a relationship ignore it. |
 
-## Facets
+Every augmentation declares all three parameters with the same names and the default shown.
 
-| Facet | Property | Meaning |
-| --- | --- | --- |
-| `states` | `options` | Options accepted by the grouped form, when declared. |
-| `states` | `api` | API contributed to `useQueryStates`. |
-| `state` | `options` | Options accepted by the single form, when declared. |
-| `state` | `api` | API contributed to `useQueryState`. |
+## Signatures
 
-Keys are namespaced module names. `QueryModuleName` is their union. Pass a key as `name` to `defineQueryModule`; the registry is type-only and does not register runtime behavior.
+| Signature | Meaning |
+| --- | --- |
+| `states(options) => setup` | Grouped form. The parameter is the options contract; the return type is the setup specialized for `TSchema` and the configured options. |
+| `state(options) => setup` | Single form with the same roles. |
 
-Read the single param value with `QueryStateValueAt<TSchema, 'value'>`. Grouped APIs can key their options and maps against `keyof TSchema`.
+Keys are namespaced module names, and `QueryModuleName` is their union. Pass a key as `name` to `defineQueryModule`. The registry is type-only and registers no runtime behavior. A module without options declares the signature without a parameter, and its factory is called without arguments.
+
+`ModuleOptions<TOptions, TContract>` is the accepted contract while `TOptions` is `unknown`, and the supplied options, narrowed to those that satisfy the contract, afterwards. A call that supplies options outside the contract, including a union with an incompatible alternative, is rejected.
+
+Read the single param value with `QueryStateValueAt<TSchema, 'value'>`. Grouped signatures can key their options and maps against `keyof TSchema`.
 
 ## Registry lookups
 
 | Type | Resolves to |
 | --- | --- |
-| `QueryModuleStatesApi<TName, TSchema, TParam>` | The entry's `states.api`, or `object` when it declares no `states` facet. |
-| `QueryModuleStateApi<TName, TSchema, TParam>` | The entry's `state.api`, or `object` when it declares no `state` facet. |
-| `QueryModuleStatesOptions<TName, TSchema, TParam>` | The entry's `states.options`, or `never` when it declares none. |
-| `QueryModuleStateOptions<TName, TSchema, TParam>` | The entry's `state.options`, or `never` when it declares none. |
+| `QueryModuleStatesContract<TName, TSchema>` / `QueryModuleStateContract<TName, TSchema>` | The options contract of the signature, before options are known. |
+| `QueryModuleStatesParam<TName, TSchema, TOptions, TInference>` / `QueryModuleStateParam<…>` | The options parameter for the configured options. |
+| `QueryModuleStatesSetup<TName, TSchema, TOptions, TInference>` / `QueryModuleStateSetup<…>` | The specialized setup the signature returns. |
+| `QueryModuleStatesResult<…>` / `QueryModuleStateResult<…>` | The result that setup produces. |
+| `QueryModuleStatesApi<…>` / `QueryModuleStateApi<…>` | The `api` of that result. |
+| `VerifiedStatesProducer<…>` / `VerifiedStateProducer<…>` | The callback shape `.use()` requires of the actual setup. |
 
-Registered `defineQueryModule` projections receive and return these types.
+`.use()` verifies the actual callback against the specialization for the bound schema and options, at the first and at every later `.use()` in a chain.
 
 ## Related guide
 
-[Value-typed APIs](/modules/authoring#value-typed-single-apis) and [facade-dependent options](/modules/authoring#facade-driven-options).
+[Registering a module](/modules/authoring#registering-a-module).

@@ -12,7 +12,7 @@ export type {
   QueryParamBuilder,
   QueryParamBuilderWithDefault,
   QueryParamObjectBuilder,
-  QueryParamObjectBuilderWithDefault,
+  QueryParamObjectBuilderFor,
   QueryParamTransform,
 } from './builder-types'
 
@@ -55,7 +55,7 @@ function createScalarQueryParam<T>(
   path: string,
   codec: Codec<T>,
 ): QueryParamBuilder<T> | QueryParamBuilderWithDefault<T> {
-  return createQueryParamBuilder(codecParamInput(path, codec))
+  return createQueryParamBuilder(codecParamInput(path, codec)) as QueryParamBuilder<T> | QueryParamBuilderWithDefault<T>
 }
 
 function createStringQueryParam(

@@ -1,6 +1,6 @@
 # Active params
 
-Derives which params are explicitly present and different from their resolved defaults.
+Derives which params are explicitly present and different from their composed defaults.
 Use it for active-filter badges, summaries, and per-param indicators without
 duplicating the comparison policy in application code.
 
@@ -66,18 +66,20 @@ A param is active when all these conditions hold:
 
 1. It exists in the explicit state after the `read` pipeline.
 2. It is not excluded.
-3. It has no resolved default, or its value differs from that default according
-   to the param's equality function.
+3. It has no composed default, or its explicit value differs from that default
+   according to the param's equality function.
 
-Resolved defaults include codec defaults and registered default layers. Custom
-equality from `withEquality` is respected. Changes to the explicit state,
-resolved defaults, or read pipeline update the result reactively. Optimistic
-writes update it before the adapter commits the URL.
+The explicit value and the composed default are compared as projected by the
+`read` pipeline, without filling omitted children. Composed defaults include static
+defaults and installed default sources, and they stay inspectable while a presence
+gate keeps the param absent from `values`. Custom equality from `withEquality` is
+respected. Changes to the explicit state, defaults, or read pipeline update the
+result reactively. Optimistic writes update it before the adapter commits the URL.
 
 ### Presence is not activity
 
-An explicit value can equal its resolved default. That param is present in
-the URL, but it is not active.
+An explicit value can equal its default. That param is present in the URL, but it
+is not active.
 
 | State | Present | Active |
 | --- | --- | --- |
@@ -85,6 +87,13 @@ the URL, but it is not active.
 | Explicit value with no default | yes | yes |
 | Explicit value different from the default | yes | yes |
 | Explicit value equal to the default | yes | no |
+
+A partial object is compared as it is. With structural equality and the default
+`{ a: 0, b: 100 }`, an explicit `{ b: 100 }` resolves to the default but differs from
+it, so it is active. The complete `{ a: 0, b: 100 }` is inactive. Keeping a
+default in the URL with `keepOnDefault()` does not make it active, and inactivity
+does not allow the URL representation to be omitted when that would change what the
+param reads.
 
 Use `core.state.explicitValues` when authoring a module that needs explicit values regardless of activity. These reads include optimistic writes and the read pipeline.
 
@@ -112,7 +121,7 @@ const summary = computed(() => ({
 
 `withActiveParams` is a read-only projection and emits no module-specific debug
 events. Use [vuqs debug logging](/guide/debugging/enabling) to inspect the
-transactions, pipeline taps, and default-layer changes that feed its computed
+transactions, pipeline registrations, and default-source changes that feed its computed
 state.
 
 ## Nuxt

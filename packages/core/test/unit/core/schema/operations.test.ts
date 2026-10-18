@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { codecs } from '../../../../src/core/codecs/catalog'
-import { buildQuery, dropDefaults, omitManagedKeys, parseQueryStates, serializeQueryStates } from '../../../../src/core/schema/operations'
+import { buildQuery, omitManagedKeys, parseQueryStates, serializeQueryStates } from '../../../../src/core/schema/operations'
 import { queryParam } from '../../../../src/core/schema/params/query-param'
 
 const schema = {
@@ -101,25 +101,6 @@ describe('buildQuery', () => {
       page: '2',
       currency: 'EUR',
     })
-  })
-})
-
-describe('dropDefaults', () => {
-  const withDefault = {
-    page: queryParam('page', codecs.integer.withDefault(1)),
-    q: queryParam('q', codecs.string),
-  }
-
-  it('drops a value equal to its default', () => {
-    expect(dropDefaults(withDefault, { page: 1, q: 'phone' })).toEqual({ q: 'phone' })
-  })
-
-  it('keeps a value that differs from its default', () => {
-    expect(dropDefaults(withDefault, { page: 2 })).toEqual({ page: 2 })
-  })
-
-  it('drops absent fields and keeps fields without a default', () => {
-    expect(dropDefaults(withDefault, { page: undefined, q: 'phone' })).toEqual({ q: 'phone' })
   })
 })
 

@@ -3,13 +3,19 @@ import type { NormalizeQueryStateSchema, QueryStateSchema, QueryStateSchemaInput
 import { emitDebug, globalDebugChannel, isDebugArmed } from '../diagnostics/bus'
 import { cloneQuery, compactQuery, mergeQueries } from '../query/object'
 import { deletePath, pruneEmptyAncestors } from '../query/path'
+import { createStaticOmissionEvaluator, prepareDefaultOmission } from './default-elision'
 import { normalizeQueryStateSchema } from './schema'
 
 /**
  * Options for {@link createSerializer}.
  */
 export interface CreateSerializerOptions {
-  /** Drop a value equal to its codec default. Defaults to `true`. */
+  /**
+   * Allows values equal to their static defaults to omit their URL representation
+   * when the complete static read is preserved. Overrides the param setting.
+   *
+   * @default The param setting, or `true`.
+   */
   clearOnDefault?: boolean
   /**
    * Formats the built query as a string.
@@ -58,6 +64,7 @@ export interface Serializer<TSchema extends QueryStateSchema, TBase, TOutput> {
    * Merges `values` over `base`, preserving untouched params.
    *
    * @returns A new merged query object, or its string representation when `stringify` is configured.
+   * @throws {Error} When a string base is passed but no `parse` option was provided.
    */
   (base: TBase, values: QueryStateWriteValues<TSchema>): TOutput
 }
@@ -70,7 +77,6 @@ export interface Serializer<TSchema extends QueryStateSchema, TBase, TOutput> {
  * @param schema - The params to serialize, keyed by logical name.
  * @param options - Optional `clearOnDefault`, `stringify`, and `parse` hooks.
  * @returns A {@link Serializer} for the schema.
- * @throws {Error} When a string base is passed but no `parse` option was provided.
  *
  * @example
  * ```ts
@@ -90,16 +96,31 @@ export function createSerializer<TSchema extends QueryStateSchemaInput>(
   options: CreateSerializerOptions & { stringify: SerializerStringify, parse: SerializerParse },
 ): Serializer<SerializerSchema<TSchema>, ParsedQuery | string, string>
 
+/**
+ * Creates a schema-bound serializer with string output and object bases.
+ *
+ * @returns A serializer that uses static defaults and the supplied `stringify` function.
+ */
 export function createSerializer<TSchema extends QueryStateSchemaInput>(
   schema: TSchema,
   options: CreateSerializerOptions & { stringify: SerializerStringify },
 ): Serializer<SerializerSchema<TSchema>, ParsedQuery, string>
 
+/**
+ * Creates a schema-bound serializer accepting object or string bases.
+ *
+ * @returns A serializer that uses static defaults and produces query objects.
+ */
 export function createSerializer<TSchema extends QueryStateSchemaInput>(
   schema: TSchema,
   options: CreateSerializerOptions & { parse: SerializerParse },
 ): Serializer<SerializerSchema<TSchema>, ParsedQuery | string, ParsedQueryRaw>
 
+/**
+ * Creates a schema-bound serializer with query-object output.
+ *
+ * @returns A serializer that uses static defaults and preserves omitted params in its base.
+ */
 export function createSerializer<TSchema extends QueryStateSchemaInput>(
   schema: TSchema,
   options?: CreateSerializerOptions,
@@ -111,6 +132,7 @@ export function createSerializer<TSchema extends QueryStateSchemaInput>(
 ): Serializer<SerializerSchema<TSchema>, ParsedQuery, ParsedQueryRaw | string> {
   const { clearOnDefault, stringify, parse } = options
   const normalizedSchema = normalizeQueryStateSchema(schema)
+  const staticEvaluator = createStaticOmissionEvaluator(normalizedSchema)
 
   function serialize(
     ...args:
@@ -137,11 +159,11 @@ export function createSerializer<TSchema extends QueryStateSchemaInput>(
     }
 
     let query = cloneQuery(base) as ParsedQueryRaw
+    const requested: Array<keyof SerializerSchema<TSchema> & string> = []
 
-    for (const key of Object.keys(values)) {
+    for (const key of Object.keys(values) as Array<keyof SerializerSchema<TSchema> & string>) {
       const value = (values as Record<string, unknown>)[key]
-
-      const definition = normalizedSchema[key as keyof SerializerSchema<TSchema> & string]
+      const definition = normalizedSchema[key]
 
       for (const path of definition.paths) {
         deletePath(query, path)
@@ -155,14 +177,20 @@ export function createSerializer<TSchema extends QueryStateSchemaInput>(
         continue
       }
 
-      const shouldClearOnDefault = clearOnDefault ?? definition.clearOnDefault ?? true
-
-      if (shouldClearOnDefault && definition.defaultValue !== undefined && definition.eq(value, definition.defaultValue)) {
-        emitDebug(globalDebugChannel, 'serializer:clear-on-default', { key })
-        continue
-      }
-
       query = mergeQueries(query, compactQuery(definition.write(value)))
+
+      if (clearOnDefault ?? definition.clearOnDefault ?? true) {
+        requested.push(key)
+      }
+    }
+
+    const omission = prepareDefaultOmission(normalizedSchema, requested, query, staticEvaluator)
+
+    if (omission !== undefined) {
+      for (const key of omission.keys) {
+        emitDebug(globalDebugChannel, 'serializer:clear-on-default', { key })
+      }
+      query = omission.query
     }
 
     if (isDebugArmed(globalDebugChannel)) {

@@ -113,3 +113,21 @@ describe('toQueryRef', () => {
     expect(first.date).toEqual(new Date(0))
   })
 })
+
+describe('toQueryRef explicit partial composed writes', () => {
+  const record = queryParam.object('record', {
+    a: queryParam('a', codecs.integer.withDefault(0)),
+    b: queryParam('b', codecs.integer.withDefault(100)),
+  })
+
+  it('replaces the whole state from an explicit partial map', async () => {
+    const { query, build } = setup({ record: { a: '7' }, other: 'keep' })
+    const ref = build(() => toQueryRef(useQueryStates({ record })))
+
+    ref.value = { record: { b: 10 } }
+    await flush()
+
+    expect(query.value).toEqual({ record: { b: '10' }, other: 'keep' })
+    expect(ref.value).toEqual({ record: { a: 0, b: 10 } })
+  })
+})

@@ -19,6 +19,18 @@ describe('createQueryHooks', () => {
     expect(handler).toHaveBeenCalledWith(42)
   })
 
+  it('calls handlers in subscription order', () => {
+    const hooks = createQueryHooks(globalDebugChannel)
+    const order: string[] = []
+
+    hooks.on('test:ping', () => order.push('first'))
+    hooks.on('test:ping', () => order.push('second'))
+    hooks.on('test:ping', () => order.push('third'))
+    hooks.emit('test:ping', 1)
+
+    expect(order).toEqual(['first', 'second', 'third'])
+  })
+
   it('stops calling a handler after its unsubscribe runs', () => {
     const hooks = createQueryHooks(globalDebugChannel)
     const handler = vi.fn()

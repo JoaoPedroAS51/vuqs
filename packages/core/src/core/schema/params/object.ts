@@ -1,26 +1,29 @@
 import type { ParsedQueryRaw } from '../../query/types'
 import type { NormalizeQueryStateSchema, QueryStateSchemaInput } from '../schema'
 import type {
-  AnyDefinedQueryParam,
   AnyObjectChildren,
-  ObjectValue,
+  ObjectContribution,
+  ObjectExplicitValue,
+  ObjectGuaranteed,
+  ObjectResolvedValue,
   PrefixedQueryParamBuilder,
+  QueryParamObjectBuilder,
   QueryParamObjectBuilderFor,
-  QueryParamObjectDefault,
 } from './builder-types'
-import { structuralClone } from '../../../shared/utils/object'
+import type { AnyDefinedQueryParam } from './definition'
 import { compactQuery, mergeQueries } from '../../query/object'
 import { getPath } from '../../query/path'
+import { composeStaticObjectDefaults } from '../resolution'
 import { normalizeQueryStateSchema } from '../schema'
-import { createQueryParamBuilder } from './builder'
-import { isDefinedQueryParam } from './definition'
+import { createTransformedQueryParam } from './builder'
+import { createDefinedQueryParam, isDefinedQueryParam } from './definition'
 import { createPrefixedQueryParam } from './prefix'
 
 interface ObjectBuilderOptions<TChildren extends AnyObjectChildren> {
   prefix?: string
   children: TChildren
-  defaultValue?: Partial<ObjectValue<TChildren>>
-  eq?: (a: ObjectValue<TChildren>, b: ObjectValue<TChildren>) => boolean
+  ownDefault?: ObjectContribution<TChildren>
+  eq?: (a: ObjectExplicitValue<TChildren>, b: ObjectExplicitValue<TChildren>) => boolean
   clearOnDefault?: boolean
   defaultsWhenPresent?: boolean
 }
@@ -46,21 +49,25 @@ export interface QueryParamObjectFactory {
 }
 
 /** @internal */
-export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
+export function createObjectQueryParam<
+  TChildren extends AnyObjectChildren,
+  THasOwnDefault extends boolean = false,
+  TGated extends boolean = false,
+>(
   options: ObjectBuilderOptions<TChildren>,
-): QueryParamObjectBuilderFor<TChildren> {
+): QueryParamObjectBuilder<TChildren, THasOwnDefault, TGated> {
   const children = prefixChildren(options.prefix, normalizeQueryStateSchema(options.children) as TChildren)
   const paths = Object.values(children).flatMap(child => child.paths)
-  const mergedDefault = buildObjectDefault(children, options.defaultValue)
-  // An explicit object default disables presence gating.
-  const presenceGated = Boolean(options.defaultsWhenPresent) && options.defaultValue === undefined
-  const defaultValue = presenceGated ? undefined : mergedDefault
+  const childKeys = Object.keys(children)
+  const staticCandidate = composeStaticObjectDefaults(children, options.ownDefault)
 
-  const childKeys = Object.keys(children) as Array<keyof ObjectValue<TChildren>>
-
-  const builder = createQueryParamBuilder<ObjectValue<TChildren>, QueryParamObjectDefault<ObjectValue<TChildren>>>({
+  const defined = createDefinedQueryParam<
+    ObjectExplicitValue<TChildren>,
+    ObjectResolvedValue<TChildren>,
+    ObjectContribution<TChildren>,
+    ObjectGuaranteed<TChildren, THasOwnDefault, TGated>
+  >({
     paths,
-    // Leave missing children absent so resolution can apply layered defaults.
     read(query, context) {
       const hasUrlPresence = paths.some(path => getPath(query, path) !== undefined)
 
@@ -80,13 +87,13 @@ export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
         }
       }
 
-      return hasValue ? value as ObjectValue<TChildren> : undefined
+      return hasValue ? value as ObjectExplicitValue<TChildren> : undefined
     },
     write(value) {
       let query: ParsedQueryRaw = {}
 
-      for (const key of Object.keys(children) as Array<keyof TChildren & string>) {
-        const childValue = value[key as keyof ObjectValue<TChildren>]
+      for (const key of childKeys) {
+        const childValue = (value as Record<string, unknown>)[key]
 
         if (childValue !== undefined) {
           query = mergeQueries(query, children[key].write(childValue))
@@ -96,62 +103,29 @@ export function createObjectQueryParam<TChildren extends AnyObjectChildren>(
       return compactQuery(query)
     },
     eq: options.eq,
-    // Missing children fall back to layered defaults, then static defaults.
-    // Present children resolve recursively; absent presence-gated children stay absent.
-    //
-    // Clone fallback values so consumers cannot mutate shared defaults.
-    resolve(explicitValue, defaults) {
-      const value: Record<string, unknown> = {}
-
-      for (const key of childKeys) {
-        const child = children[key]
-        const explicitChildValue = explicitValue[key]
-        const fallback = (defaults as Record<string, unknown> | undefined)?.[key as string] ?? mergedDefault?.[key]
-
-        if (explicitChildValue !== undefined) {
-          value[key] = child.resolve ? child.resolve(explicitChildValue, fallback) : explicitChildValue
-          continue
-        }
-
-        if (!child.presenceGated && fallback !== undefined) {
-          value[key] = structuralClone(fallback)
-        }
-      }
-
-      return value as ObjectValue<TChildren>
-    },
-    defaultValue: defaultValue as ObjectValue<TChildren> | undefined,
     clearOnDefault: options.clearOnDefault,
-    presenceGated,
+    presenceGated: options.defaultsWhenPresent === true,
+    structure: { children, staticCandidate },
   })
 
   return {
-    ...builder,
-    withDefault(defaultValue: QueryParamObjectDefault<ObjectValue<TChildren>>) {
-      return createObjectQueryParam({
-        ...options,
-        defaultValue: defaultValue as Partial<ObjectValue<TChildren>>,
-      })
+    ...defined,
+    withDefault(defaultValue) {
+      return createObjectQueryParam<TChildren, true, TGated>({ ...options, ownDefault: defaultValue })
     },
-    withEquality(eq: (a: ObjectValue<TChildren>, b: ObjectValue<TChildren>) => boolean) {
-      return createObjectQueryParam({
-        ...options,
-        eq,
-      })
+    withEquality(eq) {
+      return createObjectQueryParam<TChildren, THasOwnDefault, TGated>({ ...options, eq })
     },
     withDefaultsWhenPresent() {
-      return createObjectQueryParam({
-        ...options,
-        defaultsWhenPresent: true,
-      })
+      return createObjectQueryParam<TChildren, THasOwnDefault, true>({ ...options, defaultsWhenPresent: true })
     },
     keepOnDefault() {
-      return createObjectQueryParam({
-        ...options,
-        clearOnDefault: false,
-      })
+      return createObjectQueryParam<TChildren, THasOwnDefault, TGated>({ ...options, clearOnDefault: false })
     },
-  } as QueryParamObjectBuilderFor<TChildren>
+    transform(transformer) {
+      return createTransformedQueryParam(defined, defined.eq, transformer)
+    },
+  }
 }
 
 export const createObjectQueryParamFromArgs: QueryParamObjectFactory = ((
@@ -186,24 +160,4 @@ function prefixChildren<TChildren extends AnyObjectChildren>(
   }
 
   return prefixed as TChildren
-}
-
-// Child defaults take precedence over the object-level default.
-function buildObjectDefault<TChildren extends AnyObjectChildren>(
-  children: TChildren,
-  defaultValue: Partial<ObjectValue<TChildren>> | undefined,
-): Partial<ObjectValue<TChildren>> | undefined {
-  const result: Record<string, unknown> = { ...defaultValue }
-  let hasDefault = defaultValue !== undefined
-
-  for (const key of Object.keys(children)) {
-    const childDefault = children[key].defaultValue
-
-    if (childDefault !== undefined) {
-      result[key] = childDefault
-      hasDefault = true
-    }
-  }
-
-  return hasDefault ? result as Partial<ObjectValue<TChildren>> : undefined
 }

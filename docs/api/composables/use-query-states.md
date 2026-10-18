@@ -27,7 +27,7 @@ clear() // reset all
 function useQueryStates<TSchema extends QueryStateSchemaInput>(
   schema: TSchema,
   options?: UseQueryStatesOptions,
-): QueryComposable<NormalizeQueryStateSchema<TSchema>, UseQueryStatesReturn<NormalizeQueryStateSchema<TSchema>>>
+): QueryComposable<NormalizeQueryStateSchema<TSchema>>
 ```
 
 ## Parameters
@@ -42,7 +42,7 @@ function useQueryStates<TSchema extends QueryStateSchemaInput>(
 
 ## Return value
 
-- `query: QueryComposable<NormalizeQueryStateSchema<TSchema>, UseQueryStatesReturn<NormalizeQueryStateSchema<TSchema>>>`
+- `query: QueryComposable<NormalizeQueryStateSchema<TSchema>>`
   - The reactive values, batch writers, binding and module composition API.
 
 | Property | Description |
@@ -52,7 +52,7 @@ function useQueryStates<TSchema extends QueryStateSchemaInput>(
 | `replace(values, options?)` | Whole-state atomic write. Omitted or explicitly `undefined` params are cleared. |
 | `clear(options?)` | Resets every param to its default as one atomic transaction. |
 | `binding` | The schema-typed root used by `toQueryRef` and `toQueryRefs`. |
-| `use(module)` | Composes a [module](/modules/) and widens the returned API. |
+| `use(module)` | Composes a [module](/modules/). Returns the composable with the module's API and with `values` typed through the module's presence effects; capture the returned value. |
 
 Batch writes may share a navigation with other writes in the same scheduling window.
 
@@ -108,22 +108,46 @@ interface QueryStatesActions<TSchema extends QueryStateSchema> {
 ## UseQueryStatesReturn
 
 ```ts
-interface UseQueryStatesReturn<TSchema extends QueryStateSchema>
-  extends QueryStatesActions<TSchema>, QueryBindingSource<TSchema> {
-  values: QueryStatesValues<TSchema>
+interface UseQueryStatesReturn<TSchema extends QueryStateSchema, TRead extends QueryReadShape<TSchema> = QueryReadMap<TSchema>>
+  extends QueryStatesActions<TSchema>, QueryBindingSource<TSchema, TRead> {
+  values: QueryStatesValues<TSchema, TRead>
+}
+
+type QueryReadMap<TSchema extends QueryStateSchema> = {
+  [Key in keyof TSchema]: QueryStateRefValue<TSchema[Key]>
+}
+
+type QueryReadShape<TSchema extends QueryStateSchema> = { [Key in keyof TSchema]: unknown }
+
+type QueryStatesValues<TSchema extends QueryStateSchema, TRead extends QueryReadShape<TSchema> = QueryReadMap<TSchema>> = {
+  [Key in keyof TSchema]: TRead[Key]
 }
 ```
+
+`TRead` is the read value of each param. Without modules it is `QueryReadMap`, the base read contract. Assigning to `values` accepts the read type.
 
 ## QueryComposable
 
 ```ts
-type QueryComposable<TSchema extends QueryStateSchema, TApi> = TApi & {
-  use: {
-    <TAdded>(module: QueryStatesFacadeModule<'states', TSchema, TAdded>): QueryComposable<TSchema, TApi & TAdded>
-    <TAdded>(module: QueryStatesModule<TSchema, TAdded>): QueryComposable<TSchema, TApi & TAdded>
-  }
+type QueryComposable<
+  TSchema extends QueryStateSchema,
+  TApi extends object = object,
+  TDescriptors extends readonly unknown[] = [],
+> = UseQueryStatesReturn<TSchema, QueryReadOf<TSchema, TDescriptors>> & TApi & {
+  use: <TModule extends QueryStatesUsable<TSchema>>(
+    module: TModule & VerifiedStatesModule<TModule, TSchema>,
+  ) => QueryComposable<
+    TSchema,
+    TApi & StatesModuleApi<TModule, TSchema>,
+    [...TDescriptors, ...StatesModulePipeline<TModule, TSchema>]
+  >
 }
+
+type QueryReadOf<TSchema extends QueryStateSchema, TDescriptors extends readonly unknown[]>
+  = TDescriptors extends readonly [] ? QueryReadMap<TSchema> : /* the base read after the ordered presence effects */
 ```
+
+`TApi` is the API the applied modules contributed and `TDescriptors` the pipeline descriptors they installed. `QueryReadOf` applies the resolved-projection presence effects in execution order: an optional effect weakens a read, a required effect strengthens it, and the last effect wins. Earlier aliases keep their earlier types.
 
 The module markers and supporting single-schema types are internal declarations.
 See [Module types](/api/authoring/define-query-module#module-types) for the full composition contract.

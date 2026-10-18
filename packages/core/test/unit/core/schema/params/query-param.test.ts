@@ -64,4 +64,52 @@ describe('queryParam', () => {
     expect(t.read({})).toBeUndefined()
     expect(t.read({ n: '7' })).toBe('#7')
   })
+
+  it('replaces earlier scalar defaults and leaves previous variants untouched', () => {
+    const base = queryParam('page', codecs.integer.withDefault(1))
+    const first = base.withDefault(2)
+    const second = first.withDefault(3)
+
+    expect(base.defaultValue).toBe(1)
+    expect(first.defaultValue).toBe(2)
+    expect(second.defaultValue).toBe(3)
+  })
+
+  it('lets a supported null replace a codec default', () => {
+    const page = queryParam('page', codecs.integer.nullable().withDefault(2))
+
+    expect(page.withDefault(null).defaultValue).toBeNull()
+    expect(page.defaultValue).toBe(2)
+  })
+
+  it('derives the transformed default only from a defined transform of the input default', () => {
+    const rejected = queryParam('n', codecs.integer.withDefault(0))
+      .transform<string>({ read: v => (v > 0 ? `#${v}` : undefined), write: v => Number(v.slice(1)) })
+    const accepted = queryParam('n', codecs.integer.withDefault(5))
+      .transform<string>({ read: v => (v > 0 ? `#${v}` : undefined), write: v => Number(v.slice(1)) })
+
+    expect(rejected.defaultValue).toBeUndefined()
+    expect(accepted.defaultValue).toBe('#5')
+    expect(accepted.withDefault('#99').read({ n: '7' })).toBe('#7')
+  })
+
+  it('keeps a transformed output atomic when an output default replaces the derived one', () => {
+    const t = queryParam('n', codecs.integer.withDefault(5))
+      .transform<{ a: number, b: number }>({
+        read: v => ({ a: v, b: 100 }),
+        write: v => v.a,
+      })
+      .withDefault({ a: 1, b: 1 })
+
+    expect(t.defaultValue).toEqual({ a: 1, b: 1 })
+  })
+
+  it('keeps a custom input equality when a scalar param is transformed', () => {
+    const rounded = queryParam('n', codecs.float)
+      .withEquality((a, b) => Math.round(a) === Math.round(b))
+      .transform<string>({ read: value => `#${value}`, write: value => Number(value.slice(1)) })
+
+    expect(rounded.eq('#1.1', '#1.2')).toBe(true)
+    expect(rounded.eq('#1.1', '#3')).toBe(false)
+  })
 })

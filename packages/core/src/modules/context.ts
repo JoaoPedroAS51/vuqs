@@ -1,14 +1,17 @@
 import type { ComputedRef, MaybeRefOrGetter } from 'vue'
 import type { QueryCore } from '../core/module-system/query-core'
+import type { ModuleOptions } from '../core/module-system/registry'
 import type { ParsedQuery, ParsedQueryRaw } from '../core/query/types'
 import type { NavigateOptions } from '../core/runtime/adapter'
+import type { PipelineDescriptor, ReadProjection } from '../core/runtime/pipeline/contract'
 import type { QueryStateSchema, QueryStateValues } from '../core/schema/schema'
 // Anchor the registry augmentation to the core entry
 import type {} from '../index'
-import { computed, onScopeDispose, toValue, watch } from 'vue'
+import { computed, toValue, watch } from 'vue'
 import { emitDebug, isDebugArmed } from '../core/diagnostics/bus'
 import { defineQueryModule } from '../core/module-system/define-query-module'
-import { buildQuery, dropDefaults, parseQueryStates } from '../core/schema/operations'
+import { dropDefaults } from '../core/schema/default-elision'
+import { buildQuery, parseQueryStates } from '../core/schema/operations'
 import { pickBy } from '../shared/utils/object'
 
 declare module '@vuqs/core' {
@@ -19,19 +22,61 @@ declare module '@vuqs/core' {
 }
 
 declare module '@vuqs/core' {
-  interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
+  interface QueryModuleRegistry<TSchema extends QueryStateSchema, TOptions, TInference = unknown> {
     'vuqs:context': {
-      states: {
-        options: QueryStatesContextOptions<TSchema, TParam>
-        api: ContextStatesApi<TParam>
-      }
-      state: {
-        options: QueryStateContextOptions<TParam>
-        api: ContextStateApi<TParam>
-      }
+      states: (
+        options: ModuleOptions<TOptions, GroupedContextOptionsFromActive<TSchema, TInference>>,
+      ) => typeof withContext.definition.states<TSchema, typeof options>
+      state: (
+        options: ModuleOptions<TOptions, SingleContextOptionsFromActive<TInference>>,
+      ) => typeof withContext.definition.state<TSchema, typeof options>
     }
   }
 }
+
+/**
+ * The union of context identifiers an `active` option carries.
+ *
+ * @typeParam TOptions - The options passed to {@link withContext}.
+ */
+export type ContextOf<TOptions> = TOptions extends { active: MaybeRefOrGetter<infer TContext extends string> }
+  ? TContext
+  : string
+
+type ContextFromActive<TActive> = TActive extends MaybeRefOrGetter<infer TContext extends string>
+  ? TContext
+  : string
+
+type WithActiveSource<TOptions, TActive> = TOptions extends unknown
+  ? Omit<TOptions, 'active'> & { active: TActive & MaybeRefOrGetter<string> }
+  : never
+
+type GroupedContextOptionsFromActive<TSchema extends QueryStateSchema, TActive> = WithActiveSource<
+  QueryStatesContextOptions<TSchema, ContextFromActive<TActive>>,
+  TActive
+>
+
+type SingleContextOptionsFromActive<TActive> = WithActiveSource<
+  QueryStateContextOptions<ContextFromActive<TActive>>,
+  TActive
+>
+
+type RestrictedKeys<TOptions> = TOptions extends { only: infer TOnly extends object }
+  ? Extract<keyof TOnly, string>
+  : never
+
+type RestrictedPaths<TKey extends string> = [TKey] extends [never] ? readonly [] : readonly [[TKey]]
+
+type ContextRead<TKey extends string, TProjection extends ReadProjection>
+  = PipelineDescriptor<'read', TProjection, RestrictedPaths<TKey>, readonly [], 'default'>
+
+/** The descriptors {@link withContext} contributes: its filter on every read projection and on writes. */
+export type ContextPipeline<TKey extends string> = readonly [
+  ContextRead<TKey, 'explicit'>,
+  ContextRead<TKey, 'defaults'>,
+  ContextRead<TKey, 'resolved'>,
+  PipelineDescriptor<'write', undefined, RestrictedPaths<TKey>, readonly [], 'default'>,
+]
 
 /**
  * Shared navigation function used by {@link withContext}.
@@ -50,7 +95,7 @@ export type ContextNavigate<TContext extends string> = (
  * @typeParam TContext - The union of context identifiers.
  */
 export interface ContextBaseOptions<TContext extends string> {
-  /** The active context as a ref, getter, or plain value. The module never derives it. */
+  /** The active context supplied as a ref, getter, or plain value. */
   active: MaybeRefOrGetter<TContext>
   /**
    * Navigates to the supplied context with its reconciled query and navigation options.
@@ -69,13 +114,13 @@ export type QueryStatesContextOptions<TSchema extends QueryStateSchema, TContext
   = ContextBaseOptions<TContext> & (
     | { preserve?: undefined, only?: undefined }
     | {
-      /** Params kept across a context change; everything else resets. */
+      /** Params whose explicit values are preserved when valid in the target context; other managed params are cleared. */
       preserve: ReadonlyArray<keyof TSchema & string>
       /** Per-param validity: the contexts a param exists in. Omit a param to make it valid everywhere. */
       only?: Partial<Record<keyof TSchema & string, readonly TContext[]>>
     }
     | {
-      /** Params kept across a context change; everything else resets. */
+      /** Params whose explicit values are preserved when valid in the target context; other managed params are cleared. */
       preserve?: ReadonlyArray<keyof TSchema & string>
       /** Per-param validity: the contexts a param exists in. Omit a param to make it valid everywhere. */
       only: Partial<Record<keyof TSchema & string, readonly TContext[]>>
@@ -90,13 +135,13 @@ export type QueryStatesContextOptions<TSchema extends QueryStateSchema, TContext
 export type QueryStateContextOptions<TContext extends string> = ContextBaseOptions<TContext> & (
   | { preserve?: undefined, only?: undefined }
   | {
-    /** Whether this param is kept across a context change when valid in the target. */
+    /** Whether this param's explicit value is preserved when valid in the target context. */
     preserve: boolean
     /** The contexts this param exists in. Omit to make it valid everywhere. */
     only?: readonly TContext[]
   }
   | {
-    /** Whether this param is kept across a context change when valid in the target. */
+    /** Whether this param's explicit value is preserved when valid in the target context. */
     preserve?: boolean
     /** The contexts this param exists in. Omit to make it valid everywhere. */
     only: readonly TContext[]
@@ -133,8 +178,9 @@ interface ContextControls<TContext extends string> {
    */
   buildContextQuery: (currentQuery: ParsedQuery, nextContext: TContext) => ParsedQueryRaw
   /**
-   * Switches to `target` in one navigation: reconciles the query and hands it to
-   * the `navigate` option. Throws if `navigate` was not provided.
+   * Calls the supplied `navigate` callback with `target` and its reconciled query.
+   *
+   * @throws {Error} When `navigate` was not provided.
    */
   switchTo: (target: TContext, options?: NavigateOptions) => void
 }
@@ -152,25 +198,64 @@ interface ContextControls<TContext extends string> {
  *     navigate: (target, query) => navigateTo({ name: target, query }),
  *   }))
  *
- * switchTo('orders') // one navigation: preserved params kept, the rest reset
+ * switchTo('orders') // preserves q and clears category
  * ```
  *
  * @see https://vuqs.dev/modules/context
  */
 export const withContext = /* @__PURE__ */ defineQueryModule({
   name: 'vuqs:context',
-  queryStates: <TSchema extends QueryStateSchema, TContext extends string>(
+  states: <TSchema extends QueryStateSchema, const TOptions>(
     core: QueryCore<TSchema>,
-    options: QueryStatesContextOptions<TSchema, TContext>,
-  ): ContextStatesApi<TContext> =>
-    createContextControls(core, resolveQueryStatesContextOptions(options)),
-  queryState: <TSchema extends QueryStateSchema, TKey extends keyof TSchema & string, TContext extends string>(
+    options: TOptions & QueryStatesContextOptions<TSchema, string>,
+  ): { api: ContextStatesApi<ContextOf<TOptions>>, pipeline: ContextPipeline<RestrictedKeys<TOptions>> } => {
+    const resolved = resolveQueryStatesContextOptions<TSchema, ContextOf<TOptions>>(
+      options as QueryStatesContextOptions<TSchema, ContextOf<TOptions>>,
+    )
+
+    return {
+      api: createContextControls(core, resolved),
+      pipeline: declareContextFilters<RestrictedKeys<TOptions>, TSchema, ContextOf<TOptions>>(core, resolved, Object.keys(options.only ?? {})),
+    }
+  },
+  state: <TSchema extends QueryStateSchema, const TOptions>(
     core: QueryCore<TSchema>,
-    key: TKey,
-    options: QueryStateContextOptions<TContext>,
-  ): ContextStateApi<TContext> =>
-    createContextControls(core, resolveQueryStateContextOptions<TSchema, TContext>(options), key),
+    key: keyof TSchema & string,
+    options: TOptions & QueryStateContextOptions<string>,
+  ): { api: ContextStateApi<ContextOf<TOptions>>, pipeline: ContextPipeline<TOptions extends { only: unknown } ? 'value' : never> } => {
+    const resolved = resolveQueryStateContextOptions<TSchema, ContextOf<TOptions>>(
+      options as QueryStateContextOptions<ContextOf<TOptions>>,
+    )
+
+    return {
+      api: createContextControls(core, resolved, key),
+      pipeline: declareContextFilters<TOptions extends { only: unknown } ? 'value' : never, TSchema, ContextOf<TOptions>>(
+        core,
+        resolved,
+        options.only === undefined ? [] : ['value'],
+      ),
+    }
+  },
 })
+
+function declareContextFilters<TKey extends string, TSchema extends QueryStateSchema, TContext extends string>(
+  core: QueryCore<TSchema>,
+  options: ResolvedContextOptions<TSchema, TContext>,
+  restricted: readonly string[],
+): ContextPipeline<TKey> {
+  const active = computed(() => toValue(options.active))
+  const filter = pickBy(paramKey => options.isValidIn(paramKey as keyof TSchema & string, active.value))
+  const presence = { optional: restricted.map(key => [key]) }
+  // Typed by the module's registry signature, which states the effects it contributes.
+  const define = core.pipeline.define as (...args: unknown[]) => unknown
+
+  return [
+    define('read', filter, { projection: 'explicit', presence }),
+    define('read', filter, { projection: 'defaults', presence }),
+    define('read', filter, { projection: 'resolved', presence }),
+    define('write', filter, { presence }),
+  ] as ContextPipeline<TKey>
+}
 
 function createContextControls<TSchema extends QueryStateSchema, TContext extends string>(
   core: QueryCore<TSchema>,
@@ -179,9 +264,6 @@ function createContextControls<TSchema extends QueryStateSchema, TContext extend
 ): ContextControls<TContext> {
   const active = computed(() => toValue(options.active))
   const contextKeys = key === undefined ? Object.keys(core.schema) as Array<keyof TSchema & string> : [key]
-
-  const untap = core.pipeline.tap(['read', 'write'], pickBy(paramKey => options.isValidIn(paramKey, active.value)))
-  onScopeDispose(untap)
 
   function build(currentQuery: ParsedQuery, nextContext: TContext): ParsedQueryRaw {
     const parsed = parseQueryStates(core.schema, currentQuery) as Record<string, unknown>
@@ -213,13 +295,12 @@ function createContextControls<TSchema extends QueryStateSchema, TContext extend
   }
 
   function buildContextQuery(currentQuery: ParsedQuery, nextContext: TContext): ParsedQueryRaw {
-    // `kept`/`dropped` are computed only for the event, so keep the whole thing behind
-    // the armed check: the `filter`/`includes` pass is otherwise pure debug overhead.
+    // Avoid diagnostic-only query analysis when unobserved.
     if (isDebugArmed(core.debug)) {
       const kept = keptContextKeys(currentQuery, nextContext)
       emitDebug(core.debug, 'ctx:build', { kept, dropped: contextKeys.filter(paramKey => !kept.includes(paramKey)) })
     }
-    return core.pipeline.run('navigate', build(currentQuery, nextContext))
+    return build(currentQuery, nextContext)
   }
 
   function switchTo(target: TContext, navigateOptions?: NavigateOptions): void {
@@ -232,8 +313,7 @@ function createContextControls<TSchema extends QueryStateSchema, TContext extend
   }
 
   watch(active, (nextContext) => {
-    // Partitioning every context key is O(schema) and feeds only the event; skip it when
-    // nothing observes the bus. The hooks emit stays outside, since it is not a debug concern.
+    // Avoid diagnostic-only partitioning when unobserved; context hooks still run.
     if (isDebugArmed(core.debug)) {
       const valid: string[] = []
       const invalid: string[] = []

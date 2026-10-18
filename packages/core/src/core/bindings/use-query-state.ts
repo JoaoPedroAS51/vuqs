@@ -1,9 +1,12 @@
 import type { WritableComputedRef } from 'vue'
 import type { Codec, CodecWithDefault } from '../codecs/codec'
-import type { DefinedQueryStateModule, QueryFacadeModule, QueryStateFacadeModule, QueryStateNameApiOf, QueryStateNameModule } from '../module-system/contract'
+import type { QueryStateUsable, StateModuleApi, StateModulePipeline, VerifiedStateModule } from '../module-system/composition'
+import type { DefinedQueryStateModule } from '../module-system/contract'
+import type { SingleParamSchema } from '../module-system/registry'
 import type { NavigateOptions } from '../runtime/adapter'
-import type { DefinedQueryParam, DefinedQueryParamWithDefault } from '../schema/params/definition'
-import type { QueryStateSchema } from '../schema/schema'
+import type { ApplyPipelineEffects } from '../runtime/pipeline/contract'
+import type { AnyDefinedQueryParam, DefinedQueryParam } from '../schema/params/definition'
+import type { QueryStateRefInput, QueryStateRefValue } from '../schema/schema'
 import type { UseQueryStatesOptions } from './binding'
 import { computed } from 'vue'
 import { codecs } from '../codecs/catalog'
@@ -12,79 +15,83 @@ import { applyQueryStateModule } from '../module-system/apply-module'
 import { queryParam } from '../schema/params/query-param'
 import { createQueryBinding, transactQueryKey } from './binding'
 
-interface SingleQueryStateSchema<T> extends QueryStateSchema {
-  value: DefinedQueryParam<T>
-}
-
 /**
  * A writable ref bound to one query param, returned by {@link useQueryState}.
  *
- * @typeParam T - The param's value type.
+ * @typeParam TRead - The value type the ref reads.
+ * @typeParam TWrite - The value type the ref and `set` accept.
  *
  * @see https://vuqs.dev/guide/query-state/use-query-state
  */
-export interface QueryStateRef<T> extends WritableComputedRef<T> {
+export interface QueryStateRef<TRead, TWrite = TRead> extends WritableComputedRef<TRead, TWrite> {
   /** Writes `value`, optionally overriding the navigation options for this write. */
-  set: (value: T, options?: NavigateOptions) => void
+  set: (value: TWrite, options?: NavigateOptions) => void
   /** Removes the param from the URL, optionally overriding the navigation options. */
   clear: (options?: NavigateOptions) => void
 }
 
 /**
- * A {@link QueryStateRef} with module support, returned by {@link useQueryState}.
+ * The value a single param reads after the presence effects of the installed pipeline
+ * descriptors. Without descriptors it is the base read contract.
  *
- * @typeParam T - The ref value type.
- * @typeParam TApi - The API accumulated so far.
+ * @typeParam TParam - The bound param.
+ * @typeParam TDescriptors - The installed descriptors, in installation order.
  */
-export type UseQueryStateReturn<T, TApi = object, TValue = T> = QueryStateRef<T> & TApi & {
-  use: {
-    <TStateApi>(
-      module: QueryFacadeModule<'state', SingleQueryStateSchema<TValue>, any, TStateApi>,
-    ): UseQueryStateReturn<T, TApi & TStateApi, TValue>
-    <TModule extends QueryStateNameModule<any>>(
-      module: TModule,
-    ): UseQueryStateReturn<T, TApi & QueryStateNameApiOf<TModule, SingleQueryStateSchema<TValue>>, TValue>
-    <TAdded>(
-      module: QueryStateFacadeModule<'state', TAdded>,
-    ): UseQueryStateReturn<T, TApi & TAdded, TValue>
-    <TAdded>(
-      module: DefinedQueryStateModule<TAdded>,
-    ): UseQueryStateReturn<T, TApi & TAdded, TValue>
-  }
-}
+export type QueryStateReadOf<TParam extends AnyDefinedQueryParam, TDescriptors extends readonly unknown[]>
+  = TDescriptors extends readonly []
+    ? QueryStateRefValue<TParam>
+    : ApplyPipelineEffects<{ value: QueryStateRefValue<TParam> }, TDescriptors> extends { value: infer TRead } ? TRead : QueryStateRefValue<TParam>
 
 /**
- * Options for the string-implicit form. Forbids the `parse` and `serialize` keys
- * so a {@link Codec} routes to the codec overloads instead.
+ * A {@link QueryStateRef} with module support, returned by {@link useQueryState}.
  *
- * @internal
+ * `use` returns the same ref with an extended type. Capture its return to retain
+ * the accumulated module APIs and presence effects.
+ *
+ * @typeParam TParam - The bound param; its resolved value is read and its explicit value is written.
+ * @typeParam TApi - The API the applied modules contributed.
+ * @typeParam TDescriptors - The pipeline descriptors the applied modules installed, in order.
  */
+export type UseQueryStateReturn<
+  TParam extends AnyDefinedQueryParam,
+  TApi = object,
+  TDescriptors extends readonly unknown[] = [],
+> = QueryStateRef<QueryStateReadOf<TParam, TDescriptors>, QueryStateRefInput<TParam>> & TApi & {
+  use: <TModule extends QueryStateUsable<SingleParamSchema<TParam>>>(
+    module: TModule & VerifiedStateModule<TModule, SingleParamSchema<TParam>>,
+  ) => UseQueryStateReturn<
+    TParam,
+    TApi & StateModuleApi<TModule, SingleParamSchema<TParam>>,
+    [...TDescriptors, ...StateModulePipeline<TModule, SingleParamSchema<TParam>>]
+  >
+}
+
 type StringQueryStateOptions = UseQueryStatesOptions & { parse?: never, serialize?: never }
 
 /**
  * Binds a single query key to a writable ref, using a codec with a static default.
+ * The query source and URL writer come from the provided adapter.
  *
  * @typeParam T - The param's value type.
  * @param path - A dot-path into the query object, for example `'filters.sort'`.
  * @param codec - A codec carrying a default, from {@link Codec.withDefault}.
  * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
- * The query source and URL writer come from the provided adapter.
  * @returns A writable ref that always holds a value.
  */
 export function useQueryState<T>(
   path: string,
   codec: CodecWithDefault<T>,
   options?: UseQueryStatesOptions,
-): UseQueryStateReturn<T, object, T>
+): UseQueryStateReturn<DefinedQueryParam<T, T, T, true>>
 
 /**
  * Binds a single query key to a writable ref via a codec.
+ * The query source and URL writer come from the provided adapter.
  *
  * @typeParam T - The param's value type.
  * @param path - A dot-path into the query object, for example `'filters.sort'`.
  * @param codec - The codec that reads and writes the value at `path`.
  * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
- * The query source and URL writer come from the provided adapter.
  * @returns A writable ref holding the value, or `undefined` when the key is absent.
  *
  * @example
@@ -96,14 +103,14 @@ export function useQueryState<T>(
   path: string,
   codec: Codec<T>,
   options?: UseQueryStatesOptions,
-): UseQueryStateReturn<T | undefined, object, T>
+): UseQueryStateReturn<DefinedQueryParam<T, T, T, false>>
 
 /**
  * Binds a single query key as a string with a default, with no codec needed.
+ * The query source and URL writer come from the provided adapter.
  *
  * @param path - A dot-path into the query object, for example `'filters.sort'`.
- * @param options - Behavior options plus the `defaultValue` string. The query
- * source and URL writer come from the provided adapter.
+ * @param options - Behavior options plus the `defaultValue` string.
  * @returns A writable ref that always holds a string.
  *
  * @example
@@ -114,14 +121,14 @@ export function useQueryState<T>(
 export function useQueryState(
   path: string,
   options: StringQueryStateOptions & { defaultValue: string },
-): UseQueryStateReturn<string, object, string>
+): UseQueryStateReturn<DefinedQueryParam<string, string, string, true>>
 
 /**
  * Binds a single query key as a string, using an implicit `codecs.string`.
+ * The query source and URL writer come from the provided adapter.
  *
  * @param path - A dot-path into the query object, for example `'filters.sort'`.
  * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
- * The query source and URL writer come from the provided adapter.
  * @returns A writable ref holding the string, or `undefined` when the key is absent.
  *
  * @example
@@ -132,48 +139,34 @@ export function useQueryState(
 export function useQueryState(
   path: string,
   options?: StringQueryStateOptions,
-): UseQueryStateReturn<string | undefined, object, string>
-
-/**
- * Binds a pre-built definition that declares a default to a writable ref.
- *
- * @typeParam T - The param's value type.
- * @param definition - A definition carrying a default, from a codec's `withDefault`.
- * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
- * The query source and URL writer come from the provided adapter.
- * @returns A writable ref that always holds a value.
- */
-export function useQueryState<T>(
-  definition: DefinedQueryParamWithDefault<T>,
-  options?: UseQueryStatesOptions,
-): UseQueryStateReturn<T, object, T>
+): UseQueryStateReturn<DefinedQueryParam<string, string, string, false>>
 
 /**
  * Binds a pre-built definition to a writable ref.
+ * The query source and URL writer come from the provided adapter.
  *
- * @typeParam T - The param's value type.
+ * @typeParam TParam - The bound param; reads resolve its defaults and writes accept its explicit values.
  * @param definition - A definition from {@link queryParam}.
  * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
- * The query source and URL writer come from the provided adapter.
- * @returns A writable ref holding the value, or `undefined` when the param is absent.
+ * @returns A writable ref holding the resolved value, or `undefined` when no static default guarantees one.
  */
-export function useQueryState<T>(
-  definition: DefinedQueryParam<T>,
+export function useQueryState<TParam extends AnyDefinedQueryParam>(
+  definition: TParam,
   options?: UseQueryStatesOptions,
-): UseQueryStateReturn<T | undefined, object, T>
+): UseQueryStateReturn<TParam>
 
-export function useQueryState<T>(
-  pathOrDefinition: string | DefinedQueryParam<T>,
-  codecOrOptions?: Codec<T> | (UseQueryStatesOptions & { defaultValue?: string }),
+export function useQueryState(
+  pathOrDefinition: string | AnyDefinedQueryParam,
+  codecOrOptions?: Codec<unknown> | (UseQueryStatesOptions & { defaultValue?: string }),
   maybeOptions?: UseQueryStatesOptions,
-): UseQueryStateReturn<T | undefined, object, T> | UseQueryStateReturn<string | undefined, object, string> {
+): unknown {
   if (typeof pathOrDefinition !== 'string') {
     return toQueryStateRef(pathOrDefinition, (codecOrOptions as UseQueryStatesOptions | undefined) ?? {})
   }
 
   const path = pathOrDefinition
 
-  if (isCodec<T>(codecOrOptions)) {
+  if (isCodec(codecOrOptions)) {
     return toQueryStateRef(queryParam(path, codecOrOptions), maybeOptions ?? {})
   }
 
@@ -183,12 +176,12 @@ export function useQueryState<T>(
   return toQueryStateRef(queryParam(path, codec), navigateOptions)
 }
 
-function toQueryStateRef<T>(
-  definition: DefinedQueryParam<T>,
+function toQueryStateRef<TParam extends AnyDefinedQueryParam>(
+  definition: TParam,
   options: UseQueryStatesOptions,
-): UseQueryStateReturn<T | undefined, object, T> {
-  const schema = { value: definition } satisfies SingleQueryStateSchema<T>
-  const { binding, core } = createQueryBinding(schema, options)
+): UseQueryStateReturn<TParam> {
+  const schema = { value: definition } satisfies SingleParamSchema<TParam>
+  const { binding, host } = createQueryBinding(schema, options)
 
   const valueRef = computed({
     get: () => (binding.read.value as Record<string, unknown>).value,
@@ -198,13 +191,13 @@ function toQueryStateRef<T>(
   const queryRef = Object.assign(valueRef, {
     set: (value: unknown, perCall?: NavigateOptions) => transactQueryKey(binding, 'value', value, perCall),
     clear: (perCall?: NavigateOptions) => transactQueryKey(binding, 'value', undefined, perCall),
-  }) as UseQueryStateReturn<T | undefined, object, T>
+  }) as UseQueryStateReturn<TParam>
 
-  queryRef.use = ((module: DefinedQueryStateModule<any>) => {
-    applyQueryStateModule(queryRef, core, 'value', module)
+  queryRef.use = ((module: DefinedQueryStateModule) => {
+    applyQueryStateModule(queryRef, host, 'value', module)
 
     return queryRef
-  }) as UseQueryStateReturn<T | undefined, object, T>['use']
+  }) as UseQueryStateReturn<TParam>['use']
 
   return queryRef
 }

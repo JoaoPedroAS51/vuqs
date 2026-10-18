@@ -1,12 +1,20 @@
 import type { ParsedQuery, ParsedQueryRaw } from '../../query/types'
-import type { AnyDefinedQueryParam, DefinedValue, PrefixedQueryParamBuilder, QueryParamBuilder, QueryParamObjectBuilder } from './builder-types'
-import type { DefinedQueryParam } from './definition'
+import type { PrefixedQueryParamBuilder } from './builder-types'
+import type { AnyDefinedQueryParam } from './definition'
 import { collectLeafPaths, getPath, setPath } from '../../query/path'
 import { createQueryParamBuilder } from './builder'
+import { getParamStructure } from './definition'
 
-function isQueryParamBuilder(value: DefinedQueryParam<any>): value is QueryParamBuilder<any, any> {
-  return typeof (value as QueryParamBuilder<any, any>).withDefault === 'function'
-    && typeof (value as QueryParamBuilder<any, any>).withEquality === 'function'
+interface ModifierSurface {
+  withDefault: (defaultValue: unknown) => AnyDefinedQueryParam
+  withEquality: (eq: (a: unknown, b: unknown) => boolean) => AnyDefinedQueryParam
+  keepOnDefault: () => AnyDefinedQueryParam
+  withDefaultsWhenPresent?: () => AnyDefinedQueryParam
+}
+
+function hasModifiers(value: AnyDefinedQueryParam): value is AnyDefinedQueryParam & ModifierSurface {
+  return typeof (value as Partial<ModifierSurface>).withDefault === 'function'
+    && typeof (value as Partial<ModifierSurface>).withEquality === 'function'
 }
 
 /** @internal */
@@ -53,6 +61,9 @@ export function prefixQuery(query: ParsedQueryRaw, prefix: string): ParsedQueryR
 /**
  * Prefixes a param's query paths.
  *
+ * A prefix rewrites paths only. The wrapped param's declared structure, default
+ * candidate and presence gate carry over unchanged.
+ *
  * @returns A new builder preserving the wrapped param's value and modifier semantics.
  *
  * @internal
@@ -60,8 +71,9 @@ export function prefixQuery(query: ParsedQueryRaw, prefix: string): ParsedQueryR
 export function createPrefixedQueryParam<TParam extends AnyDefinedQueryParam>(
   prefix: string,
   param: TParam,
-): PrefixedQueryParamBuilder<TParam> {
-  const base = createQueryParamBuilder<DefinedValue<TParam>>({
+): PrefixedQueryParamBuilder<TParam>
+export function createPrefixedQueryParam(prefix: string, param: AnyDefinedQueryParam): AnyDefinedQueryParam {
+  const base = createQueryParamBuilder<unknown, unknown, boolean>({
     paths: param.paths.map(path => joinPath(prefix, path)),
     read(query, context) {
       const prefixedContext = context === undefined
@@ -75,34 +87,28 @@ export function createPrefixedQueryParam<TParam extends AnyDefinedQueryParam>(
       return prefixQuery(param.write(value), prefix)
     },
     eq: param.eq,
-    // A prefix only rewrites paths, not the value; delegate value-space composition
-    // to the wrapped param.
     resolve: param.resolve,
     defaultValue: param.defaultValue,
     clearOnDefault: param.clearOnDefault,
     presenceGated: param.presenceGated,
+    structure: getParamStructure(param),
   })
 
-  if (!isQueryParamBuilder(param)) {
-    return base as PrefixedQueryParamBuilder<TParam>
+  if (!hasModifiers(param)) {
+    return base
   }
 
-  // Modifiers delegate to the wrapped builder and re-prefix, so the wrapped
-  // param's own semantics (an object's partial default merge, its presence
-  // gating) survive prefixing instead of degrading to plain replacement.
-  const { withDefaultsWhenPresent } = param as Partial<
-    Pick<QueryParamObjectBuilder<unknown>, 'withDefaultsWhenPresent'>
-  >
-
-  const prefixed = {
+  // Modifiers delegate to the wrapped builder and re-prefix, so its own semantics
+  // (an object's contribution, its presence gate) survive prefixing.
+  const prefixed: AnyDefinedQueryParam & ModifierSurface = {
     ...base,
     withDefault: (defaultValue: unknown) => createPrefixedQueryParam(prefix, param.withDefault(defaultValue)),
     withEquality: (eq: (a: unknown, b: unknown) => boolean) => createPrefixedQueryParam(prefix, param.withEquality(eq)),
     keepOnDefault: () => createPrefixedQueryParam(prefix, param.keepOnDefault()),
-    ...(typeof withDefaultsWhenPresent === 'function'
-      ? { withDefaultsWhenPresent: () => createPrefixedQueryParam(prefix, withDefaultsWhenPresent()) }
+    ...(typeof param.withDefaultsWhenPresent === 'function'
+      ? { withDefaultsWhenPresent: () => createPrefixedQueryParam(prefix, param.withDefaultsWhenPresent!()) }
       : {}),
   }
 
-  return prefixed as PrefixedQueryParamBuilder<TParam>
+  return prefixed
 }

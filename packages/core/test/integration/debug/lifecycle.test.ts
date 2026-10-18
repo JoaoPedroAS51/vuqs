@@ -2,7 +2,7 @@ import type { DebugEvent } from '../../../src/core/diagnostics/bus'
 import type { ParsedQuery } from '../../../src/core/query/types'
 import type { QueryStateNavigate } from '../../../src/core/runtime/adapter'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createApp, ref } from 'vue'
+import { createApp, effectScope, ref } from 'vue'
 import { createTestingAdapter } from '../../../src/adapters/testing'
 import { installQueryAdapter } from '../../../src/core/bindings/adapter-provider'
 import { useQueryState } from '../../../src/core/bindings/use-query-state'
@@ -13,6 +13,7 @@ import { getDebugSnapshot } from '../../../src/core/diagnostics/snapshot'
 import { ThrottledQueue } from '../../../src/core/runtime/navigation-queue'
 import { queryParam } from '../../../src/core/schema/params/query-param'
 import { enableDebug } from '../../../src/debug'
+import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults'
 import { withTestQuery } from '../../helpers/adapter'
 import { captureCodes, captureEvents, flush, inOrder, resetDebugState, trackReporter } from '../../helpers/debug'
 
@@ -522,5 +523,34 @@ describe('lifecycle tracing', () => {
     query.patch({ q: 'sale' })
 
     expect(events).toContainEqual(['tx:start', expect.objectContaining({ id: 1, mode: 'patch', paths: ['q'] })])
+  })
+})
+
+describe('binding ownership of diagnostics', () => {
+  it('removes only the disposed binding from the live snapshot and keeps prior observations detached', () => {
+    const adapter = createTestingAdapter({ hasMemory: true })
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const value = queryParam('value', codecs.integer.withDefault(1))
+    const scopeA = effectScope()
+    const scopeB = effectScope()
+    const a = app.runWithContext(() => scopeA.run(() => useQueryStates({ value }).use(withRuntimeDefaults())))!
+    const b = app.runWithContext(() => scopeB.run(() => useQueryStates({ value }).use(withRuntimeDefaults())))!
+
+    a.setDefaults({ value: 5 })
+    b.setDefaults({ value: 9 })
+
+    const channel = getDebugChannel(adapter)
+    const before = getDebugSnapshot(channel).engines
+    expect(before.map(engine => engine.defaults.value).sort()).toEqual([5, 9])
+
+    scopeA.stop()
+    b.setDefaults({ value: 10 })
+
+    const after = getDebugSnapshot(channel).engines
+    expect(after).toHaveLength(1)
+    expect(after[0]!.defaults.value).toBe(10)
+    expect(before.map(engine => engine.defaults.value).sort()).toEqual([5, 9])
+    scopeB.stop()
   })
 })

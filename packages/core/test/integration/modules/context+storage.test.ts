@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { shallowRef } from 'vue'
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../src/core/codecs/catalog'
+import { queryParam } from '../../../src/core/schema/params/query-param'
 import { withContext } from '../../../src/modules/context'
 import { withStorage } from '../../../src/modules/storage/storage'
 import { withTestQuery as setup } from '../../helpers/adapter'
@@ -88,5 +89,34 @@ describe('withContext + withStorage', () => {
     expect(state.values).toEqual({ status: 'open' })
     expect(test.query.value).toEqual({ status: 'open' })
     expect(memory.current()).toEqual(expect.objectContaining({ query: { status: 'open' } }))
+  })
+
+  it.each(compositionOrders)('keeps a preserved partial object explicit across a context switch and storage mirror (%s)', async (_label, storageFirst) => {
+    const schema = {
+      record: queryParam.object('record', {
+        a: queryParam('a', codecs.integer.withDefault(0)),
+        b: queryParam('b', codecs.integer),
+      }),
+    }
+    const active = shallowRef<'products' | 'orders'>('products')
+    const memory = createMemoryStorage()
+    const test = setup({ record: { b: '10' } })
+    const state = test.build(() => {
+      const query = useQueryStates(schema)
+
+      return storageFirst
+        ? query
+            .use(withStorage({ key: 'filters', storage: memory.storage }))
+            .use(withContext({ active, preserve: ['record'] }))
+        : query
+            .use(withContext({ active, preserve: ['record'] }))
+            .use(withStorage({ key: 'filters', storage: memory.storage }))
+    })
+
+    await state.storage.ready
+    await state.storage.flush()
+
+    expect(state.buildContextQuery(test.query.value, 'orders')).toEqual({ record: { b: '10' } })
+    expect(memory.current()).toEqual(expect.objectContaining({ query: { record: { b: '10' } } }))
   })
 })

@@ -1,10 +1,10 @@
 import type { ComputedRef } from 'vue'
-import type { QueryCore } from '../module-system/query-core'
+import type { ModuleHost } from '../module-system/apply-module'
 import type { NavigateOptions } from '../runtime/adapter'
 import type { QueryStateEngine } from '../runtime/engine'
 import type { QueryTransactionRequest } from '../runtime/transaction'
-import type { QueryStateRefValue, QueryStateSchema, QueryStateValues, QueryStateWriteValues } from '../schema/schema'
-import { computed, onScopeDispose, reactive } from 'vue'
+import type { QueryStateRefValue, QueryStateResolvedValues, QueryStateSchema, QueryStateWriteValues } from '../schema/schema'
+import { computed, getCurrentScope, onScopeDispose, reactive } from 'vue'
 import { emitDebug } from '../diagnostics/bus'
 import { createQueryStateEngine } from '../runtime/engine'
 import { createQueryHooks } from '../runtime/hooks'
@@ -15,9 +15,18 @@ import { useQueryAdapter } from './adapter-provider'
  * Behavior options for {@link useQueryStates} and {@link useQueryState}.
  */
 export interface UseQueryStatesOptions extends NavigateOptions {
-  /** Coalesce writes within this many ms into one navigation. Defaults to a microtask. */
+  /**
+   * Coalesces writes within this many ms into one navigation (`0` uses a microtask).
+   *
+   * @default The adapter setting, or `0`.
+   */
   throttleMs?: number
-  /** Drop a value from the URL when it equals its codec default. Defaults to `true`. */
+  /**
+   * Allows default-equal writes to omit their URL representation when the binding
+   * reads the same value afterward. Overrides the param and adapter settings.
+   *
+   * @default The param setting, then the adapter setting, then `true`.
+   */
   clearOnDefault?: boolean
 }
 
@@ -26,6 +35,7 @@ export interface UseQueryStatesOptions extends NavigateOptions {
  * Use Vue's `toRefs` to obtain individual refs.
  *
  * @typeParam TSchema - The schema bound to the URL.
+ * @typeParam TRead - The read value of each param after module effects.
  *
  * @example
  * ```ts
@@ -33,7 +43,26 @@ export interface UseQueryStatesOptions extends NavigateOptions {
  * values.q = undefined // Clear a param whose type includes `undefined`.
  * ```
  */
-export type QueryStatesValues<TSchema extends QueryStateSchema> = {
+export type QueryStatesValues<TSchema extends QueryStateSchema, TRead extends QueryReadShape<TSchema> = QueryReadMap<TSchema>> = {
+  [Key in keyof TSchema]: TRead[Key]
+}
+
+/**
+ * Any read map with one entry per param, such as the base map after module effects.
+ *
+ * @typeParam TSchema - The schema whose params key the map.
+ */
+export type QueryReadShape<TSchema extends QueryStateSchema> = {
+  [Key in keyof TSchema]: unknown
+}
+
+/**
+ * The read value of every param before module effects: the resolved value, which
+ * permits `undefined` unless a static default guarantees presence.
+ *
+ * @typeParam TSchema - The schema whose params determine the value types.
+ */
+export type QueryReadMap<TSchema extends QueryStateSchema> = {
   [Key in keyof TSchema]: QueryStateRefValue<TSchema[Key]>
 }
 
@@ -47,24 +76,34 @@ export interface QueryBinding<TSchema extends QueryStateSchema> {
   /** The schema param names, the key set every lens iterates. */
   readonly keys: readonly (keyof TSchema & string)[]
   /** The resolved whole-object read: explicit values layered over defaults. */
-  readonly read: ComputedRef<QueryStateValues<TSchema>>
+  readonly read: ComputedRef<QueryStateResolvedValues<TSchema>>
   /** Atomically applies a partial or exhaustive query-state write. */
   readonly transact: (request: QueryTransactionRequest<TSchema>) => void
 }
+
+/**
+ * Type-only marker carrying the read value of each param after module effects.
+ *
+ * @internal
+ */
+export declare const QUERY_READ: unique symbol
 
 /**
  * Anything that carries a {@link QueryBinding}: the object a reactive lens such
  * as {@link toQueryRefs} accepts.
  *
  * @typeParam TSchema - The schema the binding exposes.
+ * @typeParam TRead - The read value of each param after module effects.
  */
-export interface QueryBindingSource<TSchema extends QueryStateSchema> {
+export interface QueryBindingSource<TSchema extends QueryStateSchema, TRead extends QueryReadShape<TSchema> = QueryReadMap<TSchema>> {
   /**
    * The schema-typed root a reactive lens derives from.
    *
    * @internal
    */
   readonly binding: QueryBinding<TSchema>
+  /** @internal */
+  readonly [QUERY_READ]?: TRead
 }
 
 /**
@@ -78,8 +117,8 @@ export interface QueryBindingResult<TSchema extends QueryStateSchema> {
   engine: QueryStateEngine<TSchema>
   /** The schema-typed root every reactive lens derives from. */
   binding: QueryBinding<TSchema>
-  /** The shared core passed to composed modules. */
-  core: QueryCore<TSchema>
+  /** What composed modules install through: an owned core view per module, and the registries. */
+  host: ModuleHost<TSchema>
 }
 
 let bindingCounter = 0
@@ -130,15 +169,32 @@ export function createQueryBinding<TSchema extends QueryStateSchema>(
   }
   const managedPaths = getManagedKeys(resolvedSchema)
 
-  const core: QueryCore<TSchema> = {
-    schema: resolvedSchema,
-    state: engine.state,
-    defaults: engine.defaults,
-    options: engine.options,
+  const hooks = createQueryHooks(engine.debug)
+  let moduleId = 0
+  const host: ModuleHost<TSchema> = {
     pipeline: engine.pipeline,
-    hooks: createQueryHooks(engine.debug),
-    query: engine.query,
-    debug: engine.debug,
+    publish: engine.installations.publish,
+    remove: engine.installations.remove,
+    nextId: () => ++moduleId,
+    scope: getCurrentScope(),
+    // Subscriptions made through the core view are released with the module that made them.
+    createCore: own => ({
+      schema: resolvedSchema,
+      state: engine.state,
+      defaults: { candidates: engine.defaults.candidates },
+      options: engine.options,
+      pipeline: { define: engine.pipeline.define },
+      hooks: {
+        on: (event, handler) => own(hooks.on(event, handler)),
+        emit: hooks.emit,
+      },
+      query: {
+        current: engine.query.current,
+        transact: engine.query.transact,
+        transactions: { observe: observer => own(engine.query.transactions.observe(observer)) },
+      },
+      debug: engine.debug,
+    }),
   }
 
   emitDebug(engine.debug, 'binding:created', {
@@ -150,7 +206,7 @@ export function createQueryBinding<TSchema extends QueryStateSchema>(
     emitDebug(engine.debug, 'binding:disposed', { id, keys: binding.keys, managedPaths })
   }, true)
 
-  return { engine, binding, core }
+  return { engine, binding, host }
 }
 
 /**

@@ -1,13 +1,15 @@
 import type { ComputedRef } from 'vue'
 import type { QueryCore } from '../core/module-system/query-core'
-import type { QueryStateSchema, QueryStateValues } from '../core/schema/schema'
+import type { ModuleOptions } from '../core/module-system/registry'
+import type { QueryStateContributions, QueryStateSchema, QueryStateValues } from '../core/schema/schema'
 // Anchor the registry augmentation to the core entry
 import type {} from '../index'
 import { computed } from 'vue'
 import { defineQueryModule } from '../core/module-system/define-query-module'
+import { classifyDefault } from '../core/schema/resolution'
 
 /**
- * Options for the grouped {@link withActiveParams} projection.
+ * Options for {@link withActiveParams} on grouped state.
  *
  * @typeParam TSchema - The schema whose param names can be excluded.
  */
@@ -41,20 +43,18 @@ export interface ActiveParamsStateApi {
 }
 
 declare module '@vuqs/core' {
-  // eslint-disable-next-line unused-imports/no-unused-vars -- TParam must match the base registry signature
-  interface QueryModuleRegistry<TSchema extends QueryStateSchema, TParam extends string> {
+  // eslint-disable-next-line unused-imports/no-unused-vars -- the params must match the base registry signature
+  interface QueryModuleRegistry<TSchema extends QueryStateSchema, TOptions, TInference = unknown> {
     'vuqs:active-params': {
-      states: {
-        options: ActiveParamsOptions<TSchema>
-        api: ActiveParamsStatesApi<TSchema>
-      }
-      state: { api: ActiveParamsStateApi }
+      states: (options?: ModuleOptions<TOptions, ActiveParamsOptions<TSchema>>) => typeof withActiveParams.definition.states<TSchema>
+      state: (options?: undefined) => typeof withActiveParams.definition.state<TSchema>
     }
   }
 }
 
 /**
- * Adds reactive views over params explicitly present and different from their resolved defaults.
+ * Adds reactive activity views for defined explicit values that differ from their
+ * composed default candidates or have no candidate.
  *
  * @returns A module that contributes {@link ActiveParamsStatesApi} to
  * {@link useQueryStates} and {@link ActiveParamsStateApi} to {@link useQueryState}.
@@ -72,45 +72,49 @@ declare module '@vuqs/core' {
  */
 export const withActiveParams = /* @__PURE__ */ defineQueryModule({
   name: 'vuqs:active-params',
-  queryStates: createActiveParamsStatesApi,
-  queryState: createActiveParamsStateApi,
+  states: createActiveParamsStatesSetup,
+  state: createActiveParamsStateSetup,
 })
 
-function createActiveParamsStatesApi<TSchema extends QueryStateSchema>(
+function createActiveParamsStatesSetup<TSchema extends QueryStateSchema>(
   core: QueryCore<TSchema>,
   options: ActiveParamsOptions<TSchema> = {},
-): ActiveParamsStatesApi<TSchema> {
+): { api: ActiveParamsStatesApi<TSchema> } {
   type Key = keyof TSchema & string
 
   const keys = Object.keys(core.schema) as Key[]
   const excluded = new Set<Key>(options.exclude ?? [])
   const activeKeys = computed<readonly Key[]>(() => {
     const explicitValues = core.state.explicitValues.value
-    const defaults = core.defaults.resolved.value
+    const candidates = core.defaults.candidates.value
 
-    return keys.filter(key => !excluded.has(key) && isParamActive(core, key, explicitValues, defaults))
+    return keys.filter(key => !excluded.has(key) && isParamActive(core, key, explicitValues, candidates))
   })
   const activeSet = computed(() => new Set(activeKeys.value))
 
   return {
-    activeKeys,
-    activeCount: computed(() => activeKeys.value.length),
-    hasActive: computed(() => activeKeys.value.length > 0),
-    isActive: key => activeSet.value.has(key),
+    api: {
+      activeKeys,
+      activeCount: computed(() => activeKeys.value.length),
+      hasActive: computed(() => activeKeys.value.length > 0),
+      isActive: key => activeSet.value.has(key),
+    },
   }
 }
 
-function createActiveParamsStateApi<
-  TSchema extends QueryStateSchema,
-  TKey extends keyof TSchema & string,
->(core: QueryCore<TSchema>, key: TKey): ActiveParamsStateApi {
+function createActiveParamsStateSetup<TSchema extends QueryStateSchema>(
+  core: QueryCore<TSchema>,
+  key: keyof TSchema & string,
+): { api: ActiveParamsStateApi } {
   return {
-    isActive: computed(() => isParamActive(
-      core,
-      key,
-      core.state.explicitValues.value,
-      core.defaults.resolved.value,
-    )),
+    api: {
+      isActive: computed(() => isParamActive(
+        core,
+        key,
+        core.state.explicitValues.value,
+        core.defaults.candidates.value,
+      )),
+    },
   }
 }
 
@@ -118,15 +122,9 @@ function isParamActive<TSchema extends QueryStateSchema>(
   core: QueryCore<TSchema>,
   key: keyof TSchema & string,
   explicitValues: QueryStateValues<TSchema>,
-  defaults: QueryStateValues<TSchema>,
+  candidates: QueryStateContributions<TSchema>,
 ): boolean {
-  if (!Object.hasOwn(explicitValues, key)) {
-    return false
-  }
+  const classification = classifyDefault(core.schema[key], explicitValues[key], candidates[key])
 
-  if (!Object.hasOwn(defaults, key)) {
-    return true
-  }
-
-  return !core.schema[key].eq(explicitValues[key], defaults[key])
+  return classification === 'different' || classification === 'no-default'
 }

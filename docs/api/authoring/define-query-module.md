@@ -1,6 +1,6 @@
 # defineQueryModule <Badge type="info" text="@vuqs/core" />
 
-Builds a factory that contributes API to grouped state, single state, or both.
+Builds a factory that contributes API, default sources and pipeline registrations to grouped state, single state, or both.
 
 ## Usage
 
@@ -11,11 +11,15 @@ import { computed } from 'vue'
 const schema = { q: codecs.string }
 
 export const withPresence = defineQueryModule({
-  queryStates: core => ({
-    present: computed(() => Object.keys(core.state.explicitValues.value)),
+  states: core => ({
+    api: {
+      present: computed(() => Object.keys(core.state.explicitValues.value)),
+    },
   }),
-  queryState: (core, key) => ({
-    isPresent: computed(() => core.state.explicitValues.value[key] !== undefined),
+  state: (core, key) => ({
+    api: {
+      isPresent: computed(() => core.state.explicitValues.value[key] !== undefined),
+    },
   }),
 })
 
@@ -26,318 +30,127 @@ useQueryState('q').use(withPresence()) // on a single param
 ## Type
 
 ```ts
-function defineQueryModule<TName extends QueryModuleName>(
-  definition: {
-    name: TName
-    queryStates?: undefined
-    queryState: <TSchema extends QueryStateSchema, TKey extends keyof TSchema & string>(
-      core: QueryCore<TSchema>,
-      key: TKey,
-      options: QueryModuleStateOptions<TName, TSchema, string>,
-    ) => QueryModuleStateApi<TName, TSchema, string>
-  },
-): QueryStateNameModuleFactory<TName>
+// Registered: `name` selects a QueryModuleRegistry entry
+function defineQueryModule<const TName extends QueryModuleName, TState extends ContextualState<NoInfer<TName>>>(
+  definition: { name: TName, states?: undefined, state: TState },
+): QueryModuleFactory<TName, { state: TState }>
 
-function defineQueryModule<TName extends QueryModuleName>(
-  definition: {
-    name: TName
-    queryStates: <TSchema extends QueryStateSchema>(
-      core: QueryCore<TSchema>,
-      options: QueryModuleStatesOptions<TName, TSchema, string>,
-    ) => QueryModuleStatesApi<TName, TSchema, string>
-    queryState?: <TSchema extends QueryStateSchema, TKey extends keyof TSchema & string>(
-      core: QueryCore<TSchema>,
-      key: TKey,
-      options: QueryModuleStateOptions<TName, TSchema, string>,
-    ) => QueryModuleStateApi<TName, TSchema, string>
-  },
-): QueryModuleFactory<TName>
+function defineQueryModule<const TName extends QueryModuleName, TStates extends ContextualStates<NoInfer<TName>>>(
+  definition: { name: TName, states: TStates, state?: undefined },
+): QueryModuleFactory<TName, { states: TStates }>
 
-function defineQueryModule<TStatesApi, TStateApi, TOptions = void>(
+function defineQueryModule<
+  const TName extends QueryModuleName,
+  TStates extends ContextualStates<NoInfer<TName>>,
+  TState extends ContextualState<NoInfer<TName>>,
+>(
+  definition: { name: TName, states: TStates, state: TState },
+): QueryModuleFactory<TName, { states: TStates, state: TState }>
+
+// Plain: options and results come from the callbacks
+function defineQueryModule<TStatesResult extends QueryModuleResult, TStateResult extends QueryModuleResult, TOptions = void>(
   definition: {
     name?: undefined
-    queryStates: (core: QueryCore<any>, options: TOptions) => TStatesApi
-    queryState: <TSchema extends QueryStateSchema, TKey extends keyof TSchema & string>(
-      core: QueryCore<TSchema>,
-      key: TKey,
-      options: TOptions,
-    ) => TStateApi
+    states: (core: QueryCore<any>, options: TOptions) => TStatesResult
+    state: (core: QueryCore<any>, key: string, options: TOptions) => TStateResult
   },
-): PlainQueryModuleFactory<TStatesApi, TStateApi, TOptions, true, true>
+): PlainQueryModuleFactory<TStatesResult, TStateResult, TOptions, true, true>
 
-function defineQueryModule<TStatesApi, TOptions = void>(
+function defineQueryModule<TStatesResult extends QueryModuleResult, TOptions = void>(
   definition: {
     name?: undefined
-    queryStates: (core: QueryCore<any>, options: TOptions) => TStatesApi
-    queryState?: undefined
+    states: (core: QueryCore<any>, options: TOptions) => TStatesResult
+    state?: undefined
   },
-): PlainQueryModuleFactory<TStatesApi, object, TOptions, true, false>
+): PlainQueryModuleFactory<TStatesResult, QueryModuleResult, TOptions, true, false>
 
-function defineQueryModule<TStateApi, TOptions = void>(
+function defineQueryModule<TStateResult extends QueryModuleResult, TOptions = void>(
   definition: {
     name?: undefined
-    queryStates?: undefined
-    queryState: <TSchema extends QueryStateSchema, TKey extends keyof TSchema & string>(
-      core: QueryCore<TSchema>,
-      key: TKey,
-      options: TOptions,
-    ) => TStateApi
+    states?: undefined
+    state: (core: QueryCore<any>, key: string, options: TOptions) => TStateResult
   },
-): PlainQueryModuleFactory<object, TStateApi, TOptions, false, true>
-
-function defineQueryModule(
-  definition: {
-    name?: QueryModuleName
-    queryStates?: (core: QueryCore<any>, options: any) => any
-    queryState?: (core: QueryCore<any>, key: any, options: any) => any
-  },
-): (...args: any[]) => any
+): PlainQueryModuleFactory<QueryModuleResult, TStateResult, TOptions, false, true>
 ```
 
-The factory types are listed under [Module types](#module-types), and the option and API aliases under [registry lookups](/api/authoring/query-module-registry#registry-lookups). `name` selects a `QueryModuleRegistry` entry; omitting it infers fixed options and API from the projections.
+The registered forms contextualize `states` and `state` from the registry entry named by `name`: inline callbacks receive typed `core`, `key` and `options` without annotations or generics. The factory captures each callback as written and exposes it on `definition`. The plain forms type the factory from the callbacks.
+
+`ContextualStates` and `ContextualState` are internal supporting types, not package exports. They describe the setup callbacks accepted by the registered overloads:
+
+```ts
+type ContextualStates<TName extends QueryModuleName> = <TSchema extends QueryStateSchema, const TOptions = unknown>(
+  core: QueryCore<TSchema>,
+  options: TOptions & QueryModuleStatesContract<TName, TSchema>,
+) => QueryModuleResult
+
+type ContextualState<TName extends QueryModuleName> = <TSchema extends QueryStateSchema, const TOptions = unknown>(
+  core: QueryCore<TSchema>,
+  key: keyof TSchema & string,
+  options: TOptions & QueryModuleStateContract<TName, TSchema>,
+) => QueryModuleResult
+```
 
 ## Parameters
 
 | Property | Type | Behavior |
 | --- | --- | --- |
-| `name` | `QueryModuleName` | Optional registry name. The registered facets determine options and API. |
-| `queryStates` | `(core, options) => api` | Grouped projection. Omit for a single-only module. |
-| `queryState` | `(core, key, options) => api` | Single-param projection. Omit for a grouped-only module. |
+| `name` | `QueryModuleName` | Optional registry name. The registered signatures determine options and result. |
+| `states` | `(core, options) => result` | Grouped setup. Omit for a single-only module. |
+| `state` | `(core, key, options) => result` | Single-param setup. Omit for a grouped-only module. |
 
-Provide at least one projection. Registered projections are generic over their schema. A plain grouped projection receives `QueryCore<any>`; the single projection is generic over schema and key.
+Provide at least one setup. A setup returns a [`QueryModuleResult`](#querymoduleresult).
 
 ## Return value
 
-A factory, invoked to produce the module passed to `.use()`. The factory captures its options; `.use()` runs the projection and merges the returned API onto the same composable.
+A factory, called to produce the module passed to `.use()`. Calling the factory captures the options and never runs a setup. `.use()` runs the setup of the receiving facade once, inside an effect scope owned by the binding, then installs what it returned. The factory's `definition` property holds the callbacks as written.
 
-Applying a module without the receiving facade's projection throws. Returning a key already present on the base API or another module throws. Effects registered during a projection are disposed if projection or API merging fails. Successful effects follow the owning scope.
+Applying a module without the receiving facade's setup throws. A setup that returns no `api` object, a key already present on the base API or another module, or an invalid descriptor throws, and everything the module created is released while earlier modules stay intact.
 
 ## Factory call forms
 
 | Call | Facade and inference |
 | --- | --- |
 | `factory(options?)` | Adaptive. Inline `.use()` supplies the facade and schema. |
-| `factory(schema, options)` | Grouped. Uses a normalized schema for option/API inference. |
-| `factory(param, options)` | Single. Infers from the param's decoded value type. |
+| `factory(schema, options)` | Grouped. Uses a normalized schema for option and result inference. |
+| `factory(param, options)` | Single. Infers from the param's value contract. |
 | `factory(path, options)` | Single. Selects the single option shape. |
 
-The target arguments provide type information and select a facade. The composable applying the module supplies the actual core and bound key.
+The target arguments provide type information and select a facade. The composable applying the module supplies the actual core and bound key. A registered factory keeps the configured options and the inference source independent (`TOptions` and `TInference`) until `.use()` verifies the callbacks against the registry signature.
 
-Single-only registered adaptive factories resolve their API against the bound param via the registry. This preserves value types in contributed refs and setters.
-
-<details>
-<summary>Factory declarations</summary>
+## QueryModuleResult
 
 ```ts
-type QueryModuleStatesApi<
-  TName extends QueryModuleName,
-  TSchema extends QueryStateSchema,
-  TParam extends string,
-> = QueryModuleRegistry<TSchema, TParam>[TName] extends { states: { api: infer TApi } } ? TApi : object
-
-type QueryModuleStateApi<
-  TName extends QueryModuleName,
-  TSchema extends QueryStateSchema,
-  TParam extends string,
-> = QueryModuleRegistry<TSchema, TParam>[TName] extends { state: { api: infer TApi } } ? TApi : object
-
-type QueryModuleStatesOptions<
-  TName extends QueryModuleName,
-  TSchema extends QueryStateSchema,
-  TParam extends string,
-> = QueryModuleRegistry<TSchema, TParam>[TName] extends { states: { options: infer TOptions } } ? TOptions : never
-
-type QueryModuleStateOptions<
-  TName extends QueryModuleName,
-  TSchema extends QueryStateSchema,
-  TParam extends string,
-> = QueryModuleRegistry<TSchema, TParam>[TName] extends { state: { options: infer TOptions } } ? TOptions : never
-
-type QueryModuleAdaptiveOptions<
-  TName extends QueryModuleName,
-  TFacade,
-  TSchema extends QueryStateSchema,
-  TParam extends string,
-> = [TFacade] extends ['states']
-  ? QueryModuleStatesOptions<TName, TSchema, TParam>
-  : [TFacade] extends ['state']
-      ? QueryModuleStateOptions<TName, TSchema, TParam>
-      : QueryModuleStatesOptions<TName, TSchema, TParam> | QueryModuleStateOptions<TName, TSchema, TParam>
-
-type SingleParamSchema<TValue> = { value: DefinedQueryParam<TValue> }
-
-type QueryModuleHasStates<TName extends QueryModuleName>
-  = QueryModuleRegistry<QueryStateSchema, string>[TName] extends { states: unknown } ? true : false
-
-type QueryModuleHasState<TName extends QueryModuleName>
-  = QueryModuleRegistry<QueryStateSchema, string>[TName] extends { state: unknown } ? true : false
-
-type AdaptiveModule<
-  TFacade,
-  TSchema extends QueryStateSchema,
-  TStatesApi,
-  TStateApi,
-  THasStates,
-  THasState,
-> = [THasStates] extends [true]
-  ? [THasState] extends [true]
-      ? QueryFacadeModule<TFacade, TSchema, TStatesApi, TStateApi>
-      : QueryStatesFacadeModule<TFacade extends QueryModuleFacade ? TFacade : 'states', TSchema, TStatesApi>
-  : QueryStateFacadeModule<'state', TStateApi>
-
-interface QueryModuleFactory<TName extends QueryModuleName> {
-  <TFacade = 'base', TSchema extends QueryStateSchema = QueryStateSchema, TParam extends string = string>(
-    options?: QueryModuleAdaptiveOptions<TName, NoInfer<TFacade>, NoInfer<TSchema>, TParam>,
-  ): QueryFacadeModule<
-    TFacade,
-    TSchema,
-    QueryModuleStatesApi<TName, TSchema, TParam>,
-    QueryModuleStateApi<TName, TSchema, TParam>
-  >
-  <TSchema extends QueryStateSchema, TParam extends string = string>(
-    schema: TSchema,
-    options: QueryModuleStatesOptions<TName, TSchema, TParam>,
-  ): QueryStatesFacadeModule<'states', TSchema, QueryModuleStatesApi<TName, TSchema, TParam>>
-  <TValue, TParam extends string = string>(
-    param: DefinedQueryParam<TValue>,
-    options: QueryModuleStateOptions<TName, SingleParamSchema<TValue>, TParam>,
-  ): QueryStateFacadeModule<'state', QueryModuleStateApi<TName, SingleParamSchema<TValue>, TParam>>
-  <TParam extends string = string>(
-    path: string,
-    options: QueryModuleStateOptions<TName, QueryStateSchema, TParam>,
-  ): QueryStateFacadeModule<'state', QueryModuleStateApi<TName, QueryStateSchema, TParam>>
+interface QueryModuleResult<TApi extends object = object> {
+  api: TApi
+  defaults?: readonly QueryDefaultSource[]
+  pipeline?: readonly [QueryModulePipelineDescriptor?, ...QueryModulePipelineDescriptor[]]
 }
 
-interface QueryStateNameModuleFactory<TName extends QueryModuleName> {
-  (options?: QueryModuleStateOptions<TName, QueryStateSchema, string>): QueryStateNameModule<TName>
-  <TValue, TParam extends string = string>(
-    param: DefinedQueryParam<TValue>,
-    options: QueryModuleStateOptions<TName, SingleParamSchema<TValue>, TParam>,
-  ): QueryStateFacadeModule<'state', QueryModuleStateApi<TName, SingleParamSchema<TValue>, TParam>>
-  <TParam extends string = string>(
-    path: string,
-    options: QueryModuleStateOptions<TName, QueryStateSchema, TParam>,
-  ): QueryStateFacadeModule<'state', QueryModuleStateApi<TName, QueryStateSchema, TParam>>
-}
-
-interface PlainQueryModuleFactory<TStatesApi, TStateApi, TOptions, THasStates, THasState> {
-  <TFacade = 'base', TSchema extends QueryStateSchema = QueryStateSchema>(
-    options?: TOptions,
-  ): AdaptiveModule<TFacade, TSchema, TStatesApi, TStateApi, THasStates, THasState>
-  <TSchema extends QueryStateSchema>(
-    schema: TSchema,
-    options: TOptions,
-  ): QueryStatesFacadeModule<'states', TSchema, TStatesApi>
-  <TValue>(
-    param: DefinedQueryParam<TValue>,
-    options: TOptions,
-  ): QueryStateFacadeModule<'state', TStateApi>
-  (
-    path: string,
-    options: TOptions,
-  ): QueryStateFacadeModule<'state', TStateApi>
-}
+type QueryDefaultSource = MaybeRefOrGetter<Readonly<Record<string, unknown>> | undefined>
 ```
 
-These supporting types are not package exports.
+| Member | Contract |
+| --- | --- |
+| `api` | Merged onto the composable. A key already provided throws. |
+| `defaults` | Reactive sources of partial default contributions, installed in order above the static defaults. A missing or `undefined` path keeps the lower default. |
+| `pipeline` | Descriptors created with `core.pipeline.define`. Only returned descriptors are installed. |
 
-</details>
+The core assigns each installed source and descriptor a registration identity and its module installation, and keeps the declared `name` for diagnostics.
 
 ## Module types
 
 | Type | Contract |
 | --- | --- |
-| `QueryStatesModule<TSchema, TApi>` | Grouped projection `(core) => api`. |
-| `QueryStateModule<TSchema, TApi>` | Single projection `(core, key) => api`. |
-| `DefinedQueryStatesModule` | Packaged grouped module. |
-| `DefinedQueryStateModule` | Packaged single projection. |
-| `DefinedQueryModule` | Both projections on one module value. |
+| `QueryStatesModule<TSchema, TResult>` | Grouped setup `(core) => result`. |
+| `DefinedQueryStateModule<TResult>` | Packaged single setup. |
 | `QueryModuleFacade` | `'state'` or `'states'`. |
-| `QueryStatesFacadeModule` / `QueryStateFacadeModule` | Modules carrying a type-only facade marker. |
-| `QueryFacadeModule` | Dual module with an adaptive facade marker. |
-| `QueryStateNameModule<TName>` | Single-only registered module whose `state` API resolves against the bound param. |
-| `QueryStateNameApiOf<TModule, TSchema>` | The `state` API a `QueryStateNameModule` contributes for a schema. |
-| `QueryModuleFactory<TName>` | Factory returned for a registered module with a `states` facet. |
-| `QueryStateNameModuleFactory<TName>` | Factory returned for a single-only registered module. |
-| `PlainQueryModuleFactory<TStatesApi, TStateApi, TOptions, THasStates, THasState>` | Factory returned for a plain module. |
+| `QueryStatesFacadeModule` / `QueryStateFacadeModule` / `QueryFacadeModule` | Plain modules carrying a type-only facade marker. |
+| `QueryRegisteredStatesModule` / `QueryRegisteredStateModule` / `QueryRegisteredDualModule` | Registered modules carrying the name, options, inference source and callbacks. |
+| `QueryModuleFactory<TName, TProducers>` | Factory returned for a registered module. |
+| `PlainQueryModuleFactory<TStatesResult, TStateResult, TOptions, THasStates, THasState>` | Factory returned for a plain module. |
+| `QueryModuleProducers` | The callbacks held by `definition`. |
 
-<details>
-<summary>Module declarations</summary>
-
-```ts
-interface SingleQueryStateSchema<T> extends QueryStateSchema {
-  value: DefinedQueryParam<T>
-}
-
-declare const QUERY_STATE_MODULE: unique symbol
-declare const QUERY_MODULE_KIND: unique symbol
-declare const QUERY_MODULE_NAME: unique symbol
-
-type QueryStatesModule<TSchema extends QueryStateSchema, TApi> = (core: QueryCore<TSchema>) => TApi
-
-type QueryStateModule<TSchema extends QueryStateSchema, TApi> = (
-  core: QueryCore<TSchema>,
-  key: keyof TSchema & string,
-) => TApi
-
-type AnyQueryStateModule<TApi> = <
-  TSchema extends QueryStateSchema,
-  TKey extends keyof TSchema & string,
->(
-  core: QueryCore<TSchema>,
-  key: TKey,
-) => TApi
-
-type DefinedQueryStatesModule<TSchema extends QueryStateSchema, TApi> = QueryStatesModule<TSchema, TApi>
-
-interface DefinedQueryStateModule<TApi> {
-  readonly [QUERY_STATE_MODULE]: AnyQueryStateModule<TApi>
-}
-
-type DefinedQueryModule<
-  TSchema extends QueryStateSchema,
-  TQueryStatesApi,
-  TQueryStateApi,
-> = DefinedQueryStatesModule<TSchema, TQueryStatesApi> & DefinedQueryStateModule<TQueryStateApi>
-
-type QueryModuleFacade = 'state' | 'states'
-
-interface QueryStatesFacadeModule<
-  TFacade extends QueryModuleFacade,
-  TSchema extends QueryStateSchema,
-  TApi,
-> extends QueryStatesModule<TSchema, TApi> {
-  readonly [QUERY_MODULE_KIND]: TFacade
-}
-
-interface QueryStateFacadeModule<TFacade extends QueryModuleFacade, TApi>
-  extends DefinedQueryStateModule<TApi> {
-  readonly [QUERY_MODULE_KIND]: TFacade
-}
-
-interface QueryFacadeModule<TFacade, TSchema extends QueryStateSchema, TStatesApi, TStateApi>
-  extends QueryStatesModule<TSchema, TStatesApi>, DefinedQueryStateModule<TStateApi> {
-  readonly [QUERY_MODULE_KIND]: TFacade
-}
-
-interface QueryStateNameModule<TName extends QueryModuleName>
-  extends DefinedQueryStateModule<QueryModuleStateApi<TName, QueryStateSchema, string>> {
-  readonly [QUERY_MODULE_KIND]: 'state'
-  readonly [QUERY_MODULE_NAME]: TName
-}
-
-type QueryStateNameApiOf<
-  TModule,
-  TSchema extends QueryStateSchema,
-> = TModule extends { readonly [QUERY_MODULE_NAME]: infer TName extends QueryModuleName }
-  ? QueryModuleStateApi<TName, TSchema, string>
-  : never
-```
-
-Symbol markers, `AnyQueryStateModule`, `QueryStateNameModule`, and
-`QueryStateNameApiOf` are supporting internals, not package exports.
-
-</details>
+The remaining exported types, such as the verification and lookup aliases, support `.use()` and are listed under [registry lookups](/api/authoring/query-module-registry#registry-lookups).
 
 ## Related guide
 

@@ -23,10 +23,15 @@ query.buildContextQuery({}, 'orders')
 ## Type
 
 ```ts
-declare const withContext: QueryModuleFactory<'vuqs:context'>
+import type { QueryModuleFactory } from '@vuqs/core'
+
+declare const withContext: QueryModuleFactory<
+  'vuqs:context',
+  typeof import('@vuqs/core/modules').withContext.definition
+>
 ```
 
-`QueryModuleFactory` is the inferred factory type, not a package export.
+`QueryModuleFactory` is exported from `@vuqs/core`. Its second type parameter preserves the module's setup definitions.
 See [Factory call forms](/api/authoring/define-query-module#factory-call-forms)
 for adaptive, schema, param, and path calls.
 
@@ -39,7 +44,7 @@ for adaptive, schema, param, and path calls.
 | `only` | Group: partial key-to-context map; single: readonly contexts | Valid everywhere | Restricts param validity. |
 | `navigate` | `ContextNavigate<TContext>` | Absent | Required by `switchTo`; optional for `buildContextQuery`. |
 
-Grouped `preserve` and `only` are checked against the schema. Calls built outside a `.use()` chain can pass a normalized schema or a param to make the facade explicit.
+`TContext` is the union carried by `active`, whether it is a ref, a computed value, a getter or a literal. An unannotated inline `navigate` callback receives it as `target`; a widened `string` source keeps `string`. Grouped `preserve` and `only` are checked against the schema. Calls built outside a `.use()` chain can pass a normalized schema or a param to make the facade explicit.
 
 ## Return value
 

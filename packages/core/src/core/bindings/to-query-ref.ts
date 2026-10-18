@@ -1,7 +1,7 @@
 import type { WritableComputedRef } from 'vue'
 import type { NavigateOptions } from '../runtime/adapter'
-import type { QueryStateSchema, QueryStateValues } from '../schema/schema'
-import type { QueryBindingSource } from './binding'
+import type { QueryStateResolvedValues, QueryStateSchema, QueryStateValues } from '../schema/schema'
+import type { QueryBindingSource, QueryReadShape } from './binding'
 import { computed } from 'vue'
 import { definedOnly, structuralEq } from '../../shared/utils/object'
 
@@ -11,7 +11,7 @@ import { definedOnly, structuralEq } from '../../shared/utils/object'
  * @typeParam TSchema - The schema the binding exposes.
  */
 export interface QueryRef<TSchema extends QueryStateSchema>
-  extends WritableComputedRef<QueryStateValues<TSchema>> {
+  extends WritableComputedRef<QueryStateResolvedValues<TSchema>, QueryStateValues<TSchema>> {
   /**
    * Replaces the whole state as one atomic transaction, optionally overriding
    * navigation options.
@@ -39,8 +39,8 @@ export interface QueryRef<TSchema extends QueryStateSchema>
  * filters.clear()
  * ```
  */
-export function toQueryRef<TSchema extends QueryStateSchema>(
-  query: QueryBindingSource<TSchema>,
+export function toQueryRef<TSchema extends QueryStateSchema, TRead extends QueryReadShape<TSchema>>(
+  query: QueryBindingSource<TSchema, TRead>,
 ): QueryRef<TSchema> {
   const { binding } = query
 
@@ -48,11 +48,9 @@ export function toQueryRef<TSchema extends QueryStateSchema>(
     binding.transact({ mode: 'replace', values: next, navigation: options })
   }
 
-  // Return the same reference while the snapshot content is unchanged: binding.read
-  // rebuilds a fresh object on every navigation, so without this a v-model over the
-  // whole object would see a new identity each tick and loop.
-  let cache: QueryStateValues<TSchema> | undefined
-  const ref = computed<QueryStateValues<TSchema>>({
+  // Keep equivalent snapshots stable to avoid feedback through v-model.
+  let cache: QueryStateResolvedValues<TSchema> | undefined
+  const ref = computed<QueryStateResolvedValues<TSchema>, QueryStateValues<TSchema>>({
     get: () => {
       const next = definedOnly(binding.read.value)
 

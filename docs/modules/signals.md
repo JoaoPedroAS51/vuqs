@@ -5,7 +5,7 @@ Modules coordinate through **signals**: typed, namespaced events on the shared
 importing the emitter.
 
 Signals are one of the available [composition mechanisms](/modules/composition).
-Modules can also interact through shared reads, default layers, pipelines, and
+Modules can also interact through shared reads, default sources, pipelines, and
 transactions without emitting an event.
 
 A new module can emit or react to an existing signal without changing the modules
@@ -44,6 +44,10 @@ core.hooks.emit('context:change', nextContext)
 const stop = core.hooks.on('context:change', () => { /* reset per-context state */ })
 ```
 
-Handlers run synchronously in an unspecified order and must be commutative, so do
-not rely on ordering. A throwing handler is isolated and logged: it never aborts
-the others or the emitter.
+Handlers run synchronously in subscription order, which follows module installation
+order. Write handlers so the outcome does not depend on that order. A throwing
+handler is isolated and logged: it never aborts the others or the emitter.
+Subscriptions made through a module's `core` are released with the module, so a
+module needs no disposer bookkeeping. A signal is a synchronous notification: it
+carries no value back to the emitter, and slow work belongs in an action the
+module exposes.

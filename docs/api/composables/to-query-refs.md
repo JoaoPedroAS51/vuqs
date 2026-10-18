@@ -40,7 +40,7 @@ function toQueryRefs<TSchema extends QueryStateSchema>(query: QueryBindingSource
 
 ```ts
 type ToQueryRefs<TSchema extends QueryStateSchema> = {
-  [Key in keyof TSchema]: QueryStateRef<QueryStateRefValue<TSchema[Key]>>
+  [Key in keyof TSchema]: QueryStateRef<QueryStateRefValue<TSchema[Key]>, QueryStateRefInput<TSchema[Key]>>
 }
 ```
 

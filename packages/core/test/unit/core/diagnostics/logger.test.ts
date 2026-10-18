@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { addDebugReporter } from '../../../../src/core/diagnostics/bus'
+import { addDebugReporter, createDebugChannel } from '../../../../src/core/diagnostics/bus'
 import { createDebugLogger } from '../../../../src/core/diagnostics/logger'
 import { enableDebug } from '../../../../src/debug'
 import { resetDebugState, trackReporter } from '../../../helpers/debug'
@@ -32,5 +32,27 @@ describe('createDebugLogger', () => {
     createDebugLogger('my-module').debug('did a thing')
 
     expect(logSpy).toHaveBeenCalledWith('[vuqs my-module] did a thing')
+  })
+
+  it('writes to a supplied target channel instead of the global one', () => {
+    const other: string[] = []
+    const targeted: string[] = []
+    const channel = createDebugChannel('runtime-a')
+    trackReporter(createDebugChannel('runtime-other').addReporter(event => other.push(event.code)))
+    trackReporter(channel.addReporter(event => targeted.push(event.code)))
+
+    const log = createDebugLogger('my-module', { target: channel })
+    log.debug('hello')
+    log.warn('careful')
+
+    expect(targeted).toEqual(['module:log', 'module:warn'])
+    expect(other).toEqual([])
+  })
+
+  it('is a no-op when its target has nothing armed', () => {
+    const log = createDebugLogger('my-module', { target: createDebugChannel('runtime-b') })
+
+    expect(() => log.debug('x')).not.toThrow()
+    expect(() => log.warn('y')).not.toThrow()
   })
 })

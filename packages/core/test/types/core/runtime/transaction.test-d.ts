@@ -11,7 +11,7 @@ const schema = {
 
 describe('query transaction types', () => {
   it('types atomic transactions and schema-projected starts', () => {
-    const withTransactions = (core: QueryCore<typeof schema>): { stop: () => void } => {
+    const withTransactions = (core: QueryCore<typeof schema>): { api: { stop: () => void } } => {
       const stop = core.query.transactions.observe({
         start: (transaction) => {
           expectTypeOf(transaction.keys).toEqualTypeOf<readonly ('q' | 'category')[]>()
@@ -32,7 +32,7 @@ describe('query transaction types', () => {
       expectTypeOf<{ mode: 'patch', values: { category: 'memory' } }>().not.toExtend<Transaction>()
       expectTypeOf<'preserve'>().not.toExtend<NonNullable<Transaction['defaultPolicy']>>()
 
-      return { stop }
+      return { api: { stop } }
     }
 
     const query = useQueryStates(schema).use(withTransactions)

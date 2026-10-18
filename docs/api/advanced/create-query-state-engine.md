@@ -70,10 +70,13 @@ interface QueryStateEngine<TSchema extends QueryStateSchema> {
     transactions: QueryTransactionBus<TSchema>
   }
   options: ResolvedQueryStateOptions
-  pipeline: QueryPipelineBus
+  pipeline: QueryPipelineRuntime<TSchema>
   debug: DebugChannelHandle
+  installations: InstallationRegistry
 }
 ```
+
+`installations` holds the active module installations. Each installation's default sources and pipeline descriptors become active together and leave together, so a read never sees part of an installation. Reads derive from this registry: the composed candidates evaluate the sources of every active installation in installation order, and the pipeline prepares its descriptors from the same membership. A source that is a ref or getter stays reactive, and updating it needs no reinstallation.
 
 ## QueryStateReads
 
@@ -88,10 +91,28 @@ interface QueryStateReads<TSchema extends QueryStateSchema> {
 
 ```ts
 interface QueryDefaultsBus<TSchema extends QueryStateSchema> {
-  resolved: ComputedRef<QueryStateValues<TSchema>>
-  register: (source: MaybeRefOrGetter<QueryStateValues<TSchema>>) => () => void
+  candidates: ComputedRef<QueryStateContributions<TSchema>>
 }
 ```
+
+## InstallationRegistry
+
+```ts
+interface InstallationRegistry {
+  readonly snapshot: Readonly<Ref<readonly InstalledContributions[]>>
+  publish: (installation: InstalledContributions) => void
+  remove: (id: number) => void
+}
+
+interface InstalledContributions {
+  readonly id: number
+  readonly name?: string
+  readonly defaults: readonly InstalledDefaultSource[]
+  readonly pipeline: readonly InstalledPipelineEntry[]
+}
+```
+
+`publish` activates a prepared installation after the ones already active, in one step. `remove` takes an installation out by identity, also in one step, and removing an identity that is not active changes nothing. The snapshot lists registration membership: it keeps the original sources and descriptor callbacks and never copies resolved values.
 
 ## ResolvedQueryStateOptions
 

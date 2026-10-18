@@ -1,6 +1,6 @@
 # withActiveParams <Badge type="tip" text="@vuqs/core/modules" />
 
-Derives which params are explicitly present and different from their resolved defaults.
+Derives which params are explicitly present and different from their composed defaults.
 
 ## Usage
 
@@ -18,10 +18,15 @@ query.isActive('q')
 ## Type
 
 ```ts
-declare const withActiveParams: QueryModuleFactory<'vuqs:active-params'>
+import type { QueryModuleFactory } from '@vuqs/core'
+
+declare const withActiveParams: QueryModuleFactory<
+  'vuqs:active-params',
+  typeof import('@vuqs/core/modules').withActiveParams.definition
+>
 ```
 
-`QueryModuleFactory` is the inferred factory type, not a package export.
+`QueryModuleFactory` is exported from `@vuqs/core`. Its second type parameter preserves the module's setup definitions.
 See [Factory call forms](/api/authoring/define-query-module#factory-call-forms)
 for adaptive, schema, param, and path calls.
 
@@ -44,7 +49,7 @@ A module contributing `ActiveParamsStatesApi<TSchema>` to a group or `ActivePara
 | `hasActive` | `ComputedRef<boolean>` | Whether a param is active. |
 | `isActive` | `(key: keyof TSchema & string) => boolean` | Reads the same reactive source as the aggregate views. |
 
-The single API exposes `isActive: ComputedRef<boolean>`. A param is active when an explicit value survives the read pipeline and differs from its resolved default according to its equality function. Optimistic writes and changes to default layers update the result.
+The single API exposes `isActive: ComputedRef<boolean>`. A param is active when an explicit value survives the read pipeline and differs from its composed default according to its equality function, compared without filling omitted children. Optimistic writes and changes to default layers update the result.
 
 Call grouped `isActive(key)` in a template, computed, or effect when the result must track changes.
 

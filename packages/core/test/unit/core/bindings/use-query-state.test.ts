@@ -78,9 +78,9 @@ describe('useQueryState', () => {
   it('preserves ref identity and behavior when composing a single-state module', async () => {
     const { query, run } = setup({ q: 'phone' })
     const module = defineQueryModule({
-      queryStates: () => ({ grouped: true }),
-      queryState: (core, key) => ({
-        explicitValue: computed(() => core.state.explicitValues.value[key]),
+      states: () => ({ api: { grouped: true } }),
+      state: (core, key) => ({
+        api: { explicitValue: computed(() => core.state.explicitValues.value[key]) },
       }),
     })
     const q = run(() => useQueryState('q', codecs.string))
@@ -118,9 +118,9 @@ describe('useQueryState', () => {
       write: value => value,
     })
     const module = defineQueryModule({
-      queryStates: () => ({}),
-      queryState: (core, key) => ({
-        currentValue: computed(() => core.state.values.value[key]),
+      states: () => ({ api: {} }),
+      state: (core, key) => ({
+        api: { currentValue: computed(() => core.state.values.value[key]) },
       }),
     })
     const q = run(() => useQueryState(range))
@@ -139,5 +139,39 @@ describe('useQueryState', () => {
     await flush()
 
     expect(query.value).toEqual({})
+  })
+})
+
+describe('useQueryState explicit partial composed writes', () => {
+  const record = queryParam.object('record', {
+    a: queryParam('a', codecs.integer.withDefault(0)),
+    b: queryParam('b', codecs.integer.withDefault(100)),
+  })
+
+  it.each(['set', 'value assignment'] as const)('writes a partial object through %s without injecting defaulted children', async (mode) => {
+    const { query, run } = setup({})
+    const state = run(() => useQueryState(record))
+
+    if (mode === 'set') {
+      state.set({ b: 10 })
+    }
+    else {
+      state.value = { b: 10 }
+    }
+    await flush()
+
+    expect(query.value).toEqual({ record: { b: '10' } })
+    expect(state.value).toEqual({ a: 0, b: 10 })
+  })
+
+  it('reveals the composed default after clearing', async () => {
+    const { query, run } = setup({ record: { b: '10' } })
+    const state = run(() => useQueryState(record))
+
+    state.clear()
+    await flush()
+
+    expect(query.value).toEqual({})
+    expect(state.value).toEqual({ a: 0, b: 100 })
   })
 })

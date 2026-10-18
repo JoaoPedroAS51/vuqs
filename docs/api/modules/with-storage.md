@@ -21,10 +21,15 @@ query.storage.status.value
 ## Type
 
 ```ts
-declare const withStorage: QueryModuleFactory<'vuqs:storage'>
+import type { QueryModuleFactory } from '@vuqs/core'
+
+declare const withStorage: QueryModuleFactory<
+  'vuqs:storage',
+  typeof import('@vuqs/core/modules').withStorage.definition
+>
 ```
 
-`QueryModuleFactory` is the inferred factory type, not a package export.
+`QueryModuleFactory` is exported from `@vuqs/core`. Its second type parameter preserves the module's setup definitions.
 See [Factory call forms](/api/authoring/define-query-module#factory-call-forms)
 for adaptive, schema, param, and path calls.
 

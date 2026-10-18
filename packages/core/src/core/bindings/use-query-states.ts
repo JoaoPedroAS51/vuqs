@@ -1,22 +1,48 @@
-import type { QueryStatesFacadeModule, QueryStatesModule } from '../module-system/contract'
+import type { QueryStatesUsable, StatesModuleApi, StatesModulePipeline, VerifiedStatesModule } from '../module-system/composition'
+import type { QueryStatesModule } from '../module-system/contract'
 import type { NavigateOptions } from '../runtime/adapter'
+import type { ApplyPipelineEffects } from '../runtime/pipeline/contract'
 import type { NormalizeQueryStateSchema, QueryStateSchema, QueryStateSchemaInput, QueryStateValues, QueryStateWriteValues } from '../schema/schema'
-import type { QueryBindingSource, QueryStatesValues, UseQueryStatesOptions } from './binding'
+import type { QueryBindingSource, QueryReadMap, QueryReadShape, QueryStatesValues, UseQueryStatesOptions } from './binding'
 import { applyQueryStatesModule } from '../module-system/apply-module'
 import { normalizeQueryStateSchema } from '../schema/schema'
 import { createQueryBinding, toReactiveQuery } from './binding'
 
 /**
- * The object returned by {@link useQueryStates}: the current API plus `use`.
+ * The read value of each param after the presence effects of the installed pipeline
+ * descriptors. Without descriptors it is the base read contract.
  *
  * @typeParam TSchema - The schema being managed.
- * @typeParam TApi - The API accumulated so far.
+ * @typeParam TDescriptors - The installed descriptors, in installation order.
  */
-export type QueryComposable<TSchema extends QueryStateSchema, TApi> = TApi & {
-  use: {
-    <TAdded>(module: QueryStatesFacadeModule<'states', TSchema, TAdded>): QueryComposable<TSchema, TApi & TAdded>
-    <TAdded>(module: QueryStatesModule<TSchema, TAdded>): QueryComposable<TSchema, TApi & TAdded>
-  }
+export type QueryReadOf<TSchema extends QueryStateSchema, TDescriptors extends readonly unknown[]>
+  = TDescriptors extends readonly []
+    ? QueryReadMap<TSchema>
+    : ApplyPipelineEffects<QueryReadMap<TSchema>, TDescriptors> extends infer TRead extends QueryReadShape<TSchema> ? TRead : QueryReadMap<TSchema>
+
+/**
+ * The object returned by {@link useQueryStates}: the base composable plus the API of
+ * every module `use` applied, with reads that follow the modules' presence effects.
+ *
+ * `use` returns the same object with an extended type. Capture its return to retain
+ * the accumulated module APIs and presence effects.
+ *
+ * @typeParam TSchema - The schema being managed.
+ * @typeParam TApi - The API the applied modules contributed.
+ * @typeParam TDescriptors - The pipeline descriptors the applied modules installed, in order.
+ */
+export type QueryComposable<
+  TSchema extends QueryStateSchema,
+  TApi extends object = object,
+  TDescriptors extends readonly unknown[] = [],
+> = UseQueryStatesReturn<TSchema, QueryReadOf<TSchema, TDescriptors>> & TApi & {
+  use: <TModule extends QueryStatesUsable<TSchema>>(
+    module: TModule & VerifiedStatesModule<TModule, TSchema>,
+  ) => QueryComposable<
+    TSchema,
+    TApi & StatesModuleApi<TModule, TSchema>,
+    [...TDescriptors, ...StatesModulePipeline<TModule, TSchema>]
+  >
 }
 
 /**
@@ -46,20 +72,21 @@ export interface QueryStatesActions<TSchema extends QueryStateSchema> {
  * `patch`, `replace`, and `clear` batch writers.
  *
  * @typeParam TSchema - The schema bound to the URL.
+ * @typeParam TRead - The read value of each param after module effects.
  */
-export interface UseQueryStatesReturn<TSchema extends QueryStateSchema>
-  extends QueryStatesActions<TSchema>, QueryBindingSource<TSchema> {
+export interface UseQueryStatesReturn<TSchema extends QueryStateSchema, TRead extends QueryReadShape<TSchema> = QueryReadMap<TSchema>>
+  extends QueryStatesActions<TSchema>, QueryBindingSource<TSchema, TRead> {
   /** The reactive, writable value map, one entry per param. */
-  values: QueryStatesValues<TSchema>
+  values: QueryStatesValues<TSchema, TRead>
 }
 
 /**
  * Binds a schema's params to the URL as a reactive value map.
+ * The query source and URL writer come from the provided {@link provideQueryAdapter | adapter}.
  *
  * @typeParam TSchema - The schema mapping param names to definitions.
  * @param schema - The params to bind, keyed by logical name.
  * @param options - Behavior options (navigation defaults, `throttleMs`, `clearOnDefault`).
- * The query source and URL writer come from the provided {@link provideQueryAdapter | adapter}.
  * @returns The reactive `values` map, batch writers, and `use` for module composition.
  * @throws {Error} When two params declare the same query path.
  * @throws {Error} When no adapter has been provided.
@@ -82,20 +109,21 @@ export interface UseQueryStatesReturn<TSchema extends QueryStateSchema>
  */
 export function useQueryStates<TSchema extends QueryStateSchemaInput>(
   schema: TSchema,
-  options: UseQueryStatesOptions = {},
-): QueryComposable<NormalizeQueryStateSchema<TSchema>, UseQueryStatesReturn<NormalizeQueryStateSchema<TSchema>>> {
-  const normalizedSchema = normalizeQueryStateSchema(schema)
-  const { binding, core } = createQueryBinding(normalizedSchema, options)
+  options?: UseQueryStatesOptions,
+): QueryComposable<NormalizeQueryStateSchema<TSchema>>
 
-  type TNormalizedSchema = NormalizeQueryStateSchema<TSchema>
+// eslint-disable-next-line ts/explicit-function-return-type -- the object shape is inferred; the overload above is the public contract
+export function useQueryStates(schema: QueryStateSchemaInput, options: UseQueryStatesOptions = {}) {
+  const normalizedSchema = normalizeQueryStateSchema(schema)
+  const { binding, host } = createQueryBinding(normalizedSchema, options)
 
   const values = toReactiveQuery(binding)
 
-  function patch(next: QueryStateWriteValues<TNormalizedSchema>, perCall?: NavigateOptions): void {
+  function patch(next: QueryStateWriteValues<typeof normalizedSchema>, perCall?: NavigateOptions): void {
     binding.transact({ mode: 'patch', values: next, navigation: perCall })
   }
 
-  function replace(next: QueryStateValues<TNormalizedSchema>, perCall?: NavigateOptions): void {
+  function replace(next: QueryStateValues<typeof normalizedSchema>, perCall?: NavigateOptions): void {
     binding.transact({ mode: 'replace', values: next, navigation: perCall })
   }
 
@@ -103,19 +131,16 @@ export function useQueryStates<TSchema extends QueryStateSchemaInput>(
     replace({}, perCall)
   }
 
-  const composable = {
+  return {
     values,
     patch,
     replace,
     clear,
     binding,
-  } as QueryComposable<TNormalizedSchema, UseQueryStatesReturn<TNormalizedSchema>>
+    use(module: QueryStatesModule<typeof normalizedSchema>) {
+      applyQueryStatesModule(this, host, module)
 
-  composable.use = (<TAdded>(module: QueryStatesModule<TNormalizedSchema, TAdded>) => {
-    applyQueryStatesModule(composable, core, module)
-
-    return composable as QueryComposable<TNormalizedSchema, UseQueryStatesReturn<TNormalizedSchema> & TAdded>
-  }) as QueryComposable<TNormalizedSchema, UseQueryStatesReturn<TNormalizedSchema>>['use']
-
-  return composable
+      return this
+    },
+  }
 }

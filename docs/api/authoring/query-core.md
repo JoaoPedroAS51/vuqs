@@ -1,6 +1,6 @@
 # QueryCore <Badge type="info" text="@vuqs/core" />
 
-The schema, reactive reads, defaults, query writes, pipelines, signals, and diagnostics supplied to a module projection.
+The schema, reactive reads, defaults, query writes, pipeline descriptors, signals, and diagnostics supplied to a module setup.
 
 ## Usage
 
@@ -9,8 +9,10 @@ import { defineQueryModule } from '@vuqs/core'
 import { computed } from 'vue'
 
 const withPresence = defineQueryModule({
-  queryStates: core => ({
-    present: computed(() => Object.keys(core.state.explicitValues.value)),
+  states: core => ({
+    api: {
+      present: computed(() => Object.keys(core.state.explicitValues.value)),
+    },
   }),
 })
 ```
@@ -19,11 +21,11 @@ const withPresence = defineQueryModule({
 
 ```ts
 interface QueryCore<TSchema extends QueryStateSchema> {
-  schema: TSchema
+  readonly schema: Readonly<TSchema>
   state: QueryStateReads<TSchema>
-  defaults: QueryDefaultsBus<TSchema>
-  options: ResolvedQueryStateOptions
-  pipeline: QueryPipelineBus
+  defaults: { readonly candidates: ComputedRef<QueryStateContributions<TSchema>> }
+  readonly options: Readonly<ResolvedQueryStateOptions>
+  pipeline: QueryPipelineBus<TSchema>
   hooks: QueryHookBus
   debug: DebugChannelHandle
   query: {
@@ -38,18 +40,17 @@ interface QueryCore<TSchema extends QueryStateSchema> {
 
 | Property | Contract |
 | --- | --- |
-| `schema` | Normalized definitions managed by the binding. |
+| `schema` | Normalized definitions managed by the binding. Readonly: assigning an entry is a type error and does not change what the binding captured. |
 | `state.explicitValues` | Explicit values plus optimistic writes, after the read pipeline; before engine default resolution. |
-| `state.values` | Resolved values layered over defaults, after the read pipeline. |
-| `defaults.resolved` | Merged codec and registered default layers, after the read pipeline. |
-| `defaults.register(source)` | Registers a reactive default layer and returns its disposer. Later layers win; `undefined` does not shadow lower layers. |
-| `options` | Resolved navigation, throttle, and clearing baseline. |
-| `pipeline` | [`QueryPipelineBus`](/api/authoring/query-pipeline-bus). |
-| `hooks` | [`QueryHookBus`](/api/authoring/query-hook-bus). |
-| `debug` | Adapter runtime observation channel. |
+| `state.values` | Resolved values: explicit values over the composed defaults, after the read pipeline. |
+| `defaults.candidates` | Composed default candidates: static defaults under every installed source, with the `defaults` read projection applied. A candidate blocked by a presence gate stays visible here while the resolved read is absent. |
+| `options` | Resolved navigation, throttle, and clearing baseline. Readonly. |
+| `pipeline` | [`QueryPipelineBus`](/api/authoring/query-pipeline-bus): creates descriptors a setup returns. |
+| `hooks` | [`QueryHookBus`](/api/authoring/query-hook-bus). Subscriptions are released with the module. |
+| `debug` | Observation channel of this binding's runtime. Pass it as `target` to [`createDebugLogger`](/api/debugging/create-debug-logger). |
 | `query.current()` | Current committed query, without pending writes. |
 | `query.transact(request)` | Atomic partial or exhaustive query-state write. |
-| `query.transactions` | Observes starts from the same adapter whose raw paths overlap the schema. |
+| `query.transactions` | Observes starts from the same adapter whose raw paths overlap the schema. Observers are released with the module. |
 
 ## Transactions
 
@@ -73,21 +74,19 @@ synchronously without a partial write or start.
 query paths overlap the module schema. The snapshot is frozen and projected to
 the observer's local `keys`. Starts run synchronously in causal transaction id
 order, including writes triggered by synchronous reactive watchers. Pass an
-`origin` symbol to `transact` when the module must ignore its own writes. Register
-the returned disposer with `onScopeDispose`. A throwing observer is logged and
+`origin` symbol to `transact` when the module must ignore its own writes. The
+observer is released with the module; the returned disposer removes it earlier. A throwing observer is logged and
 isolated: it never aborts the producer or the remaining observers.
 
 ```ts
 const origin = Symbol('my-module')
-const stop = core.query.transactions.observe({
+core.query.transactions.observe({
   start: transaction => {
     if (transaction.origin !== origin) {
       // React to an external write.
     }
   },
 })
-
-onScopeDispose(stop)
 
 core.query.transact({
   mode: 'patch',
@@ -150,7 +149,7 @@ type QueryTransactionDefaultPolicy = 'binding' | 'preserve-explicit'
 type QueryTransactionOrigin = symbol
 ```
 
-Resolved reads and default layer types are documented with [createQueryStateEngine](/api/advanced/create-query-state-engine).
+Resolved reads and default candidate types are documented with [createQueryStateEngine](/api/advanced/create-query-state-engine).
 
 ## Related guide
 

@@ -1,3 +1,4 @@
+import type { StorageOptions } from '../../../../src/modules/storage/storage'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useQueryState } from '../../../../src/core/bindings/use-query-state'
 import { useQueryStates } from '../../../../src/core/bindings/use-query-states'
@@ -25,7 +26,7 @@ describe('withStorage contract', () => {
   ])('throws synchronously for invalid options %#', (options, message) => {
     const { build } = setup()
 
-    expect(() => build(() => useQueryStates(schema).use(withStorage(options as never))))
+    expect(() => build(() => useQueryStates(schema).use(withStorage(options as StorageOptions))))
       .toThrow(message)
   })
 

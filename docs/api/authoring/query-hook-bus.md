@@ -6,7 +6,6 @@ Subscribes to and synchronously emits typed module signals.
 
 ```ts
 import { defineQueryModule } from '@vuqs/core'
-import { onScopeDispose } from 'vue'
 
 declare module '@vuqs/core' {
   interface QueryHooks {
@@ -15,12 +14,12 @@ declare module '@vuqs/core' {
 }
 
 const withReset = defineQueryModule({
-  queryStates: (core) => {
-    const stop = core.hooks.on('my-lib:reset', () => {
+  states: (core) => {
+    core.hooks.on('my-lib:reset', () => {
       core.query.transact({ mode: 'replace', values: {} })
     })
-    onScopeDispose(stop)
-    return { reset: () => core.hooks.emit('my-lib:reset') }
+
+    return { api: { reset: () => core.hooks.emit('my-lib:reset') } }
   },
 })
 ```
@@ -43,7 +42,7 @@ interface QueryHookBus {
 | `on(event, handler)` | An augmented `QueryHooks` key and its handler. | Disposer that unsubscribes the handler. |
 | `emit(event, ...args)` | A signal key and the arguments declared for it. | `void`. Invokes subscribed handlers synchronously. |
 
-Handlers are invoked synchronously in unspecified order; returned promises are not awaited. A synchronous throw is logged and isolated from the emitter and other handlers. Pair subscription disposers with `onScopeDispose`.
+Handlers are invoked synchronously in subscription order, which follows module installation order; returned promises are not awaited. Write handlers so the outcome does not depend on that order. A synchronous throw is logged and isolated from the emitter and other handlers. A subscription made through a module's `core` is released with that module, including one made after setup; calling the disposer earlier is safe and idempotent.
 
 ## QueryHooks
 

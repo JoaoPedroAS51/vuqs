@@ -19,8 +19,9 @@ const { values, setDefaults } = useQueryStates(schema).use(withRuntimeDefaults()
 Both `useQueryStates` and `useQueryState` return something with a `.use(module)`
 method. Each call runs the module, merges the API it contributes, and widens the
 return type. Calls chain, and the accumulated type reflects every module applied.
-Built-ins are [order-independent](/modules/composition#order-independence), so
-choose the order that reads most clearly:
+Install modules in one synchronous chain. The documented
+[built-in interactions](/modules/composition#composition-order) support either
+installation order:
 
 ```ts
 // on a group

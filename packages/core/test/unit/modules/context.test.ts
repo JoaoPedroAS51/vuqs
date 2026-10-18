@@ -2,6 +2,8 @@ import type { ParsedQuery, ParsedQueryRaw } from '../../../src/core/query/types'
 import type { NavigateOptions } from '../../../src/core/runtime/adapter'
 import { describe, expect, it } from 'vitest'
 import { isRef, nextTick, ref } from 'vue'
+import { toQueryRef } from '../../../src/core/bindings/to-query-ref'
+import { toQueryRefs } from '../../../src/core/bindings/to-query-refs'
 import { useQueryState } from '../../../src/core/bindings/use-query-state'
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../src/core/codecs/catalog'
@@ -169,19 +171,20 @@ describe('withContext buildContextQuery', () => {
     expect(qi.buildContextQuery(invalid.query.value, 'orders')).toEqual({ q: 'foo' })
   })
 
-  it('applies the navigate pipeline stage', () => {
-    const { query, build } = setup({ q: 'foo' })
+  it('preserves a permitted partial object without adding missing defaulted children', () => {
+    const nestedSchema = {
+      record: queryParam.object('record', {
+        a: queryParam('a', codecs.integer.withDefault(0)),
+        b: queryParam('b', codecs.integer),
+      }),
+    }
+    const { query, build } = setup({ record: { b: '10' } })
     const tab = ref<'products' | 'orders'>('products')
     const q = build(() =>
-      useQueryStates(schema)
-        .use((core) => {
-          core.pipeline.tap('navigate', next => ({ ...next, flag: 'on' }))
-          return {}
-        })
-        .use(withContext({ active: tab, preserve: ['q'] })),
+      useQueryStates(nestedSchema).use(withContext({ active: tab, preserve: ['record'] })),
     )
 
-    expect(q.buildContextQuery(query.value, 'orders')).toEqual({ q: 'foo', flag: 'on' })
+    expect(q.buildContextQuery(query.value, 'orders')).toEqual({ record: { b: '10' } })
   })
 
   it('drops a preserved field that is invalid in the target context', () => {
@@ -255,5 +258,167 @@ describe('withContext switchTo', () => {
     )
 
     expect(() => q.switchTo('orders')).toThrow(/provide a `navigate` option/)
+  })
+})
+
+describe('withContext validity and preservation', () => {
+  type Tab = 'products' | 'orders'
+
+  function context() {
+    const { query, build } = setup({})
+    const tab = ref<Tab>('products')
+    const targets: ParsedQueryRaw[] = []
+    const navigate = (target: Tab, next: ParsedQueryRaw): void => {
+      targets.push(next)
+      query.value = next as ParsedQuery
+      tab.value = target
+    }
+
+    return { query, build, tab, targets, navigate }
+  }
+
+  describe('a preserved param invalid in the target context', () => {
+    it('is omitted from the target query and reads undefined despite its static default (grouped)', async () => {
+      const { query, build, tab, targets, navigate } = context()
+      query.value = { page: '3' }
+      const q = build(() => useQueryStates({ page: queryParam('page', codecs.integer.withDefault(1)) }).use(
+        withContext({ active: tab, preserve: ['page'], only: { page: ['products'] }, navigate }),
+      ))
+
+      expect(q.values.page).toBe(3)
+
+      q.switchTo('orders')
+      await nextTick()
+      await flush()
+
+      expect(targets).toEqual([{}])
+      expect(q.activeContext.value).toBe('orders')
+      expect(q.values.page).toBeUndefined()
+    })
+
+    it('is omitted from the target query and reads undefined despite its static default (single)', async () => {
+      const { query, build, tab, targets, navigate } = context()
+      query.value = { page: '3' }
+      const q = build(() => useQueryState('page', codecs.integer.withDefault(1)).use(
+        withContext({ active: tab, preserve: true, only: ['products'], navigate }),
+      ))
+
+      expect(q.value).toBe(3)
+
+      q.switchTo('orders')
+      await nextTick()
+      await flush()
+
+      expect(targets).toEqual([{}])
+      expect(q.value).toBeUndefined()
+    })
+  })
+
+  describe('a reset valid param', () => {
+    it('is omitted from the target query and reads its static default (grouped)', async () => {
+      const { query, build, tab, targets, navigate } = context()
+      query.value = { label: 'explicit-value' }
+      const q = build(() => useQueryStates({ label: queryParam('label', codecs.string.withDefault('fallback')) }).use(
+        withContext({ active: tab, navigate }),
+      ))
+
+      expect(q.values.label).toBe('explicit-value')
+
+      q.switchTo('orders')
+      await nextTick()
+      await flush()
+
+      expect(targets).toEqual([{}])
+      expect(q.values.label).toBe('fallback')
+    })
+
+    it('is omitted from the target query and reads its static default (single)', async () => {
+      const { query, build, tab, targets, navigate } = context()
+      query.value = { label: 'explicit-value' }
+      const q = build(() => useQueryState('label', codecs.string.withDefault('fallback')).use(
+        withContext({ active: tab, preserve: false, navigate }),
+      ))
+
+      q.switchTo('orders')
+      await nextTick()
+      await flush()
+
+      expect(targets).toEqual([{}])
+      expect(q.value).toBe('fallback')
+    })
+  })
+
+  describe('a preserved valid param', () => {
+    it('retains its explicit value in the target query and read (grouped)', async () => {
+      const { query, build, tab, targets, navigate } = context()
+      query.value = { label: 'initial' }
+      const q = build(() => useQueryStates({ label: queryParam('label', codecs.string.withDefault('')) }).use(
+        withContext({ active: tab, preserve: ['label'], navigate }),
+      ))
+
+      q.switchTo('orders')
+      await nextTick()
+      await flush()
+
+      expect(targets).toEqual([{ label: 'initial' }])
+      expect(q.values.label).toBe('initial')
+    })
+
+    it('retains its explicit value in the target query and read (single)', async () => {
+      const { query, build, tab, targets, navigate } = context()
+      query.value = { label: 'initial' }
+      const q = build(() => useQueryState('label', codecs.string.withDefault('')).use(
+        withContext({ active: tab, preserve: true, navigate }),
+      ))
+
+      q.switchTo('orders')
+      await nextTick()
+      await flush()
+
+      expect(targets).toEqual([{ label: 'initial' }])
+      expect(q.value).toBe('initial')
+    })
+  })
+})
+
+describe('withContext reads through every lens', () => {
+  it('reads a context-filtered defaulted param as absent while the module API stays available', async () => {
+    const { build } = setup({ page: '3', label: 'kept' })
+    const tab = ref<'products' | 'orders'>('products')
+    const grouped = build(() => useQueryStates({
+      page: queryParam('page', codecs.integer.withDefault(1)),
+      label: queryParam('label', codecs.string.withDefault('')),
+    }).use(withContext({ active: tab, only: { page: ['products'] } })))
+    const refs = toQueryRefs(grouped)
+    const whole = toQueryRef(grouped)
+
+    expect(grouped.values.page).toBe(3)
+    expect(refs.page.value).toBe(3)
+
+    tab.value = 'orders'
+    await nextTick()
+    await flush()
+
+    expect(grouped.activeContext.value).toBe('orders')
+    expect(grouped.values.page).toBeUndefined()
+    expect(refs.page.value).toBeUndefined()
+    expect(whole.value.page).toBeUndefined()
+    expect(grouped.values.label).toBe('kept')
+    expect(refs.label.value).toBe('kept')
+  })
+
+  it('reads a context-filtered single param as absent', async () => {
+    const { build } = setup({ page: '3' })
+    const tab = ref<'products' | 'orders'>('products')
+    const page = build(() => useQueryState('page', codecs.integer.withDefault(1)).use(withContext({ active: tab, only: ['products'] })))
+
+    expect(page.value).toBe(3)
+
+    tab.value = 'orders'
+    await nextTick()
+    await flush()
+
+    expect(page.activeContext.value).toBe('orders')
+    expect(page.value).toBeUndefined()
   })
 })

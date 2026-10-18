@@ -9,11 +9,55 @@ export interface QueryParamReadContext {
 }
 
 /**
+ * Type-only carrier of a param's value contracts.
+ *
+ * @internal
+ */
+export declare const paramContract: unique symbol
+
+/**
+ * Type-only carrier of the declared object children of a composed param.
+ *
+ * @internal
+ */
+export declare const paramChildren: unique symbol
+
+/**
+ * The value contracts a param preserves through builders, prefixes and state bindings.
+ *
+ * @typeParam TExplicit - The decoded value before default resolution.
+ * @typeParam TResolved - The value after applicable defaults when it is defined.
+ * @typeParam TContribution - The value a default source can supply.
+ * @typeParam TGuaranteed - `true` when an applicable static default guarantees a defined resolved value.
+ */
+export interface ParamContract<
+  TExplicit,
+  TResolved,
+  TContribution,
+  TGuaranteed extends boolean,
+> {
+  explicit: TExplicit
+  resolved: TResolved
+  contribution: TContribution
+  guaranteed: TGuaranteed
+}
+
+/**
  * A defined query param the core can execute.
  *
- * @typeParam T - The decoded value type of the param.
+ * @typeParam TExplicit - The decoded value type before default resolution.
+ * @typeParam TResolved - The value type after applicable defaults, accepted wherever the explicit type is accepted.
+ * @typeParam TContribution - The value type a default source can supply.
+ * @typeParam TGuaranteed - `true` when an applicable static default guarantees a defined resolved value.
  */
-export interface DefinedQueryParam<T> {
+export interface DefinedQueryParam<
+  TExplicit,
+  TResolved = TExplicit,
+  TContribution = TExplicit,
+  TGuaranteed extends boolean = boolean,
+> {
+  /** Type-only carrier of the param's value contracts. */
+  readonly [paramContract]?: ParamContract<TExplicit, TResolved, TContribution, TGuaranteed>
   /** The query keys this param owns. */
   readonly paths: readonly string[]
   /**
@@ -21,39 +65,87 @@ export interface DefinedQueryParam<T> {
    *
    * @returns The decoded value, or `undefined` when absent or invalid.
    */
-  read: (query: ParsedQuery, context?: QueryParamReadContext) => T | undefined
+  read: (query: ParsedQuery, context?: QueryParamReadContext) => TExplicit | undefined
   /**
    * Encodes the param's value for the query.
    *
    * @returns A new query object containing only declared `paths`.
    */
-  write: (value: T) => ParsedQueryRaw
-  /** Compares two values to detect when one equals the default. */
-  eq: (a: T, b: T) => boolean
+  write: (value: TExplicit) => ParsedQueryRaw
+  /** Compares two defined values in the explicit-value domain. */
+  eq: (a: TExplicit, b: TExplicit) => boolean
   /**
-   * Resolves a present value against its defaults.
+   * Resolves an explicit value or its absence against the applicable default.
    *
-   * Called only when `read` returns a value. Without this resolver,
-   * the value is used unchanged.
+   * A param that guarantees a resolved value must return one.
    *
-   * @returns The value resolved against the supplied defaults.
+   * @returns The resolved value, or `undefined` when none applies and presence is not guaranteed.
    */
-  resolve?: (explicitValue: T, defaults: T | undefined) => T
-  /** The param's default value, if the codec or builder declared one. */
-  readonly defaultValue?: T
+  resolve?: (
+    explicitValue: TExplicit | undefined,
+    defaultValue: TResolved | undefined,
+  ) => [TGuaranteed] extends [true] ? TResolved : TResolved | undefined
+  /** The param's static default candidate, if the codec or builder declared one. */
+  readonly defaultValue?: TContribution
   /** Param-level `clearOnDefault` override. */
   readonly clearOnDefault?: boolean
-  /** Prevents default fallback when `read` returns `undefined`. */
+  /** Conditions every default of the param on decoded explicit presence. */
   readonly presenceGated?: boolean
 }
 
 /**
- * A {@link DefinedQueryParam} whose definition declares a default.
+ * A {@link DefinedQueryParam} whose definition guarantees a defined resolved value.
  *
  * @typeParam T - The decoded value type of the param.
  */
-export interface DefinedQueryParamWithDefault<T> extends DefinedQueryParam<T> {
-  readonly defaultValue: T
+export type DefinedQueryParamWithDefault<T> = DefinedQueryParam<T, T, T, true>
+
+/** @internal */
+export type AnyDefinedQueryParam = DefinedQueryParam<any, any, any, boolean>
+
+/**
+ * The composed default of one param position.
+ *
+ * @internal
+ */
+export interface DefaultCandidate {
+  /** The composed value before read projection, or `undefined` when no source supplies one. */
+  readonly value: unknown
+  /** `true` when a source supplied this param directly, including `{}` for an object. */
+  readonly direct: boolean
+  /** The candidates of declared object children. */
+  readonly children?: Readonly<Record<string, DefaultCandidate>>
+}
+
+/**
+ * The declared structure the core traverses for composition and resolution.
+ *
+ * @internal
+ */
+export interface ParamStructure {
+  /** The declared object children, keyed by logical name; absent for atomic params. */
+  readonly children?: Readonly<Record<string, AnyDefinedQueryParam>>
+  /** The static composed candidate before any runtime source. */
+  readonly staticCandidate?: DefaultCandidate
+}
+
+/** @internal */
+export const PARAM_STRUCTURE: unique symbol = Symbol('vuqs.paramStructure')
+
+/** @internal */
+export interface StructuredParam {
+  readonly [PARAM_STRUCTURE]?: ParamStructure
+}
+
+/**
+ * Reads the declared structure of a param.
+ *
+ * @returns The structure, or `undefined` when the param has no structure metadata.
+ *
+ * @internal
+ */
+export function getParamStructure(param: AnyDefinedQueryParam): ParamStructure | undefined {
+  return (param as StructuredParam)[PARAM_STRUCTURE]
 }
 
 /**
@@ -61,19 +153,30 @@ export interface DefinedQueryParamWithDefault<T> extends DefinedQueryParam<T> {
  *
  * @internal
  */
-export function createDefinedQueryParam<T>(
+export function createDefinedQueryParam<
+  TExplicit,
+  TResolved = TExplicit,
+  TContribution = TExplicit,
+  TGuaranteed extends boolean = boolean,
+>(
   input: {
     paths: readonly string[]
-    read: (query: ParsedQuery, context?: QueryParamReadContext) => T | undefined
-    write: (value: T) => ParsedQueryRaw
-    eq?: (a: T, b: T) => boolean
-    resolve?: (explicitValue: T, defaults: T | undefined) => T
-    defaultValue?: T
+    read: (query: ParsedQuery, context?: QueryParamReadContext) => TExplicit | undefined
+    write: (value: TExplicit) => ParsedQueryRaw
+    eq?: (a: TExplicit, b: TExplicit) => boolean
+    resolve?: (explicitValue: TExplicit | undefined, defaultValue: TResolved | undefined) => TResolved | undefined
+    defaultValue?: unknown
     clearOnDefault?: boolean
     presenceGated?: boolean
+    structure?: ParamStructure
   },
-): DefinedQueryParam<T> {
+): DefinedQueryParam<TExplicit, TResolved, TContribution, TGuaranteed> {
   const write = guardWrite(input.paths, input.write)
+  const structure: ParamStructure = input.structure ?? {
+    staticCandidate: input.defaultValue === undefined
+      ? undefined
+      : { value: input.defaultValue, direct: false },
+  }
 
   return {
     paths: input.paths,
@@ -81,14 +184,15 @@ export function createDefinedQueryParam<T>(
     write,
     eq: input.eq ?? structuralEq,
     resolve: input.resolve,
-    defaultValue: input.defaultValue,
+    defaultValue: structure.staticCandidate?.value,
     clearOnDefault: input.clearOnDefault,
     presenceGated: input.presenceGated,
-  }
+    [PARAM_STRUCTURE]: structure,
+  } as DefinedQueryParam<TExplicit, TResolved, TContribution, TGuaranteed>
 }
 
 /**
- * The raw executable pieces of a codec bound to a single dot-path.
+ * Creates the executable pieces of a codec bound to a single dot-path.
  *
  * @internal
  */
@@ -123,14 +227,14 @@ export function codecParamInput<T>(path: string, codec: Codec<T>): {
  * @internal
  */
 export function defineCodecQueryParam<T>(path: string, codec: Codec<T>): DefinedQueryParam<T> {
-  return createDefinedQueryParam(codecParamInput(path, codec))
+  return createDefinedQueryParam<T>(codecParamInput(path, codec))
 }
 
 /**
  * Wraps a write function so every call checks that the keys it writes fall
  * within the declared paths.
  *
- * @throws {Error} When the wrapped write function writes outside `paths`.
+ * @returns A writer that throws if its output includes a key outside `paths`.
  *
  * @internal
  */
@@ -156,10 +260,10 @@ export function guardWrite<T>(
 }
 
 /** @internal */
-export function isDefinedQueryParam(value: unknown): value is DefinedQueryParam<any> {
+export function isDefinedQueryParam(value: unknown): value is AnyDefinedQueryParam {
   return value !== null
     && typeof value === 'object'
-    && typeof (value as DefinedQueryParam<any>).read === 'function'
-    && typeof (value as DefinedQueryParam<any>).write === 'function'
-    && Array.isArray((value as DefinedQueryParam<any>).paths)
+    && typeof (value as AnyDefinedQueryParam).read === 'function'
+    && typeof (value as AnyDefinedQueryParam).write === 'function'
+    && Array.isArray((value as AnyDefinedQueryParam).paths)
 }

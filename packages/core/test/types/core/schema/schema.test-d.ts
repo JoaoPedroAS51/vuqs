@@ -57,3 +57,35 @@ describe('defineQuerySchema', () => {
     expectTypeOf(values.status).toEqualTypeOf<'open' | 'closed' | undefined>()
   })
 })
+
+describe('explicit and resolved composed values', () => {
+  const record = queryParam.object('record', {
+    a: queryParam('a', codecs.integer.withDefault(0)),
+    b: queryParam('b', codecs.integer.withDefault(100)),
+  })
+  const schema = { record }
+
+  it('parses explicit values with optional defaulted children', () => {
+    const parsed = parseQueryStates(schema, { record: { b: '10' } })
+
+    expectTypeOf(parsed.record).toEqualTypeOf<{ a?: number, b?: number } | undefined>()
+  })
+
+  it('keeps the resolved read required after normalization and binding', () => {
+    const normalized = defineQuerySchema({ record })
+    const { values } = useQueryStates(normalized)
+
+    expectTypeOf(parseQueryStates(normalized, {}).record).toEqualTypeOf<{ a?: number, b?: number } | undefined>()
+    expectTypeOf(values.record).toEqualTypeOf<{ a: number, b: number }>()
+  })
+
+  it('keeps a validated transform output complete', () => {
+    const transformed = record.transform<{ a: number, b: number }>({
+      read: value => (value.a !== undefined && value.b !== undefined ? { a: value.a, b: value.b } : undefined),
+      write: value => value,
+    })
+    const parsed = parseQueryStates({ transformed }, {})
+
+    expectTypeOf(parsed.transformed).toEqualTypeOf<{ a: number, b: number } | undefined>()
+  })
+})

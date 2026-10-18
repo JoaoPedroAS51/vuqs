@@ -124,12 +124,14 @@ describe('withStorage operational errors', () => {
     const stored = createMemoryStorage(snapshot({ q: 'stored' }))
     const second = setup()
     const writePipeline = second.build(() => useQueryStates(schema)
-      .use((core) => {
-        core.pipeline.tap('write', () => {
-          throw new Error('write failed')
-        })
-        return {}
-      })
+      .use(core => ({
+        api: {},
+        pipeline: [
+          core.pipeline.define('write', () => {
+            throw new Error('write failed')
+          }),
+        ],
+      }))
       .use(withStorage({ key: 'broken', storage: stored.storage })))
 
     await expect(writePipeline.storage.ready).resolves.toBeUndefined()

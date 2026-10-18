@@ -46,24 +46,50 @@ For composite params and prefixed definitions, use [queryParam.object](/api/para
 ## DefinedQueryParam
 
 ```ts
-interface DefinedQueryParam<T> {
+interface DefinedQueryParam<
+  TExplicit,
+  TResolved = TExplicit,
+  TContribution = TExplicit,
+  TGuaranteed extends boolean = boolean,
+> {
+  readonly [paramContract]?: ParamContract<TExplicit, TResolved, TContribution, TGuaranteed>
   readonly paths: readonly string[]
-  read: (query: ParsedQuery, context?: QueryParamReadContext) => T | undefined
-  write: (value: T) => ParsedQueryRaw
-  eq: (a: T, b: T) => boolean
-  resolve?: (explicitValue: T, defaults: T | undefined) => T
-  readonly defaultValue?: T
+  read: (query: ParsedQuery, context?: QueryParamReadContext) => TExplicit | undefined
+  write: (value: TExplicit) => ParsedQueryRaw
+  eq: (a: TExplicit, b: TExplicit) => boolean
+  resolve?: (
+    explicitValue: TExplicit | undefined,
+    defaultValue: TResolved | undefined,
+  ) => [TGuaranteed] extends [true] ? TResolved : TResolved | undefined
+  readonly defaultValue?: TContribution
   readonly clearOnDefault?: boolean
   readonly presenceGated?: boolean
+}
+```
+
+`TExplicit` is the decoded value before default resolution and the value writers accept. `TResolved` is the value after applicable defaults. `TContribution` is what a default source can supply. `TGuaranteed` is `true` when an applicable static default guarantees a defined resolved value.
+
+`eq` receives defined explicit values. Absence is handled before it is called, and a supported `null` is a value.
+
+`resolve` receives the explicit value or `undefined`, plus the applicable default. A param that guarantees a resolved value must return one. `paramContract` is a type-only marker.
+
+`AnyDefinedQueryParam` is `DefinedQueryParam<any, any, any, boolean>`.
+
+## ParamContract
+
+```ts
+interface ParamContract<TExplicit, TResolved, TContribution, TGuaranteed extends boolean> {
+  explicit: TExplicit
+  resolved: TResolved
+  contribution: TContribution
+  guaranteed: TGuaranteed
 }
 ```
 
 ## DefinedQueryParamWithDefault
 
 ```ts
-interface DefinedQueryParamWithDefault<T> extends DefinedQueryParam<T> {
-  readonly defaultValue: T
-}
+type DefinedQueryParamWithDefault<T> = DefinedQueryParam<T, T, T, true>
 ```
 
 ## QueryParamReadContext
@@ -79,20 +105,23 @@ Receives diagnostics while a param reads a query. `onInvalid` gets the path and 
 ## QueryParamTransform
 
 ```ts
-interface QueryParamTransform<TInput, TOutput> {
+interface QueryParamTransform<TInput, TOutput, TWrite = TInput> {
   read: (value: TInput) => TOutput | undefined
-  write: (value: TOutput) => TInput
+  write: (value: TOutput) => TWrite
   eq?: (a: TOutput, b: TOutput) => boolean
 }
 ```
 
+`read` receives the resolved input and is not called while the input is absent. `write` returns the explicit input.
+
 ## QueryParamBuilder
 
 ```ts
-interface QueryParamBuilder<T, TDefaultInput = T> extends DefinedQueryParam<T> {
-  withDefault: (defaultValue: TDefaultInput) => QueryParamBuilderWithDefault<T, TDefaultInput>
-  withEquality: (eq: (a: T, b: T) => boolean) => QueryParamBuilder<T, TDefaultInput>
-  keepOnDefault: () => QueryParamBuilder<T, TDefaultInput>
+interface QueryParamBuilder<T, TContribution = T, TGuaranteed extends boolean = false>
+  extends DefinedQueryParam<T, T, TContribution, TGuaranteed> {
+  withDefault: (defaultValue: TContribution) => QueryParamBuilder<T, TContribution, true>
+  withEquality: (eq: (a: T, b: T) => boolean) => QueryParamBuilder<T, TContribution, TGuaranteed>
+  keepOnDefault: () => QueryParamBuilder<T, TContribution, TGuaranteed>
   transform: <TOutput>(transformer: QueryParamTransform<T, TOutput>) => QueryParamBuilder<TOutput>
 }
 ```
@@ -100,13 +129,7 @@ interface QueryParamBuilder<T, TDefaultInput = T> extends DefinedQueryParam<T> {
 ## QueryParamBuilderWithDefault
 
 ```ts
-interface QueryParamBuilderWithDefault<T, TDefaultInput = T>
-  extends DefinedQueryParamWithDefault<T> {
-  withDefault: (defaultValue: TDefaultInput) => QueryParamBuilderWithDefault<T, TDefaultInput>
-  withEquality: (eq: (a: T, b: T) => boolean) => QueryParamBuilderWithDefault<T, TDefaultInput>
-  keepOnDefault: () => QueryParamBuilderWithDefault<T, TDefaultInput>
-  transform: <TOutput>(transformer: QueryParamTransform<T, TOutput>) => QueryParamBuilder<TOutput>
-}
+type QueryParamBuilderWithDefault<T, TContribution = T> = QueryParamBuilder<T, TContribution, true>
 ```
 
 ## Related guide
