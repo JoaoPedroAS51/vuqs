@@ -39,7 +39,9 @@ const page = useQueryState('page', codecs.integer.withDefault(1))
 // (no ?page)    → 1   (absent  → undefined → default)
 ```
 
-## String
+## Codecs
+
+### String
 
 Reads a non-empty query string. Empty or whitespace-only values parse as absent.
 
@@ -48,9 +50,9 @@ useQueryState('q', codecs.string) // string | undefined
 useQueryState('q', codecs.string.withDefault('')) // string
 ```
 
-## Numbers
+### Numbers
 
-### Integer
+#### Integer
 
 Reads an integer from a number or base-10 string. Fractional, non-numeric, and
 non-finite input parses as absent; serializing truncates toward zero.
@@ -59,7 +61,7 @@ non-finite input parses as absent; serializing truncates toward zero.
 useQueryState('page', codecs.integer.withDefault(1)) // ?page=2
 ```
 
-### Float
+#### Float
 
 Reads a finite number from a number or numeric string. Invalid input parses as absent.
 
@@ -67,7 +69,7 @@ Reads a finite number from a number or numeric string. Invalid input parses as a
 useQueryState('ratio', codecs.float) // ?ratio=1.5
 ```
 
-### Hex
+#### Hex
 
 A non-negative hexadecimal integer. Serializing pads to an even length.
 Numeric query values retain hexadecimal interpretation through their decimal
@@ -77,7 +79,7 @@ text: `codecs.hex.parse(10)` and `codecs.hex.parse('10')` both return `16`.
 useQueryState('color', codecs.hex) // ?color=ff8800 → 16746496
 ```
 
-### Index
+#### Index
 
 A 1-based index in the URL mapped to a **0-based** value in your state, ideal for
 one-based page numbers over a zero-based array:
@@ -87,7 +89,7 @@ const page = useQueryState('page', codecs.index.withDefault(0))
 // ?page=1 → 0,  ?page=2 → 1,  page.value = 2 → ?page=3
 ```
 
-## Boolean
+### Boolean
 
 Reads booleans or the strings `'true'` and `'false'`. Anything else parses as absent.
 
@@ -95,13 +97,13 @@ Reads booleans or the strings `'true'` and `'false'`. Anything else parses as ab
 useQueryState('archived', codecs.boolean.withDefault(false)) // ?archived=true
 ```
 
-## Literals
+### Literals
 
 `literal` accepts a homogeneous list of strings or numbers. Mixed lists and values
 of other types throw `TypeError` when creating the codec. Inline lists infer their
 literal union without `as const`.
 
-### String literal
+#### String literal
 
 Constrains a string to a fixed set. Anything outside the set parses as absent.
 
@@ -113,7 +115,7 @@ const sort = useQueryState(
 //    ^? QueryStateRef<'asc' | 'desc'>
 ```
 
-### Numeric literal
+#### Numeric literal
 
 Pass a list of numbers to parse numeric literals. Numeric strings such as `'01'`
 and `'1.0'` resolve to `1` when it is allowed.
@@ -123,7 +125,7 @@ const perPage = useQueryState('perPage', codecs.literal([10, 20, 50]))
 //    ^? QueryStateRef<10 | 20 | 50 | undefined>
 ```
 
-## Enums
+### Enums
 
 Constrains a value to the members of a TypeScript `enum`. Pass the enum itself:
 unlike `literal`, you never restate the values or wrap them in `Object.values`,
@@ -161,7 +163,7 @@ For an inline set of strings or numbers, use
 `as const` object works with `enum` too, narrowing to its value union.
 :::
 
-## Dates & timestamps
+### Dates
 
 Three date codecs return a `Date`, differing only in their wire format. All
 compare by timestamp (`valueOf`), so equality is exact, and each parses as absent
@@ -173,12 +175,37 @@ on invalid input.
 | `isoDate` | `YYYY-MM-DD` (midnight UTC) | `?d=2026-06-22` |
 | `timestamp` | milliseconds since epoch | `?t=1719014400000` |
 
+#### ISO date and time
+
+`isoDateTime` reads any string `Date` accepts and serializes with `toISOString()`.
+
 ```ts
-const from = useQueryState('from', codecs.isoDate)
+const since = useQueryState('since', codecs.isoDateTime)
 //    ^? QueryStateRef<Date | undefined>
+// ?since=2026-06-22T10:00:00.000Z
 ```
 
-## Arrays
+#### ISO date
+
+`isoDate` keeps only the calendar day. It reads the leading `YYYY-MM-DD` of the
+text as midnight UTC and serializes the UTC date, so the time of day is dropped.
+
+```ts
+const from = useQueryState('from', codecs.isoDate)
+// ?from=2026-06-22 → 2026-06-22T00:00:00.000Z
+```
+
+#### Timestamp
+
+`timestamp` reads an integer number of milliseconds since the epoch. Fractional
+or non-numeric input parses as absent.
+
+```ts
+const updated = useQueryState('updated', codecs.timestamp)
+// ?updated=1719014400000
+```
+
+### Arrays
 
 `arrayOf` wraps another codec to handle a list. A scalar query value is treated
 as a single-item array, items the inner codec rejects are dropped, and an empty
@@ -199,7 +226,7 @@ objects, see
 [Adapters](/guide/getting-started/adapters).
 :::
 
-## JSON
+### JSON
 
 Reads JSON text or an already-parsed query value and serializes with
 `JSON.stringify`. Objects and arrays are read in full, including empty structures.
