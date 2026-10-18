@@ -2,7 +2,7 @@ import type { ParsedQuery } from '../../../src/core/query/types'
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../src/core/codecs/catalog'
 import { queryParam } from '../../../src/core/schema/params/query-param'
-import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults'
+import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults/module'
 import { withTestQuery } from '../../helpers/adapter'
 
 // Bounded case data, real-param construction and an independent expected-value oracle for the

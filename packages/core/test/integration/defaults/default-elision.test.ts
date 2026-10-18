@@ -11,8 +11,8 @@ import { codecs } from '../../../src/core/codecs/catalog'
 import { createCodec } from '../../../src/core/codecs/codec'
 import { queryParam } from '../../../src/core/schema/params/query-param'
 import { defineQuerySchema } from '../../../src/core/schema/schema'
-import { withActiveParams } from '../../../src/modules/active-params'
-import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults'
+import { withActiveParams } from '../../../src/modules/active-params/module'
+import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults/module'
 import { withTestQuery } from '../../helpers/adapter'
 
 interface PairedRun {

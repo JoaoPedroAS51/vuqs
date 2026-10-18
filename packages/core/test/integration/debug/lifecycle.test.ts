@@ -13,7 +13,7 @@ import { getDebugSnapshot } from '../../../src/core/diagnostics/snapshot'
 import { ThrottledQueue } from '../../../src/core/runtime/navigation-queue'
 import { queryParam } from '../../../src/core/schema/params/query-param'
 import { enableDebug } from '../../../src/debug'
-import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults'
+import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults/module'
 import { withTestQuery } from '../../helpers/adapter'
 import { captureCodes, captureEvents, flush, inOrder, resetDebugState, trackReporter } from '../../helpers/debug'
 

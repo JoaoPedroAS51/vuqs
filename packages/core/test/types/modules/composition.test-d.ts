@@ -3,8 +3,8 @@ import { ref } from 'vue'
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../src/core/codecs/catalog'
 import { queryParam } from '../../../src/core/schema/params/query-param'
-import { withContext } from '../../../src/modules/context'
-import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults'
+import { withContext } from '../../../src/modules/context/module'
+import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults/module'
 
 const schema = {
   q: queryParam('q', codecs.string),

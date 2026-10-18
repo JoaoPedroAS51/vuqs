@@ -1,5 +1,5 @@
+import type { QueryStorage } from './module'
 import type { StoredQuerySnapshot } from './snapshot'
-import type { QueryStorage } from './storage'
 
 /**
  * Creates a lazy Web Storage adapter without reading browser globals at module load.

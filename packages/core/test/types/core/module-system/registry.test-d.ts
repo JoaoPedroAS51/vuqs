@@ -2,7 +2,7 @@ import type { ComputedRef } from 'vue'
 import type { QueryCore } from '../../../../src/core/module-system/query-core'
 import type { ModuleOptions } from '../../../../src/core/module-system/registry'
 import type { QueryStateSchema, QueryStateValueAt, QueryStateWriteValues } from '../../../../src/core/schema/schema'
-import type { QueryStatesContextOptions } from '../../../../src/modules/context'
+import type { QueryStatesContextOptions } from '../../../../src/modules/context/module'
 import { describe, expectTypeOf, it } from 'vitest'
 import { computed } from 'vue'
 import { useQueryState } from '../../../../src/core/bindings/use-query-state'
@@ -10,7 +10,7 @@ import { useQueryStates } from '../../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../../src/core/codecs/catalog'
 import { defineQueryModule } from '../../../../src/core/module-system/define-query-module'
 import { queryParam } from '../../../../src/core/schema/params/query-param'
-import { withContext } from '../../../../src/modules/context'
+import { withContext } from '../../../../src/modules/context/module'
 
 interface ExplicitValueApi<TValue> {
   explicitValue: ComputedRef<TValue | undefined>

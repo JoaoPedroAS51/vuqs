@@ -7,8 +7,8 @@ import { codecs } from '../../../src/core/codecs/catalog'
 import { getDebugChannel } from '../../../src/core/diagnostics/bus'
 import { getDebugSnapshot } from '../../../src/core/diagnostics/snapshot'
 import { queryParam } from '../../../src/core/schema/params/query-param'
-import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults'
-import { withStorage } from '../../../src/modules/storage/storage'
+import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults/module'
+import { withStorage } from '../../../src/modules/storage/module'
 import { resetDebugState } from '../../helpers/debug'
 
 afterEach(resetDebugState)

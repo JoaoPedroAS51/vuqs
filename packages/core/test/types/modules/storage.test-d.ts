@@ -1,12 +1,12 @@
 import type { ParsedQueryRaw } from '../../../src/core/query/types'
+import type { QueryStorage, StorageStatus } from '../../../src/modules/storage/module'
 import type { StoredQuerySnapshot } from '../../../src/modules/storage/snapshot'
-import type { QueryStorage, StorageStatus } from '../../../src/modules/storage/storage'
 import { describe, expectTypeOf, it } from 'vitest'
 import { useQueryState } from '../../../src/core/bindings/use-query-state'
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../src/core/codecs/catalog'
 import { queryParam } from '../../../src/core/schema/params/query-param'
-import { withStorage } from '../../../src/modules/storage/storage'
+import { withStorage } from '../../../src/modules/storage/module'
 import { createWebStorage } from '../../../src/modules/storage/web-storage'
 
 const schema = {

@@ -4,7 +4,7 @@ import { codecs } from '../../../../src/core/codecs/catalog'
 import { addDebugReporter } from '../../../../src/core/diagnostics/bus'
 import { queryParam } from '../../../../src/core/schema/params/query-param'
 import { createSerializer } from '../../../../src/core/schema/serializer'
-import { withRuntimeDefaults } from '../../../../src/modules/runtime-defaults'
+import { withRuntimeDefaults } from '../../../../src/modules/runtime-defaults/module'
 import { withTestQuery } from '../../../helpers/adapter'
 
 const schema = {

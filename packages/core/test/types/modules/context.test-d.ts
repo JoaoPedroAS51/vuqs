@@ -2,15 +2,15 @@ import type { QueryRegisteredMarkers } from '../../../src/core/module-system/fac
 import type { QueryModuleStateResult, QueryModuleStatesResult } from '../../../src/core/module-system/registry'
 import type { AnyDefinedQueryParam } from '../../../src/core/schema/params/definition'
 import type { QueryStateSchema } from '../../../src/core/schema/schema'
-import type { ContextNavigate, ContextPipeline } from '../../../src/modules/context'
+import type { ContextNavigate, ContextPipeline } from '../../../src/modules/context/module'
 import { describe, expectTypeOf, it } from 'vitest'
 import { computed, ref } from 'vue'
 import { useQueryState } from '../../../src/core/bindings/use-query-state'
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../src/core/codecs/catalog'
 import { queryParam } from '../../../src/core/schema/params/query-param'
-import { withActiveParams } from '../../../src/modules/active-params'
-import { withContext } from '../../../src/modules/context'
+import { withActiveParams } from '../../../src/modules/active-params/module'
+import { withContext } from '../../../src/modules/context/module'
 
 const schema = {
   q: queryParam('q', codecs.string),

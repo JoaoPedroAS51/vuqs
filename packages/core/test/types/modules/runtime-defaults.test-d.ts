@@ -3,7 +3,7 @@ import { useQueryState } from '../../../src/core/bindings/use-query-state'
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../src/core/codecs/catalog'
 import { queryParam } from '../../../src/core/schema/params/query-param'
-import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults'
+import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults/module'
 
 describe('withRuntimeDefaults inference', () => {
   it('adds single runtime-default APIs to useQueryState', () => {

@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { nextTick, ref } from 'vue'
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../src/core/codecs/catalog'
-import { withActiveParams } from '../../../src/modules/active-params'
-import { withContext } from '../../../src/modules/context'
+import { withActiveParams } from '../../../src/modules/active-params/module'
+import { withContext } from '../../../src/modules/context/module'
 import { withTestQuery as setup } from '../../helpers/adapter'
 
 describe('withActiveParams module interactions', () => {

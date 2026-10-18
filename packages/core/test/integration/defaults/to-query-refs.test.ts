@@ -4,7 +4,7 @@ import { toQueryRefs } from '../../../src/core/bindings/to-query-refs'
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../src/core/codecs/catalog'
 import { queryParam } from '../../../src/core/schema/params/query-param'
-import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults'
+import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults/module'
 import { withTestQuery as setup } from '../../helpers/adapter'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))

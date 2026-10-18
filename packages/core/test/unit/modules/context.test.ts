@@ -8,7 +8,7 @@ import { useQueryState } from '../../../src/core/bindings/use-query-state'
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../src/core/codecs/catalog'
 import { queryParam } from '../../../src/core/schema/params/query-param'
-import { withContext } from '../../../src/modules/context'
+import { withContext } from '../../../src/modules/context/module'
 import { withTestQuery as setup } from '../../helpers/adapter'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))

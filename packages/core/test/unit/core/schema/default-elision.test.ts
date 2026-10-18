@@ -3,7 +3,7 @@ import { useQueryStates } from '../../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../../src/core/codecs/catalog'
 import { createStaticOmissionEvaluator, dropDefaults, prepareDefaultOmission, readsEquivalent } from '../../../../src/core/schema/default-elision'
 import { queryParam } from '../../../../src/core/schema/params/query-param'
-import { withRuntimeDefaults } from '../../../../src/modules/runtime-defaults'
+import { withRuntimeDefaults } from '../../../../src/modules/runtime-defaults/module'
 import { withTestQuery } from '../../../helpers/adapter'
 
 describe('dropDefaults', () => {

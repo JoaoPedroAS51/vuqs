@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../src/core/codecs/catalog'
 import { queryParam } from '../../../src/core/schema/params/query-param'
-import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults'
+import { withRuntimeDefaults } from '../../../src/modules/runtime-defaults/module'
 import { withTestQuery } from '../../helpers/adapter'
 
 describe('explicit values and default resolution', () => {

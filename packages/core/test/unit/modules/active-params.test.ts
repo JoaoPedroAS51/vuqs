@@ -3,7 +3,7 @@ import { useQueryState } from '../../../src/core/bindings/use-query-state'
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
 import { codecs } from '../../../src/core/codecs/catalog'
 import { queryParam } from '../../../src/core/schema/params/query-param'
-import { withActiveParams } from '../../../src/modules/active-params'
+import { withActiveParams } from '../../../src/modules/active-params/module'
 import { withTestQuery as setup } from '../../helpers/adapter'
 
 describe('withActiveParams grouped', () => {
