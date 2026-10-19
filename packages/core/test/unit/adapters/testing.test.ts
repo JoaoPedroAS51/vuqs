@@ -487,7 +487,7 @@ describe('createTestingAdapter', () => {
   })
 
   describe('defaultOptions', () => {
-    it('forwards defaultOptions to the adapter', () => {
+    it('exposes the configured defaultOptions', () => {
       const adapter = createTestingAdapter({ defaultOptions: { history: 'push', throttleMs: 100 } })
 
       expect(adapter.defaultOptions).toEqual({ history: 'push', throttleMs: 100 })

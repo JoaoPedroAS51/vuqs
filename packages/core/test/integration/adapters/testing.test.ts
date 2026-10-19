@@ -9,40 +9,38 @@ import { queryParam } from '../../../src/core/schema/params/query-param'
 
 const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
 
-describe('createTestingAdapter', () => {
-  describe('composable integration', () => {
-    it('reads the initial query into the composable', () => {
-      const adapter = createTestingAdapter({ searchParams: '?q=hello&count=5' })
-      const app = createApp({})
-      installQueryAdapter(app, adapter)
-      const run = app.runWithContext.bind(app)
+describe('testing adapter query runtime', () => {
+  it('reads the initial query into the composable', () => {
+    const adapter = createTestingAdapter({ searchParams: '?q=hello&count=5' })
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const run = app.runWithContext.bind(app)
 
-      const q = run(() => useQueryState('q', codecs.string))
-      const count = run(() => useQueryState('count', codecs.integer.withDefault(0)))
+    const q = run(() => useQueryState('q', codecs.string))
+    const count = run(() => useQueryState('count', codecs.integer.withDefault(0)))
 
-      expect(q.value).toBe('hello')
-      expect(count.value).toBe(5)
-    })
+    expect(q.value).toBe('hello')
+    expect(count.value).toBe(5)
+  })
 
-    it('coalesces writes from multiple params into one navigate call', async () => {
-      const onUrlUpdate = vi.fn()
-      const adapter = createTestingAdapter({ onUrlUpdate })
-      const app = createApp({})
-      installQueryAdapter(app, adapter)
-      const run = app.runWithContext.bind(app)
+  it('coalesces writes from multiple params into one navigate call', async () => {
+    const onUrlUpdate = vi.fn()
+    const adapter = createTestingAdapter({ onUrlUpdate })
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const run = app.runWithContext.bind(app)
 
-      const schema = {
-        q: queryParam('q', codecs.string),
-        page: queryParam('page', codecs.integer),
-      }
-      const { values } = run(() => useQueryStates(schema))
+    const schema = {
+      q: queryParam('q', codecs.string),
+      page: queryParam('page', codecs.integer),
+    }
+    const { values } = run(() => useQueryStates(schema))
 
-      values.q = 'hello'
-      values.page = 2
-      await flush()
+    values.q = 'hello'
+    values.page = 2
+    await flush()
 
-      expect(onUrlUpdate).toHaveBeenCalledOnce()
-    })
+    expect(onUrlUpdate).toHaveBeenCalledOnce()
   })
 })
 

@@ -26,111 +26,69 @@ function makeRouter(options: Pick<RouterOptions, 'parseQuery' | 'stringifyQuery'
   })
 }
 
+const routerScroll = (): ReturnType<typeof vi.fn<RouterScrollBehavior>> => vi.fn<RouterScrollBehavior>(() => ({ top: 0 }))
+
+async function setupScroll(scrollBehavior?: RouterScrollBehavior) {
+  const router = makeRouter({ scrollBehavior })
+  await router.push('/')
+  const adapter = createVueRouterAdapter({ router })
+  return { router, adapter }
+}
+
+function scrollFor(router: Router, to: RouteLocationNormalizedLoaded = router.currentRoute.value) {
+  return router.options.scrollBehavior?.(to, START_LOCATION, null)
+}
+
 describe('createVueRouterAdapter', () => {
-  it('reads the current route query', async () => {
-    const router = makeRouter()
-    await router.push({ path: '/', query: { q: 'phone' } })
+  describe('query', () => {
+    it('reads the current route query', async () => {
+      const router = makeRouter()
+      await router.push({ path: '/', query: { q: 'phone' } })
 
-    const adapter = createVueRouterAdapter({ router })
+      const adapter = createVueRouterAdapter({ router })
 
-    expect(toValue(adapter.query)).toEqual({ q: 'phone' })
+      expect(toValue(adapter.query)).toEqual({ q: 'phone' })
+    })
   })
 
-  it('emits adapter:navigate on the bus when debug is armed', async () => {
-    const router = makeRouter()
-    const adapter = createVueRouterAdapter({ router })
-    const codes: string[] = []
-    const stop = addDebugReporter(event => codes.push(event.code))
+  describe('history', () => {
+    it('replaces by default', async () => {
+      const router = makeRouter()
+      await router.push('/')
+      const replaceSpy = vi.spyOn(router, 'replace')
 
-    await adapter.navigate({ q: 'x' }, { history: 'push' })
-    stop()
+      const adapter = createVueRouterAdapter({ router })
+      await adapter.navigate({ q: 'sale' }, {})
 
-    expect(codes).toContain('adapter:navigate')
-  })
+      expect(replaceSpy).toHaveBeenCalled()
+      expect(router.currentRoute.value.query).toEqual({ q: 'sale' })
+    })
 
-  it('writes via router.replace by default', async () => {
-    const router = makeRouter()
-    await router.push('/')
-    const replaceSpy = vi.spyOn(router, 'replace')
+    it('pushes when history is push', async () => {
+      const router = makeRouter()
+      await router.push('/')
+      const pushSpy = vi.spyOn(router, 'push')
 
-    const adapter = createVueRouterAdapter({ router })
-    await adapter.navigate({ q: 'sale' }, {})
+      const adapter = createVueRouterAdapter({ router })
+      await adapter.navigate({ q: 'x' }, { history: 'push' })
 
-    expect(replaceSpy).toHaveBeenCalled()
-    expect(router.currentRoute.value.query).toEqual({ q: 'sale' })
-  })
+      expect(pushSpy).toHaveBeenCalled()
+      expect(router.currentRoute.value.query).toEqual({ q: 'x' })
+    })
 
-  it('uses push when history is "push"', async () => {
-    const router = makeRouter()
-    await router.push('/')
-    const pushSpy = vi.spyOn(router, 'push')
+    it('preserves the current hash', async () => {
+      const router = makeRouter()
+      await router.push({ path: '/', hash: '#section' })
 
-    const adapter = createVueRouterAdapter({ router })
-    await adapter.navigate({ q: 'x' }, { history: 'push' })
+      const adapter = createVueRouterAdapter({ router })
+      await adapter.navigate({ q: 'sale' }, {})
 
-    expect(pushSpy).toHaveBeenCalled()
-    expect(router.currentRoute.value.query).toEqual({ q: 'x' })
-  })
-
-  it('preserves the current hash on navigation', async () => {
-    const router = makeRouter()
-    await router.push({ path: '/', hash: '#section' })
-
-    const adapter = createVueRouterAdapter({ router })
-    await adapter.navigate({ q: 'sale' }, {})
-
-    expect(router.currentRoute.value.hash).toBe('#section')
-    expect(router.currentRoute.value.query).toEqual({ q: 'sale' })
-  })
-
-  it('rejects when navigation fails', async () => {
-    const router = makeRouter()
-    await router.push('/')
-    vi.spyOn(router, 'replace').mockRejectedValueOnce(new Error('navigation cancelled'))
-
-    const adapter = createVueRouterAdapter({ router })
-
-    await expect(adapter.navigate({ q: 'sale' }, {})).rejects.toThrow('navigation cancelled')
-  })
-
-  it('rolls back an engine write when a router guard aborts navigation', async () => {
-    const router = makeRouter()
-    await router.push('/')
-    router.beforeEach(() => false)
-    const adapter = createVueRouterAdapter({ router })
-    const app = createApp({})
-    installQueryAdapter(app, adapter)
-    const q = app.runWithContext(() => useQueryState('q', codecs.string))
-
-    q.set('sale')
-    await flush()
-
-    expect(q.value).toBeUndefined()
-    expect(router.currentRoute.value.query).toEqual({})
-  })
-
-  it('carries defaultOptions', () => {
-    const router = makeRouter()
-
-    const adapter = createVueRouterAdapter({ router, defaultOptions: { history: 'push' } })
-
-    expect(adapter.defaultOptions).toEqual({ history: 'push' })
+      expect(router.currentRoute.value.hash).toBe('#section')
+      expect(router.currentRoute.value.query).toEqual({ q: 'sale' })
+    })
   })
 
   describe('scroll', () => {
-    const routerScroll = (): ReturnType<typeof vi.fn<RouterScrollBehavior>> => vi.fn<RouterScrollBehavior>(() => ({ top: 0 }))
-
-    async function setupScroll(scrollBehavior?: RouterScrollBehavior) {
-      const router = makeRouter({ scrollBehavior })
-      await router.push('/')
-      const adapter = createVueRouterAdapter({ router })
-      return { router, adapter }
-    }
-
-    function scrollFor(router: Router, to: RouteLocationNormalizedLoaded = router.currentRoute.value) {
-      return router.options.scrollBehavior?.(to, START_LOCATION, null)
-    }
-
     it('scrolls to the top-left for true', async () => {
       const behavior = routerScroll()
       const { router, adapter } = await setupScroll(behavior)
@@ -271,91 +229,82 @@ describe('createVueRouterAdapter', () => {
 
       expect(router.options.scrollBehavior).toBe(behavior)
     })
+  })
 
-    it('navigates coalesced false and true writes with true', async () => {
-      const { router, adapter } = await setupScroll(routerScroll())
-      const app = createApp({})
-      installQueryAdapter(app, adapter)
-      const scope = effectScope()
+  describe('failures', () => {
+    it('rejects when the navigation fails', async () => {
+      const router = makeRouter()
+      await router.push('/')
+      vi.spyOn(router, 'replace').mockRejectedValueOnce(new Error('navigation cancelled'))
 
-      try {
-        const q = scope.run(() => app.runWithContext(() => useQueryState('q', codecs.string)))!
-        q.set('a', { scroll: false })
-        q.set('b', { scroll: true })
-        await vi.waitFor(() => expect(router.currentRoute.value.query).toEqual({ q: 'b' }))
+      const adapter = createVueRouterAdapter({ router })
 
-        expect(scrollFor(router)).toEqual({ left: 0, top: 0 })
-      }
-      finally {
-        resetQueryRuntime(adapter)
-        scope.stop()
-      }
+      await expect(adapter.navigate({ q: 'sale' }, {})).rejects.toThrow('navigation cancelled')
+    })
+  })
+
+  describe('diagnostics', () => {
+    it('emits adapter:navigate for a direct navigation', async () => {
+      const router = makeRouter()
+      const adapter = createVueRouterAdapter({ router })
+      const codes: string[] = []
+      const stop = addDebugReporter(event => codes.push(event.code))
+
+      await adapter.navigate({ q: 'x' }, { history: 'push' })
+      stop()
+
+      expect(codes).toContain('adapter:navigate')
+    })
+  })
+
+  describe('defaultOptions', () => {
+    it('exposes the configured defaultOptions', () => {
+      const router = makeRouter()
+
+      const adapter = createVueRouterAdapter({ router, defaultOptions: { history: 'push' } })
+
+      expect(adapter.defaultOptions).toEqual({ history: 'push' })
     })
   })
 })
 
-describe('provideVueRouterAdapter', () => {
-  it('drives useQueryStates end to end', async () => {
-    const router = makeRouter()
-    await router.push({ path: '/', query: { q: 'phone' } })
-    await router.isReady()
-
-    const schema = { q: queryParam('q', codecs.string) }
-    let states: UseQueryStatesReturn<typeof schema> | undefined
-
-    const Child = defineComponent({
-      setup() {
-        states = useQueryStates(schema)
-        return () => h('div')
-      },
-    })
-    const Parent = defineComponent({
-      setup() {
-        provideVueRouterAdapter()
-        return () => h(Child)
-      },
-    })
-
-    const app = createSSRApp(Parent)
-    app.use(router)
-    await renderToString(app)
-
-    expect(states!.values.q).toBe('phone')
-  })
-
-  it('writes through the engine to the router', async () => {
+describe('vue router query runtime', () => {
+  it('rolls back a write when a router guard aborts navigation', async () => {
     const router = makeRouter()
     await router.push('/')
-    await router.isReady()
+    router.beforeEach(() => false)
+    const adapter = createVueRouterAdapter({ router })
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const q = app.runWithContext(() => useQueryState('q', codecs.string))
 
-    const schema = { q: queryParam('q', codecs.string) }
-    let states: UseQueryStatesReturn<typeof schema> | undefined
-
-    const Child = defineComponent({
-      setup() {
-        states = useQueryStates(schema)
-        return () => h('div')
-      },
-    })
-    const Parent = defineComponent({
-      setup() {
-        provideVueRouterAdapter()
-        return () => h(Child)
-      },
-    })
-
-    const app = createSSRApp(Parent)
-    app.use(router)
-    await renderToString(app)
-
-    states!.values.q = 'sale'
+    q.set('sale')
     await flush()
 
-    expect(router.currentRoute.value.query).toEqual({ q: 'sale' })
+    expect(q.value).toBeUndefined()
+    expect(router.currentRoute.value.query).toEqual({})
   })
-})
 
-describe('createVueRouterAdapter: query commits', () => {
+  it('navigates coalesced false and true scroll writes with true', async () => {
+    const { router, adapter } = await setupScroll(routerScroll())
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const scope = effectScope()
+
+    try {
+      const q = scope.run(() => app.runWithContext(() => useQueryState('q', codecs.string)))!
+      q.set('a', { scroll: false })
+      q.set('b', { scroll: true })
+      await vi.waitFor(() => expect(router.currentRoute.value.query).toEqual({ q: 'b' }))
+
+      expect(scrollFor(router)).toEqual({ left: 0, top: 0 })
+    }
+    finally {
+      resetQueryRuntime(adapter)
+      scope.stop()
+    }
+  })
+
   it('confirms duplicate navigation while preserving the parsed query', async () => {
     const queries: Record<string, ParsedQuery> = { 'value=3': { value: 3 }, 'value=4': { value: 4 } }
     const router = makeRouter({
@@ -425,5 +374,66 @@ describe('createVueRouterAdapter: query commits', () => {
       resetQueryRuntime(adapter)
       scope.stop()
     }
+  })
+})
+
+describe('provideVueRouterAdapter', () => {
+  it('drives useQueryStates end to end', async () => {
+    const router = makeRouter()
+    await router.push({ path: '/', query: { q: 'phone' } })
+    await router.isReady()
+
+    const schema = { q: queryParam('q', codecs.string) }
+    let states: UseQueryStatesReturn<typeof schema> | undefined
+
+    const Child = defineComponent({
+      setup() {
+        states = useQueryStates(schema)
+        return () => h('div')
+      },
+    })
+    const Parent = defineComponent({
+      setup() {
+        provideVueRouterAdapter()
+        return () => h(Child)
+      },
+    })
+
+    const app = createSSRApp(Parent)
+    app.use(router)
+    await renderToString(app)
+
+    expect(states!.values.q).toBe('phone')
+  })
+
+  it('writes through the engine to the router', async () => {
+    const router = makeRouter()
+    await router.push('/')
+    await router.isReady()
+
+    const schema = { q: queryParam('q', codecs.string) }
+    let states: UseQueryStatesReturn<typeof schema> | undefined
+
+    const Child = defineComponent({
+      setup() {
+        states = useQueryStates(schema)
+        return () => h('div')
+      },
+    })
+    const Parent = defineComponent({
+      setup() {
+        provideVueRouterAdapter()
+        return () => h(Child)
+      },
+    })
+
+    const app = createSSRApp(Parent)
+    app.use(router)
+    await renderToString(app)
+
+    states!.values.q = 'sale'
+    await flush()
+
+    expect(router.currentRoute.value.query).toEqual({ q: 'sale' })
   })
 })
