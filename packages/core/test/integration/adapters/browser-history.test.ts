@@ -1,7 +1,7 @@
 import type { BrowserHistoryAdapter } from '../../../src/adapters/browser-history'
 import type { ParsedQuery } from '../../../src/core/query/types'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
-import { createApp, createRenderer, defineComponent, effectScope, h, toValue } from 'vue'
+import { createApp, createRenderer, defineComponent, effectScope, h, nextTick, toValue } from 'vue'
 import { provideBrowserHistoryAdapter } from '../../../src/adapters/browser-history'
 import { installQueryAdapter } from '../../../src/core/bindings/adapter-provider'
 import { useQueryState } from '../../../src/core/bindings/use-query-state'
@@ -29,12 +29,15 @@ describe('browser history query runtime', () => {
       expect(q.value).toBe('sale')
       await Promise.resolve()
       expect(browser.history.pushState).toHaveBeenCalledOnce()
-      expect(browser.scrollTo).toHaveBeenCalledOnce()
+      await nextTick()
+      expect(browser.scrollTo).toHaveBeenCalledExactlyOnceWith({ left: 0, top: 0 })
       expect(toValue(adapter.query)).toEqual({ filters: { sort: 'price' }, utm: 'campaign', page: '2', q: 'sale' })
 
       states.patch({ page: 1 }, { history: 'replace', scroll: false })
       await Promise.resolve()
       expect(browser.history.replaceState).toHaveBeenCalledOnce()
+      await nextTick()
+      expect(browser.scrollTo).toHaveBeenCalledOnce()
       expect(browser.location.searchParams.has('page')).toBe(false)
       expect(states.values.page).toBe(1)
       browser.history.back()

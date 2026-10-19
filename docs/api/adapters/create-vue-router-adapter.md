@@ -43,8 +43,9 @@ Nested objects require matching `parseQuery`/`stringifyQuery`, for example with
 :::
 
 ::: tip `scroll`
-`vue-router` controls scrolling through `scrollBehavior`, so the per-call `scroll`
-option is ignored by this adapter.
+The adapter applies each write's `scroll` by wrapping the router's `scrollBehavior`
+on its first write. Links, application navigation and back/forward keep your
+`scrollBehavior`. See [Navigation & options](/guide/query-state/navigation-options#scroll).
 :::
 
 ## VueRouterAdapterOptions

@@ -61,7 +61,7 @@ describe('useQueryStates', () => {
     patch({ page: 3, enabled: true, ids: [1, 2] })
     await flush()
 
-    expect(navigate).toHaveBeenCalledExactlyOnceWith({ other: 'keep', page: '3', enabled: 'true', ids: ['1', '2'] }, {})
+    expect(navigate).toHaveBeenCalledExactlyOnceWith({ other: 'keep', page: '3', enabled: 'true', ids: ['1', '2'] }, { scroll: false })
     expect({ ...values }).toEqual({ page: 3, enabled: true, ids: [1, 2] })
 
     query.value = { other: 'keep', ...external }
@@ -333,6 +333,49 @@ describe('useQueryStates', () => {
 
       expect(navigate).toHaveBeenCalledTimes(1)
       expect(navigate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ scroll: true }))
+    })
+
+    it('navigates with scroll false when no level sets it', async () => {
+      const { navigate, run } = setup()
+      const { patch } = run(() => useQueryStates(schema))
+
+      patch({ q: 'sale' })
+      await flush()
+
+      expect(navigate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ scroll: false }))
+    })
+
+    it('forwards a ScrollToOptions object per call', async () => {
+      const { navigate, run } = setup()
+      const { patch } = run(() => useQueryStates(schema))
+
+      patch({ q: 'sale' }, { scroll: { top: 400, behavior: 'smooth' } })
+      await flush()
+
+      expect(navigate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ scroll: { top: 400, behavior: 'smooth' } }))
+    })
+
+    it('forwards a ScrollToOptions object from adapter defaults', async () => {
+      const { navigate, run } = setup({}, { scroll: { top: 0 } })
+      const { patch } = run(() => useQueryStates(schema))
+
+      patch({ q: 'sale' })
+      await flush()
+
+      expect(navigate).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ scroll: { top: 0 } }))
+    })
+
+    it('resolves scroll per call, then composable, then adapter defaults', async () => {
+      const { navigate, run } = setup({}, { scroll: true })
+      const { patch } = run(() => useQueryStates(schema, { scroll: { top: 100 } }))
+
+      patch({ q: 'composable' })
+      await flush()
+      expect(navigate).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ scroll: { top: 100 } }))
+
+      patch({ q: 'call' }, { scroll: false })
+      await flush()
+      expect(navigate).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ scroll: false }))
     })
   })
 

@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import type { ParsedQuery } from '../../src/core/query/types'
-import type { QueryStateNavigate } from '../../src/core/runtime/adapter'
+import type { QueryAdapterDefaultOptions, QueryStateNavigate } from '../../src/core/runtime/adapter'
 import { onTestFinished, vi } from 'vitest'
 import { createApp, effectScope } from 'vue'
 import { createTestingAdapter } from '../../src/adapters/testing'
@@ -22,12 +22,13 @@ export interface TestQuery {
  * automatically when the test finishes, or explicitly with `dispose`.
  *
  * @param initial - The starting parsed query object.
+ * @param defaultOptions - Adapter default navigation and write options.
  */
-export function withTestQuery(initial: ParsedQuery = {}): TestQuery {
+export function withTestQuery(initial: ParsedQuery = {}, defaultOptions?: QueryAdapterDefaultOptions): TestQuery {
   const adapter = createTestingAdapter({ searchParams: initial, hasMemory: true })
   const navigate = vi.fn(adapter.navigate)
   const app = createApp({})
-  const installedAdapter = { query: adapter.query, navigate }
+  const installedAdapter = { query: adapter.query, navigate, defaultOptions }
   installQueryAdapter(app, installedAdapter)
   const scope = effectScope(true)
   let disposed = false

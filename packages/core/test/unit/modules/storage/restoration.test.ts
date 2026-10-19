@@ -32,7 +32,7 @@ describe('withStorage restoration', () => {
     expect(navigate).toHaveBeenCalledTimes(1)
     expect(navigate).toHaveBeenCalledWith(
       { q: 'stored', page: '2' },
-      { history: 'replace' },
+      { history: 'replace', scroll: false },
     )
     expect(memory.save).toHaveBeenLastCalledWith('filters', {
       format: 1,

@@ -9,3 +9,7 @@ export function useRouter(): never {
 export function useRuntimeConfig(): never {
   throw new Error('useRuntimeConfig is not available in this unit-test stub')
 }
+
+export function nextTick(): Promise<void> {
+  return Promise.resolve()
+}

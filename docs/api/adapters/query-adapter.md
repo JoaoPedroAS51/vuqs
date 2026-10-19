@@ -61,7 +61,7 @@ interface QueryAdapterDefaultOptions extends NavigateOptions {
 | Property | Type | Description |
 | --- | --- | --- |
 | `history` | `'replace' \| 'push'` | Optional. Push a history entry or replace the current one. |
-| `scroll` | `boolean` | Optional. Whether navigation scrolls, forwarded to the adapter. |
+| `scroll` | `boolean \| ScrollToOptions` | Optional. Where the window scrolls after navigation, forwarded to the adapter. |
 | `throttleMs` | `number` | Optional. Coalesce writes within this many milliseconds. |
 | `clearOnDefault` | `boolean` | Optional. Drop a value from the URL when it equals its resolved default. |
 
@@ -73,7 +73,7 @@ these compose with per-instance and per-call options.
 ```ts
 interface NavigateOptions {
   history?: 'replace' | 'push'
-  scroll?: boolean
+  scroll?: boolean | ScrollToOptions
 }
 ```
 

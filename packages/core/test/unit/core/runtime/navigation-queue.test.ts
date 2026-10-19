@@ -1,5 +1,5 @@
 import type { ParsedQuery, ParsedQueryRaw } from '../../../../src/core/query/types'
-import type { QueryStateNavigate } from '../../../../src/core/runtime/adapter'
+import type { NavigateOptions, QueryStateNavigate } from '../../../../src/core/runtime/adapter'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { createApp, effectScope, nextTick, ref, watchEffect } from 'vue'
 import { installQueryAdapter } from '../../../../src/core/bindings/adapter-provider'
@@ -533,6 +533,31 @@ describe('shared update queue', () => {
     expect(first.query.value).toEqual({ q: 'a' })
     expect(second.navigate).toHaveBeenCalledTimes(1)
     expect(second.query.value).toEqual({ q: 'b' })
+  })
+})
+
+describe('coalesced scroll option', () => {
+  it.each<{ name: string, scrolls: NavigateOptions['scroll'][], expected: NavigateOptions['scroll'] }>([
+    { name: 'false then true', scrolls: [false, true], expected: true },
+    { name: 'true then false', scrolls: [true, false], expected: true },
+    { name: 'an object then false', scrolls: [{ top: 100 }, false], expected: { top: 100 } },
+    { name: 'two objects', scrolls: [{ top: 100 }, { top: 400 }], expected: { top: 400 } },
+    { name: 'an object then true', scrolls: [{ top: 100 }, true], expected: true },
+    { name: 'only false', scrolls: [false, false], expected: false },
+  ])('navigates with the last scrolling value: $name', async ({ scrolls, expected }) => {
+    const navigate = vi.fn<QueryStateNavigate>()
+    const queue = new ThrottledQueue({ query: ref<ParsedQuery>({}), navigate })
+
+    try {
+      scrolls.forEach((scroll, index) => queue.push({ [`p${index}`]: 'v' }, { scroll }, 0))
+      await flush()
+
+      expect(navigate).toHaveBeenCalledOnce()
+      expect(navigate).toHaveBeenCalledWith(expect.anything(), { scroll: expected })
+    }
+    finally {
+      queue.reset()
+    }
   })
 })
 

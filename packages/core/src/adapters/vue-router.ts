@@ -1,6 +1,6 @@
-import type { LocationQueryRaw, Router } from 'vue-router'
+import type { LocationQueryRaw, RouteLocationNormalized, RouteLocationRaw, Router, RouterScrollBehavior } from 'vue-router'
 import type { ParsedQuery } from '../core/query/types'
-import type { QueryAdapter, QueryAdapterDefaultOptions } from '../core/runtime/adapter'
+import type { NavigateOptions, QueryAdapter, QueryAdapterDefaultOptions } from '../core/runtime/adapter'
 import { isNavigationFailure, NavigationFailureType, useRouter } from 'vue-router'
 import { provideQueryAdapter } from '../core/bindings/adapter-provider'
 import { debugChannelForAdapter, emitDebug, emitWarn, isDebugArmed } from '../core/diagnostics/bus'
@@ -32,7 +32,6 @@ export function createVueRouterAdapter(options: VueRouterAdapterOptions = {}): Q
     debugName: 'vue-router',
     query: () => router.currentRoute.value.query as ParsedQuery,
     navigate: async (query, navigateOptions) => {
-      // `scroll` has no per-call equivalent in vue-router (it is `scrollBehavior`), so it is ignored.
       // Carry the current hash forward: a location object without `hash` resets it to `''`.
       const location = { query: query as LocationQueryRaw, hash: router.currentRoute.value.hash }
       const historyMode = navigateOptions.history === 'push' ? 'push' : 'replace'
@@ -42,6 +41,8 @@ export function createVueRouterAdapter(options: VueRouterAdapterOptions = {}): Q
       if (!managed && isDebugArmed(channel)) {
         emitDebug(channel, 'adapter:navigate', { adapter: 'vue-router', mode: historyMode, query: { ...query } })
       }
+
+      const releaseScroll = registerScroll(router, location, navigateOptions.scroll ?? false)
 
       try {
         const failure = await (navigateOptions.history === 'push' ? router.push(location) : router.replace(location))
@@ -56,6 +57,9 @@ export function createVueRouterAdapter(options: VueRouterAdapterOptions = {}): Q
           emitWarn(channel, 'adapter:error', { adapter: 'vue-router', error })
         }
         throw error
+      }
+      finally {
+        releaseScroll()
       }
     },
     defaultOptions: options.defaultOptions,
@@ -76,4 +80,88 @@ export function provideVueRouterAdapter(options?: VueRouterAdapterOptions): Quer
   provideQueryAdapter(adapter)
 
   return adapter
+}
+
+// Scroll
+
+type ScrollValue = NonNullable<NavigateOptions['scroll']>
+
+interface PendingScroll {
+  readonly fullPath: string
+  readonly scroll: ScrollValue
+}
+
+interface RouterScrollState {
+  wrapper?: RouterScrollBehavior
+  readonly pending: PendingScroll[]
+  readonly values: WeakMap<RouteLocationNormalized, ScrollValue>
+}
+
+const scrollStates = new WeakMap<Router, RouterScrollState>()
+
+function registerScroll(router: Router, location: RouteLocationRaw, scroll: ScrollValue): () => void {
+  const state = installScrollBehavior(router)
+  const entry: PendingScroll = { fullPath: router.resolve(location).fullPath, scroll }
+
+  state.pending.push(entry)
+
+  return () => {
+    const index = state.pending.indexOf(entry)
+
+    if (index !== -1) {
+      state.pending.splice(index, 1)
+    }
+  }
+}
+
+function installScrollBehavior(router: Router): RouterScrollState {
+  const state = scrollStates.get(router) ?? createScrollState(router)
+  const current = router.options.scrollBehavior
+  const isWrapped = current !== undefined && current === state.wrapper
+
+  if (!isWrapped) {
+    state.wrapper = wrapScrollBehavior(router, state.values, current)
+    router.options.scrollBehavior = state.wrapper
+  }
+
+  return state
+}
+
+// `afterEach` runs before the deferred `scrollBehavior` and receives the same route
+// object, so a value bound here reaches only the navigation that carried it.
+function createScrollState(router: Router): RouterScrollState {
+  const state: RouterScrollState = { pending: [], values: new WeakMap() }
+
+  router.afterEach((to, _from, failure) => {
+    if (failure) {
+      return
+    }
+
+    const index = state.pending.findIndex(entry => entry.fullPath === to.fullPath)
+
+    if (index !== -1) {
+      state.values.set(to, state.pending[index]!.scroll)
+      state.pending.splice(index, 1)
+    }
+  })
+  scrollStates.set(router, state)
+
+  return state
+}
+
+function wrapScrollBehavior(
+  router: Router,
+  values: WeakMap<RouteLocationNormalized, ScrollValue>,
+  base: RouterScrollBehavior | undefined,
+): RouterScrollBehavior {
+  return (to, from, savedPosition) => {
+    const scroll = values.get(to)
+
+    // A newer navigation may have committed before this deferred call.
+    if (scroll !== undefined && to === router.currentRoute.value) {
+      return scroll === true ? { left: 0, top: 0 } : scroll
+    }
+
+    return base?.(to, from, savedPosition)
+  }
 }

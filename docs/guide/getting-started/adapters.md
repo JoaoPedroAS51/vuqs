@@ -131,7 +131,8 @@ app.mount('#app')
 The adapter reads `window.location.search` and writes with `history.replaceState`,
 or `history.pushState` when `history` is `'push'`. Writes preserve the pathname,
 hash, and existing `history.state`. Scroll stays in place unless `scroll` is `true`,
-which scrolls to the top.
+which scrolls to the top-left, or a `ScrollToOptions` object. The adapter scrolls
+after the DOM updates.
 
 Objects use dotted keys (`filters.sort=name`). Arrays of scalar values use repeated
 keys (`tag=a&tag=b`). Numbers and booleans read back as strings, which codecs decode.
@@ -195,8 +196,8 @@ jobs:
 
 1. **Stringify** the query, for example with `qs`.
 2. **Navigate**, pushing or replacing per `options.history`.
-3. **Honor** `options.scroll` if the router supports it. (vue-router maps scroll
-   to `scrollBehavior`, so the per-call option does not apply there.)
+3. **Scroll** after the DOM updates: to the top-left for `options.scroll === true`,
+   to the given position for a `ScrollToOptions` object, and nowhere for `false`.
 
 It completes synchronously or returns a promise for asynchronous navigation.
 

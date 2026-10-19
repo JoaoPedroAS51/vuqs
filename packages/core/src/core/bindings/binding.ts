@@ -156,7 +156,7 @@ export function createQueryBinding<TSchema extends QueryStateSchema>(
     schema: resolvedSchema,
     adapter,
     history: options.history ?? adapterDefaults?.history,
-    scroll: options.scroll ?? adapterDefaults?.scroll,
+    scroll: options.scroll ?? adapterDefaults?.scroll ?? false,
     throttleMs: options.throttleMs ?? adapterDefaults?.throttleMs,
     clearOnDefault: options.clearOnDefault,
     adapterClearOnDefault: adapterDefaults?.clearOnDefault,

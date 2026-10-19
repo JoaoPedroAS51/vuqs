@@ -22,13 +22,35 @@ q.set('laptop', { history: 'replace' }) // no new history entry (the default)
 
 ### `scroll`
 
-Whether the navigation scrolls. Forwarded to the adapter, which decides how to
-honor it. With `vue-router`, scrolling is governed by the router's
-`scrollBehavior`, so this per-call option has no effect there.
+Where the window scrolls after the navigation. Writes keep the current position
+unless they ask to scroll.
 
 ```ts
-q.set('laptop', { scroll: false })
+page.set(2, { scroll: true }) // top-left of the page
+page.set(2, { scroll: { top: 0, behavior: 'smooth' } }) // as window.scrollTo(options)
+q.set('laptop', { scroll: false }) // keep the position (the default)
 ```
+
+- `false` (default): keeps the position, which suits filters and search boxes.
+- `true`: scrolls to the top-left, for example when a pager moves to the next page.
+- A `ScrollToOptions` object (`top`, `left`, `behavior`): scrolls as
+  `window.scrollTo` does with it. An omitted coordinate keeps that axis.
+
+The adapter scrolls after the DOM reflects the navigation, so a position inside
+content that the write renders is reachable. When writes coalesce into one
+navigation, the last value that scrolls wins over `false`. A `scroll` in the
+adapter's `defaultOptions` (in Nuxt, `vuqs.adapter.defaultOptions`) applies to every
+write that does not set its own, as described in [Precedence](#precedence).
+
+With `vue-router`, the adapter applies `scroll` to its own navigations by wrapping
+the router's `scrollBehavior`. Links, `router.push` from application code and
+back/forward still go through your `scrollBehavior`, including saved positions.
+
+::: warning Custom `scrollBehavior`
+vuqs writes do not run a custom `scrollBehavior`, so its smooth scrolling, header
+offsets, element targets or scroll containers do not apply to them. To move the
+page on a write, pass a position in `scroll`, such as `{ top: 120 }`.
+:::
 
 ### `throttleMs`
 
@@ -93,7 +115,7 @@ value, including default-equal ones.
 | Option | Type | Default | Settable at |
 | --- | --- | --- | --- |
 | `history` | `'push' \| 'replace'` | `'replace'` | per call, composable, adapter |
-| `scroll` | `boolean` | adapter | per call, composable, adapter |
+| `scroll` | `boolean \| ScrollToOptions` | `false` | per call, composable, adapter |
 | `throttleMs` | `number` | microtask | composable, adapter |
 | `clearOnDefault` | `boolean` | `true` | composable, adapter |
 

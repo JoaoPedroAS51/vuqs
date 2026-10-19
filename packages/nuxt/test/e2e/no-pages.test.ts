@@ -1,3 +1,4 @@
+import type { NuxtPage } from '@nuxt/test-utils/e2e'
 import { fileURLToPath } from 'node:url'
 import { $fetch, createPage, setup } from '@nuxt/test-utils/e2e'
 import { describe, expect, it } from 'vitest'
@@ -65,4 +66,77 @@ describe('no-pages fixture', async () => {
       await page.close()
     }
   })
+
+  describe('scroll', () => {
+    it.each([
+      { button: '#scroll-true', from: { x: 500, y: 800 }, url: '**/scroll?page=2', expected: { x: 0, y: 0 } },
+      { button: '#scroll-object', from: { x: 0, y: 0 }, url: '**/scroll?page=2', expected: { x: 0, y: 400 } },
+      { button: '#scroll-vertical', from: { x: 500, y: 800 }, url: '**/scroll?page=2', expected: { x: 500, y: 0 } },
+      { button: '#scroll-coalesce', from: { x: 500, y: 800 }, url: '**/scroll?page=3', expected: { x: 0, y: 0 } },
+    ])('scrolls a $button write as requested', async ({ button, from, url, expected }) => {
+      const page = await openScrolled(from)
+      try {
+        await page.locator(button).click()
+        await page.waitForURL(url)
+        await waitForScroll(page, expected)
+      }
+      finally {
+        await page.close()
+      }
+    })
+
+    it.each(['#scroll-false', '#scroll-unset'])('keeps the position for a %s write', async (button) => {
+      const page = await openScrolled({ x: 500, y: 800 })
+      try {
+        await page.locator(button).click()
+        await page.waitForURL('**/scroll?page=2')
+        await page.waitForFunction(() => document.querySelector('#page')?.textContent?.trim() === '2')
+        await page.evaluate(() => new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        }))
+        expect(await readScroll(page)).toEqual({ x: 500, y: 800 })
+      }
+      finally {
+        await page.close()
+      }
+    })
+
+    it('reaches a position that exists only after the update renders', async () => {
+      const page = await openScrolled({ x: 0, y: 0 })
+      try {
+        const maxBefore = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)
+        expect(maxBefore).toBeLessThan(2500)
+
+        await page.locator('#scroll-grow').click()
+        await page.waitForURL('**/scroll?rows=2')
+        await waitForScroll(page, { x: 0, y: 2500 })
+      }
+      finally {
+        await page.close()
+      }
+    })
+  })
 })
+
+interface ScrollPosition {
+  x: number
+  y: number
+}
+
+async function openScrolled(position: ScrollPosition): Promise<NuxtPage> {
+  const page = await createPage('/scroll')
+  await page.evaluate(({ x, y }) => window.scrollTo(x, y), position)
+  await waitForScroll(page, position)
+  return page
+}
+
+async function waitForScroll(page: NuxtPage, { x, y }: ScrollPosition): Promise<void> {
+  await page.waitForFunction(
+    expected => Math.round(window.scrollX) === expected.x && Math.round(window.scrollY) === expected.y,
+    { x, y },
+  )
+}
+
+function readScroll(page: NuxtPage): Promise<ScrollPosition> {
+  return page.evaluate(() => ({ x: Math.round(window.scrollX), y: Math.round(window.scrollY) }))
+}

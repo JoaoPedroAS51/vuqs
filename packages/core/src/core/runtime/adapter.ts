@@ -7,8 +7,16 @@ import type { ParsedQuery, ParsedQueryRaw } from '../query/types'
 export interface NavigateOptions {
   /** Replace the current history entry instead of pushing a new one. */
   history?: 'replace' | 'push'
-  /** Whether the navigation should scroll. */
-  scroll?: boolean
+  /**
+   * Scroll applied after the navigation.
+   * - `true`: scrolls the window to the top-left
+   * - `ScrollToOptions`: object scrolls to its position
+   * - `false`: keeps the current position.
+   *
+   * @default false
+   * @see https://developer.mozilla.org/docs/Web/API/Window/scrollTo
+   */
+  scroll?: boolean | ScrollToOptions
 }
 
 /**

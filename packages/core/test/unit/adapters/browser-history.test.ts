@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { toValue } from 'vue'
+import { nextTick, toValue } from 'vue'
 import { createBrowserHistoryAdapter } from '../../../src/adapters/browser-history'
 import { addDebugReporter } from '../../../src/core/diagnostics/bus'
 import { makeAdapter, makeBrowser } from '../../helpers/browser-history'
@@ -93,13 +93,53 @@ describe('createBrowserHistoryAdapter', () => {
     expect(browser.history.replaceState).toBe(replace)
   })
 
-  it('scrolls only when explicitly requested', () => {
-    const browser = makeBrowser()
-    const adapter = makeAdapter()
-    adapter.navigate({ q: 'a' }, { scroll: false })
-    expect(browser.scrollTo).not.toHaveBeenCalled()
-    adapter.navigate({ q: 'b' }, { scroll: true })
-    expect(browser.scrollTo).toHaveBeenCalledExactlyOnceWith(0, 0)
+  describe('scroll', () => {
+    it('scrolls to the top-left for true after the DOM update', async () => {
+      const browser = makeBrowser()
+      const adapter = makeAdapter()
+
+      adapter.navigate({ q: 'a' }, { scroll: true })
+      expect(browser.scrollTo).not.toHaveBeenCalled()
+
+      await nextTick()
+      expect(browser.scrollTo).toHaveBeenCalledExactlyOnceWith({ left: 0, top: 0 })
+    })
+
+    it('scrolls to a ScrollToOptions object after the DOM update', async () => {
+      const browser = makeBrowser()
+      const adapter = makeAdapter()
+      const scroll: ScrollToOptions = { top: 400, behavior: 'smooth' }
+
+      adapter.navigate({ q: 'a' }, { scroll })
+      expect(browser.scrollTo).not.toHaveBeenCalled()
+
+      await nextTick()
+      expect(browser.scrollTo).toHaveBeenCalledExactlyOnceWith(scroll)
+    })
+
+    it.each([
+      { name: 'false', options: { scroll: false } },
+      { name: 'no value', options: {} },
+    ])('does not scroll for $name', async ({ options }) => {
+      const browser = makeBrowser()
+      const adapter = makeAdapter()
+
+      adapter.navigate({ q: 'a' }, options)
+      await nextTick()
+
+      expect(browser.scrollTo).not.toHaveBeenCalled()
+    })
+
+    it('does not scroll when disposed before the DOM update', async () => {
+      const browser = makeBrowser()
+      const adapter = makeAdapter()
+
+      adapter.navigate({ q: 'a' }, { scroll: true })
+      adapter.dispose()
+      await nextTick()
+
+      expect(browser.scrollTo).not.toHaveBeenCalled()
+    })
   })
 
   it('propagates history errors without committing a query snapshot', () => {

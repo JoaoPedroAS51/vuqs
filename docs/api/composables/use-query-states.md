@@ -80,7 +80,7 @@ interface UseQueryStatesOptions extends NavigateOptions {
 | Property | Type | Description |
 | --- | --- | --- |
 | `history` | `'replace' \| 'push'` | Optional. Defaults to `'replace'`. Push or replace a history entry. |
-| `scroll` | `boolean` | Optional. Defaults to the adapter's behavior. Forwarded to the adapter. |
+| `scroll` | `boolean \| ScrollToOptions` | Optional. Defaults to `false`. Where the window scrolls after navigation. |
 | `throttleMs` | `number` | Optional. Defaults to a microtask. Coalesce writes within this many milliseconds. |
 | `clearOnDefault` | `boolean` | Optional. Defaults to `true`. Drop values equal to their resolved defaults. |
 

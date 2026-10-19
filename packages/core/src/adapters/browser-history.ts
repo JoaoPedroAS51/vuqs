@@ -1,6 +1,6 @@
 import type { ParsedQuery, ParsedQueryValue } from '../core/query/types'
 import type { QueryAdapter, QueryAdapterDefaultOptions } from '../core/runtime/adapter'
-import { onScopeDispose, shallowRef } from 'vue'
+import { nextTick, onScopeDispose, shallowRef } from 'vue'
 import { provideQueryAdapter } from '../core/bindings/adapter-provider'
 import { debugChannelForAdapter, emitDebug, emitWarn, isDebugArmed } from '../core/diagnostics/bus'
 import { setPath } from '../core/query/path'
@@ -77,8 +77,14 @@ export function createBrowserHistoryAdapter(options: BrowserHistoryAdapterOption
 
         refresh()
 
-        if (navigateOptions.scroll === true) {
-          browser.scrollTo(0, 0)
+        const { scroll = false } = navigateOptions
+
+        if (scroll !== false) {
+          void nextTick(() => {
+            if (!disposed) {
+              browser.scrollTo(scroll === true ? { left: 0, top: 0 } : scroll)
+            }
+          })
         }
       }
       catch (error) {

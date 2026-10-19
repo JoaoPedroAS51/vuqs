@@ -92,6 +92,12 @@ describe('@vuqs/nuxt module', () => {
     expect(runtimeConfig).toEqual({ adapter: { defaultOptions: { history: 'replace' } } })
   })
 
+  it('forwards a ScrollToOptions scroll default into runtimeConfig', async () => {
+    const { runtimeConfig } = await registerWith({ adapter: { defaultOptions: { scroll: { top: 0, behavior: 'smooth' } } } })
+
+    expect(runtimeConfig).toEqual({ adapter: { defaultOptions: { scroll: { top: 0, behavior: 'smooth' } } } })
+  })
+
   it('preserves runtime config overrides while filling missing adapter defaults', async () => {
     const { runtimeConfig } = await registerWith({
       adapter: { defaultOptions: { history: 'push', scroll: true, throttleMs: 50 } },

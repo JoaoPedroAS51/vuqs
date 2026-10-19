@@ -34,7 +34,8 @@ function createBrowserHistoryAdapter(options?: BrowserHistoryAdapterOptions): Br
   - `query`: a reactive getter for the parsed URL query.
   - `navigate`: synchronously writes with `replaceState`, or `pushState` for
     `history: 'push'`. Preserves the pathname, hash, and `history.state`.
-    `scroll: true` scrolls to the top; otherwise the adapter leaves scroll in place.
+    After the DOM updates, `scroll: true` scrolls to the top-left and a
+    `ScrollToOptions` object scrolls to its position; `false` keeps the position.
   - `refresh()`: reads the current URL after external History API writes.
   - `dispose()`: removes the `popstate` listener and cancels pending writes.
     Repeated disposal is safe. Navigation and refresh throw after disposal.

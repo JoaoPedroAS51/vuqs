@@ -15,9 +15,7 @@ import { runManagedNavigation } from './managed-navigation'
 import { applyOverlay } from './overlay'
 import { getQueryReadLayer } from './read-layer'
 
-// Coalescing several writes in one window: an explicit value carries over, with
-// the more navigational choice winning a conflict (`push` over `replace`, scroll
-// over no scroll). An option left undefined never overrides one already set.
+// Coalesced writes: `push` wins over `replace`, and the last scrolling value wins over `false`.
 function mergeOptions(base: NavigateOptions, next: NavigateOptions): NavigateOptions {
   const result: NavigateOptions = { ...base }
 
@@ -25,8 +23,8 @@ function mergeOptions(base: NavigateOptions, next: NavigateOptions): NavigateOpt
     result.history = result.history === 'push' || next.history === 'push' ? 'push' : next.history
   }
 
-  if (next.scroll !== undefined) {
-    result.scroll = result.scroll === true || next.scroll === true ? true : next.scroll
+  if (next.scroll !== undefined && (next.scroll !== false || result.scroll === undefined)) {
+    result.scroll = next.scroll
   }
 
   return result
