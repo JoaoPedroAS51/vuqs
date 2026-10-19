@@ -478,7 +478,7 @@ describe('default omission with composed pipelines', () => {
 describe('default omission is local to the writing binding', () => {
   const schema = { value: queryParam('value', codecs.integer) }
 
-  async function writeA(clearOnDefault: boolean, mountObserver: boolean) {
+  const writeA = async (clearOnDefault: boolean, mountObserver: boolean) => {
     const test = withTestQuery({})
     const a = test.build(() => useQueryStates(schema, { clearOnDefault }).use(withRuntimeDefaults()))
     const b = mountObserver ? test.build(() => useQueryStates(schema).use(withRuntimeDefaults())) : undefined

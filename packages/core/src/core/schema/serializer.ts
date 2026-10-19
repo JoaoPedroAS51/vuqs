@@ -134,11 +134,11 @@ export function createSerializer<TSchema extends QueryStateSchemaInput>(
   const normalizedSchema = normalizeQueryStateSchema(schema)
   const staticEvaluator = createStaticOmissionEvaluator(normalizedSchema)
 
-  function serialize(
+  const serialize = (
     ...args:
       | [QueryStateWriteValues<SerializerSchema<TSchema>>]
       | [ParsedQuery | string, QueryStateWriteValues<SerializerSchema<TSchema>>]
-  ): ParsedQueryRaw | string {
+  ): ParsedQueryRaw | string => {
     const hasBase = args.length === 2
     const rawBase = hasBase ? args[0] : undefined
     const values = (hasBase ? args[1] : args[0]) as QueryStateWriteValues<SerializerSchema<TSchema>>

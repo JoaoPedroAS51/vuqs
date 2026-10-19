@@ -20,7 +20,7 @@ describe('withContext', () => {
     sort: queryParam('sort', codecs.literal(['newest', 'oldest'] as const)),
   }
 
-  function setupContext(initial: ParsedQuery = {}) {
+  const setupContext = (initial: ParsedQuery = {}) => {
     const { query, build } = setup(initial)
     const tab = ref<'products' | 'orders'>('products')
     const q = build(() =>
@@ -264,7 +264,7 @@ describe('withContext switchTo', () => {
 describe('withContext validity and preservation', () => {
   type Tab = 'products' | 'orders'
 
-  function context() {
+  const context = () => {
     const { query, build } = setup({})
     const tab = ref<Tab>('products')
     const targets: ParsedQueryRaw[] = []

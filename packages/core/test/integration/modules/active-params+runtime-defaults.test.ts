@@ -37,7 +37,7 @@ describe('withActiveParams composed activity', () => {
     b: queryParam('b', codecs.integer.withDefault(100)),
   })
 
-  function mount(initial: Parameters<typeof setup>[0], param: AnyDefinedQueryParam, runtimeFirst: boolean) {
+  const mount = (initial: Parameters<typeof setup>[0], param: AnyDefinedQueryParam, runtimeFirst: boolean) => {
     return setup(initial).build(() => {
       const query = useQueryStates({ record: param })
 

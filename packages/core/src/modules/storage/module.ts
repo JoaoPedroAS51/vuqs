@@ -146,7 +146,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
   const unsettledRevisions = new Set<number>()
   const settlementWaiters = new Set<() => void>()
 
-  function notifySettlement(): void {
+  const notifySettlement = (): void => {
     for (const resolve of settlementWaiters) {
       resolve()
     }
@@ -154,13 +154,13 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     settlementWaiters.clear()
   }
 
-  function settleRevision(revision: number): void {
+  const settleRevision = (revision: number): void => {
     if (unsettledRevisions.delete(revision)) {
       notifySettlement()
     }
   }
 
-  function recordError(cause: unknown, operation: StorageFailureOperation, revision = 0): void {
+  const recordError = (cause: unknown, operation: StorageFailureOperation, revision = 0): void => {
     if (disposed) {
       return
     }
@@ -176,7 +176,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     statusState.value = 'error'
   }
 
-  function recordSuccess(revision: number): void {
+  const recordSuccess = (revision: number): void => {
     if (disposed || revision < outcomeRevision) {
       return
     }
@@ -189,7 +189,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     }
   }
 
-  function settleReady(): void {
+  const settleReady = (): void => {
     if (readyResolved) {
       return
     }
@@ -198,7 +198,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     resolveReady()
   }
 
-  async function pumpWrites(): Promise<void> {
+  const pumpWrites = async (): Promise<void> => {
     try {
       while (pendingWrite !== undefined) {
         const write = pendingWrite
@@ -234,7 +234,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     }
   }
 
-  function ensurePump(): Promise<void> {
+  const ensurePump = (): Promise<void> => {
     if (pumpPromise !== undefined) {
       return pumpPromise
     }
@@ -244,7 +244,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     return pumpPromise
   }
 
-  function materializePersistRequest(): void {
+  const materializePersistRequest = (): void => {
     if (!persistRequested || disposed) {
       return
     }
@@ -287,7 +287,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     }
   }
 
-  function requestPersist(): void {
+  const requestPersist = (): void => {
     persistRequested = true
 
     if (persistMicrotaskQueued) {
@@ -301,7 +301,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     })
   }
 
-  async function waitForRevision(revision: number): Promise<void> {
+  const waitForRevision = async (revision: number): Promise<void> => {
     for (;;) {
       const pending = [...unsettledRevisions].some(item => item <= revision)
 
@@ -315,13 +315,13 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     }
   }
 
-  async function flushWrites(): Promise<void> {
+  const flushWrites = async (): Promise<void> => {
     materializePersistRequest()
     const revision = requestedRevision
     await waitForRevision(revision)
   }
 
-  async function flush(): Promise<void> {
+  const flush = async (): Promise<void> => {
     let revision = requestedRevision
 
     if (readyResolved && !disposed) {
@@ -340,7 +340,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     await waitForRevision(revision)
   }
 
-  function handleSourceChange(markBeforeLoad = false): void {
+  const handleSourceChange = (markBeforeLoad = false): void => {
     sourceRevision++
 
     if (!restorationSettled) {
@@ -354,7 +354,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     requestPersist()
   }
 
-  function beginMirroring(): void {
+  const beginMirroring = (): void => {
     restorationSettled = true
 
     if (statusState.value === 'restoring') {
@@ -362,7 +362,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     }
   }
 
-  async function persistCurrentBeforeReady(): Promise<void> {
+  const persistCurrentBeforeReady = async (): Promise<void> => {
     // A source change can arrive while the initial save/remove is in flight. Retry
     // until one persisted revision spans a stable source interval, then switch to
     // normal mirroring synchronously so no change can fall between the two phases.
@@ -382,7 +382,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     }
   }
 
-  async function restoreFromStorage(): Promise<void> {
+  const restoreFromStorage = async (): Promise<void> => {
     if (disposed) {
       return
     }

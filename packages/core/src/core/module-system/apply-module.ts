@@ -89,7 +89,7 @@ function installModule<TSchema extends QueryStateSchema>(
 
   // Idempotent. Closes the owned-subscription lifetime, removes the complete installation,
   // then releases what the module subscribed through its core.
-  function cleanup(): void {
+  const cleanup = (): void => {
     if (closed) {
       return
     }

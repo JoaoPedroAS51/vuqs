@@ -18,7 +18,7 @@ export const test = base.extend<{ browserErrors: void }>({
 export { expect }
 
 export async function expectUrl(page: Page, path: string): Promise<void> {
-  function location(url: URL): { pathname: string, query: [string, string][], hash: string } {
+  const location = (url: URL): { pathname: string, query: [string, string][], hash: string } => {
     url.searchParams.sort()
     return { pathname: url.pathname, query: [...url.searchParams], hash: url.hash }
   }

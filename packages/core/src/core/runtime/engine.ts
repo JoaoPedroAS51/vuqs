@@ -255,7 +255,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
   const explicitValues = computed(() => evaluation.projectExplicit(parsedValues.value, readEffectiveQuery))
   const values = computed(() => evaluation.projectResolved(parsedValues.value, candidates.value, readEffectiveQuery))
 
-  function transact(request: QueryTransactionRequest<TSchema>): void {
+  const transact = (request: QueryTransactionRequest<TSchema>): void => {
     const input = request.values as Record<string, unknown>
 
     // Prepare the complete transaction before mutating the shared runtime.

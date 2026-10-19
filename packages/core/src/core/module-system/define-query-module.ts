@@ -183,31 +183,36 @@ export function defineQueryModule(
   const { name, states, state } = definition
 
   const factory = (...args: unknown[]): unknown => {
-    const [first, second] = args
-    const isTargeted = args.length >= 2 || typeof first === 'string' || isDefinedParam(first)
+    const [optionsOrSchemaOrParam] = args
+    const isParam = typeof optionsOrSchemaOrParam === 'string' || isDefinedParam(optionsOrSchemaOrParam)
+    const isOptionsOnly = args.length < 2 && !isParam
 
-    if (!isTargeted) {
+    if (isOptionsOnly) {
+      const options = optionsOrSchemaOrParam
+
       return packageQueryModule({
         name,
-        states: states ? (core: QueryCore<QueryStateSchema>) => states(core, first) : undefined,
+        states: states ? (core: QueryCore<QueryStateSchema>) => states(core, options) : undefined,
         state: state
-          ? <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>, key: keyof TSchema & string) => state(core, key, first)
+          ? <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>, key: keyof TSchema & string) => state(core, key, options)
           : undefined,
       })
     }
 
-    if (typeof first === 'string' || isDefinedParam(first)) {
+    const [, options] = args
+
+    if (isParam) {
       return packageQueryModule({
         name,
         state: state
-          ? <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>, key: keyof TSchema & string) => state(core, key, second)
+          ? <TSchema extends QueryStateSchema>(core: QueryCore<TSchema>, key: keyof TSchema & string) => state(core, key, options)
           : undefined,
       })
     }
 
     return packageQueryModule({
       name,
-      states: states ? (core: QueryCore<QueryStateSchema>) => states(core, second) : undefined,
+      states: states ? (core: QueryCore<QueryStateSchema>) => states(core, options) : undefined,
     })
   }
 

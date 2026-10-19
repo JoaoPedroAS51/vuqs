@@ -119,15 +119,15 @@ export function useQueryStates(schema: QueryStateSchemaInput, options: UseQueryS
 
   const values = toReactiveQuery(binding)
 
-  function patch(next: QueryStateWriteValues<typeof normalizedSchema>, perCall?: NavigateOptions): void {
+  const patch = (next: QueryStateWriteValues<typeof normalizedSchema>, perCall?: NavigateOptions): void => {
     binding.transact({ mode: 'patch', values: next, navigation: perCall })
   }
 
-  function replace(next: QueryStateValues<typeof normalizedSchema>, perCall?: NavigateOptions): void {
+  const replace = (next: QueryStateValues<typeof normalizedSchema>, perCall?: NavigateOptions): void => {
     binding.transact({ mode: 'replace', values: next, navigation: perCall })
   }
 
-  function clear(perCall?: NavigateOptions): void {
+  const clear = (perCall?: NavigateOptions): void => {
     replace({}, perCall)
   }
 

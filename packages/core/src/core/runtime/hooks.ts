@@ -45,7 +45,7 @@ export interface QueryHookBus {
 export function createQueryHooks(channel: DebugChannelHandle): QueryHookBus {
   const registry = new Map<keyof QueryHooks, Set<HookHandler>>()
 
-  function on<Event extends keyof QueryHooks>(event: Event, handler: QueryHooks[Event]): () => void {
+  const on = <Event extends keyof QueryHooks>(event: Event, handler: QueryHooks[Event]): () => void => {
     let handlers = registry.get(event)
 
     if (!handlers) {
@@ -61,7 +61,7 @@ export function createQueryHooks(channel: DebugChannelHandle): QueryHookBus {
     }
   }
 
-  function emit<Event extends keyof QueryHooks>(event: Event, ...args: HookArgs<Event>): void {
+  const emit = <Event extends keyof QueryHooks>(event: Event, ...args: HookArgs<Event>): void => {
     if (isDebugArmed(channel)) {
       emitDebug(channel, 'hooks:emit', { event: String(event), args: [...args] })
     }

@@ -265,7 +265,7 @@ function createContextControls<TSchema extends QueryStateSchema, TContext extend
   const active = computed(() => toValue(options.active))
   const contextKeys = key === undefined ? Object.keys(core.schema) as Array<keyof TSchema & string> : [key]
 
-  function build(currentQuery: ParsedQuery, nextContext: TContext): ParsedQueryRaw {
+  const build = (currentQuery: ParsedQuery, nextContext: TContext): ParsedQueryRaw => {
     const parsed = parseQueryStates(core.schema, currentQuery) as Record<string, unknown>
     const kept: Record<string, unknown> = {}
 
@@ -284,7 +284,7 @@ function createContextControls<TSchema extends QueryStateSchema, TContext extend
     return buildQuery(core.schema, currentQuery, dropDefaults(core.schema, values))
   }
 
-  function keptContextKeys(currentQuery: ParsedQuery, nextContext: TContext): string[] {
+  const keptContextKeys = (currentQuery: ParsedQuery, nextContext: TContext): string[] => {
     const parsed = parseQueryStates(core.schema, currentQuery) as Record<string, unknown>
 
     return contextKeys.filter(paramKey =>
@@ -294,7 +294,7 @@ function createContextControls<TSchema extends QueryStateSchema, TContext extend
     )
   }
 
-  function buildContextQuery(currentQuery: ParsedQuery, nextContext: TContext): ParsedQueryRaw {
+  const buildContextQuery = (currentQuery: ParsedQuery, nextContext: TContext): ParsedQueryRaw => {
     // Avoid diagnostic-only query analysis when unobserved.
     if (isDebugArmed(core.debug)) {
       const kept = keptContextKeys(currentQuery, nextContext)
@@ -303,7 +303,7 @@ function createContextControls<TSchema extends QueryStateSchema, TContext extend
     return build(currentQuery, nextContext)
   }
 
-  function switchTo(target: TContext, navigateOptions?: NavigateOptions): void {
+  const switchTo = (target: TContext, navigateOptions?: NavigateOptions): void => {
     if (!options.navigate) {
       throw new Error('[vuqs] withContext: provide a `navigate` option to use switchTo()')
     }

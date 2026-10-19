@@ -60,7 +60,7 @@ describe('pipeline descriptors', () => {
     request: { mode: 'patch' as const, values: { value: 1 } },
   }
 
-  function setup() {
+  const setup = () => {
     const { pipeline, installations } = createPipelineFixture(schema)
     const read = (
       callback: (values: any, context: any) => Values,
@@ -393,7 +393,7 @@ describe('installed registrations', () => {
   const context = { stage: 'read' as const, projection: 'resolved' as const, schema, query: {} }
   type Values = Record<string, unknown>
 
-  function append(fixture: ReturnType<typeof createPipelineFixture<typeof schema>>, label: string, options: { enforce?: 'pre' | 'default' | 'post' } = {}) {
+  const append = (fixture: ReturnType<typeof createPipelineFixture<typeof schema>>, label: string, options: { enforce?: 'pre' | 'default' | 'post' } = {}) => {
     return fixture.pipeline.define('read', ((values: Values) => ({ ...values, text: `${String(values.text ?? '')}${label}` })) as never, {
       projection: 'resolved',
       enforce: options.enforce,

@@ -38,13 +38,13 @@ export function createBrowserHistoryAdapter(options: BrowserHistoryAdapterOption
   const query = shallowRef(parseSearch(browser.location.search))
   let disposed = false
 
-  function assertActive(): void {
+  const assertActive = (): void => {
     if (disposed) {
       throw new Error('[vuqs] Browser history adapter has been disposed')
     }
   }
 
-  function refresh(): void {
+  const refresh = (): void => {
     assertActive()
     query.value = parseSearch(browser.location.search)
   }
@@ -150,7 +150,7 @@ function parseSearch(search: string): ParsedQuery {
 function stringifyQuery(query: ParsedQuery): string {
   const params = new URLSearchParams()
 
-  function append(path: string, value: ParsedQueryValue): void {
+  const append = (path: string, value: ParsedQueryValue): void => {
     if (value === null || value === undefined) {
       return
     }

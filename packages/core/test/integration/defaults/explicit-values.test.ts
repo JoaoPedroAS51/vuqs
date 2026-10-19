@@ -8,7 +8,7 @@ import { withTestQuery } from '../../helpers/adapter'
 describe('explicit values and default resolution', () => {
   const schema = { page: queryParam('page', codecs.integer.withDefault(1)) }
 
-  function mount(initial: Parameters<typeof withTestQuery>[0]) {
+  const mount = (initial: Parameters<typeof withTestQuery>[0]) => {
     const { build } = withTestQuery(initial)
     return build(() => useQueryStates(schema).use(withRuntimeDefaults()))
   }
@@ -152,7 +152,7 @@ describe('runtime defaults over object children', () => {
     to: queryParam('to', codecs.integer.withDefault(0)),
   })
 
-  function mount(initial: Parameters<typeof withTestQuery>[0]) {
+  const mount = (initial: Parameters<typeof withTestQuery>[0]) => {
     const { build } = withTestQuery(initial)
     return build(() => useQueryStates({ range }).use(withRuntimeDefaults()))
   }

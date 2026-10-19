@@ -85,7 +85,7 @@ describe('withRuntimeDefaults + withStorage', () => {
       b: queryParam('b', codecs.integer),
     })
 
-    function mountNested(initial: unknown, storageFirst: boolean) {
+    const mountNested = (initial: unknown, storageFirst: boolean) => {
       const memory = createMemoryStorage(initial)
       const test = setup()
       const state = test.build(() => {

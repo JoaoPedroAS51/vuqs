@@ -58,16 +58,14 @@ export function createQueryEvaluation<TSchema extends QueryStateSchema>(
 ): QueryEvaluation<TSchema> {
   const { schema, keys, runPipeline } = options
 
-  return { projectExplicit, projectCandidates, projectResolved, prepareWrite }
-
-  function projectExplicit(parsed: ParsedValues, getQuery: () => ParsedQuery): QueryStateValues<TSchema> {
+  const projectExplicit = (parsed: ParsedValues, getQuery: () => ParsedQuery): QueryStateValues<TSchema> => {
     return definedOnly(runPipeline('read', { ...parsed }, readContext('explicit', getQuery))) as QueryStateValues<TSchema>
   }
 
-  function projectCandidates(
+  const projectCandidates = (
     composed: DefaultCandidates,
     getQuery: () => ParsedQuery,
-  ): QueryStateContributions<TSchema> {
+  ): QueryStateContributions<TSchema> => {
     return runPipeline(
       'read',
       projectDefaultCandidates(composed),
@@ -75,11 +73,11 @@ export function createQueryEvaluation<TSchema extends QueryStateSchema>(
     ) as QueryStateContributions<TSchema>
   }
 
-  function projectResolved(
+  const projectResolved = (
     parsed: ParsedValues,
     composed: DefaultCandidates,
     getQuery: () => ParsedQuery,
-  ): QueryStateResolvedValues<TSchema> {
+  ): QueryStateResolvedValues<TSchema> => {
     // Preserve lower defaults for omitted children.
     return runPipeline(
       'read',
@@ -88,10 +86,10 @@ export function createQueryEvaluation<TSchema extends QueryStateSchema>(
     ) as QueryStateResolvedValues<TSchema>
   }
 
-  function prepareWrite(
+  const prepareWrite = (
     request: QueryTransactionRequest<TSchema>,
     inputs: WriteEvaluationInputs<TSchema>,
-  ): PreparedWrite<keyof TSchema & string> | undefined {
+  ): PreparedWrite<keyof TSchema & string> | undefined => {
     const input = request.values as Record<string, unknown>
 
     for (const key of Object.keys(input)) {
@@ -123,6 +121,8 @@ export function createQueryEvaluation<TSchema extends QueryStateSchema>(
       omitted: omission?.decisions ?? [],
     }
   }
+
+  return { projectExplicit, projectCandidates, projectResolved, prepareWrite }
 
   // The normal representation of a request: the write registrations run once over the
   // complete explicit map, then every affected param is encoded, before any automatic

@@ -15,7 +15,7 @@ export function createWebStorage(resolveStorage: () => Storage | undefined): Que
     throw new TypeError('[vuqs] createWebStorage: expected a storage resolver function')
   }
 
-  function resolve(): Storage {
+  const resolve = (): Storage => {
     const storage = resolveStorage()
 
     if (storage === undefined) {

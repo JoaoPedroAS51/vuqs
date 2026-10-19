@@ -569,7 +569,7 @@ describe('useQueryStates explicit partial composed writes', () => {
 describe('write policy through every bound writer', () => {
   type Query = ReturnType<typeof composed>
 
-  function composed() {
+  const composed = () => {
     const { build } = setup({ q: 'old' })
     const calls: Array<Record<string, unknown>> = []
     const query = build(() => useQueryStates(schema).use(core => ({

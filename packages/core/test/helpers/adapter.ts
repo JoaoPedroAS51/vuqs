@@ -32,7 +32,7 @@ export function withTestQuery(initial: ParsedQuery = {}): TestQuery {
   const scope = effectScope(true)
   let disposed = false
 
-  function dispose(): void {
+  const dispose = (): void => {
     if (disposed) {
       return
     }
@@ -46,7 +46,7 @@ export function withTestQuery(initial: ParsedQuery = {}): TestQuery {
     }
   }
 
-  function run<T>(create: () => T): T {
+  const run = <T>(create: () => T): T => {
     if (disposed) {
       throw new Error('The test query fixture has been disposed')
     }

@@ -203,7 +203,7 @@ describe('withRuntimeDefaults bindings sharing a schema', () => {
     b: queryParam('b', codecs.integer.withDefault(100)),
   })
 
-  function mountPair(initial: Parameters<typeof setup>[0] = {}) {
+  const mountPair = (initial: Parameters<typeof setup>[0] = {}) => {
     const test = setup(initial)
     const a = test.build(() => useQueryStates({ value }).use(withRuntimeDefaults()))
     const b = test.build(() => useQueryStates({ value }).use(withRuntimeDefaults()))
