@@ -33,6 +33,7 @@
     "@antfu/eslint-config": "catalog:",
     "@changesets/cli": "catalog:",
     "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
     "eslint": "catalog:",
     "eslint-plugin-import-x": "catalog:",
     "turbo": "catalog:",

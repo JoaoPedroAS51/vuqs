@@ -17,7 +17,7 @@ export default defineConfig({
   platform: 'neutral',
   sourcemap: true,
   dts: {
-    generator: 'tsc',
+    generator: 'tsgo',
     sourcemap: true,
   },
   fixedExtension: true,
@@ -31,4 +31,7 @@ export default defineConfig({
       defaultHandler(level, log)
     },
   },
+  suppressWarnings: [
+    /^TypeScript 7\.0 does not yet have a stable API and is experimental\. Some options will be unavailable\.$/,
+  ],
 })
