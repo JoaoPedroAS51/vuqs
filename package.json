@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "turbo run build --filter='./packages/*'",
-    "dev": "turbo run dev --filter=@vuqs/playground",
+    "dev": "turbo run dev --filter=@vuqs/core --filter=@vuqs/playground",
     "dev:prepare": "turbo run dev:prepare --filter='./packages/*'",
     "test": "turbo run test --filter='./packages/*'",
     "test:watch": "turbo run test:watch --filter='./packages/*'",

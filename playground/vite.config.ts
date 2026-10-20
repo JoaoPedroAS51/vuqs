@@ -3,7 +3,7 @@ import { defineConfig } from 'vite'
 
 const src = (path: string) => new URL(path, import.meta.url).pathname
 
-// Source aliases enable browser HMR; unbuild stubs require Node.
+// Source aliases enable browser HMR.
 // Match specific subpaths before the bare package alias.
 export default defineConfig({
   plugins: [vue()],

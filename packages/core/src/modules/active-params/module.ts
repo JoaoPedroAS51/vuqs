@@ -2,8 +2,6 @@ import type { ComputedRef } from 'vue'
 import type { QueryCore } from '../../core/module-system/query-core'
 import type { ModuleOptions } from '../../core/module-system/registry'
 import type { QueryStateContributions, QueryStateSchema, QueryStateValues } from '../../core/schema/schema'
-// Anchor the registry augmentation to the core entry
-import type {} from '../../index'
 import { computed } from 'vue'
 import { defineQueryModule } from '../../core/module-system/define-query-module'
 import { classifyDefault } from '../../core/schema/resolution'

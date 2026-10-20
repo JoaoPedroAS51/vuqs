@@ -24,61 +24,62 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     },
     "./debug": {
-      "types": "./dist/debug.d.ts",
+      "types": "./dist/debug.d.mts",
       "import": "./dist/debug.mjs"
     },
     "./debug/console": {
-      "types": "./dist/debug/console.d.ts",
+      "types": "./dist/debug/console.d.mts",
       "import": "./dist/debug/console.mjs"
     },
     "./debug-protocol": {
-      "types": "./dist/debug-protocol.d.ts",
+      "types": "./dist/debug-protocol.d.mts",
       "import": "./dist/debug-protocol.mjs"
     },
     "./adapters/vue-router": {
-      "types": "./dist/adapters/vue-router.d.ts",
+      "types": "./dist/adapters/vue-router.d.mts",
       "import": "./dist/adapters/vue-router.mjs"
     },
     "./adapters/testing": {
-      "types": "./dist/adapters/testing.d.ts",
+      "types": "./dist/adapters/testing.d.mts",
       "import": "./dist/adapters/testing.mjs"
     },
     "./adapters/browser-history": {
-      "types": "./dist/adapters/browser-history.d.ts",
+      "types": "./dist/adapters/browser-history.d.mts",
       "import": "./dist/adapters/browser-history.mjs"
     },
     "./testing": {
-      "types": "./dist/testing.d.ts",
+      "types": "./dist/testing.d.mts",
       "import": "./dist/testing.mjs"
     },
     "./modules": {
-      "types": "./dist/modules/index.d.ts",
+      "types": "./dist/modules/index.d.mts",
       "import": "./dist/modules/index.mjs"
     },
     "./shared": {
-      "types": "./dist/shared/index.d.ts",
+      "types": "./dist/shared/index.d.mts",
       "import": "./dist/shared/index.mjs"
     }
   },
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/index.d.mts",
   "files": [
     "LICENSE",
     "README.md",
-    "dist"
+    "dist",
+    "src"
   ],
   "engines": {
     "node": ">=22.12.0",
     "pnpm": ">=12 <13"
   },
   "scripts": {
-    "build": "unbuild",
-    "dev:prepare": "unbuild --stub",
+    "build": "tsdown",
+    "dev": "tsdown --watch --no-clean",
     "test": "vitest run",
     "test:watch": "vitest watch",
     "test:unit": "vitest run --project unit",
@@ -111,8 +112,8 @@
     "@playwright/test": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "tsdown": "catalog:",
     "typescript": "catalog:",
-    "unbuild": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
     "vue": "catalog:",

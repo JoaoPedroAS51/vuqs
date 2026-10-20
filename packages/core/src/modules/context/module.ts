@@ -5,8 +5,6 @@ import type { ParsedQuery, ParsedQueryRaw } from '../../core/query/types'
 import type { NavigateOptions } from '../../core/runtime/adapter'
 import type { PipelineDescriptor, ReadProjection } from '../../core/runtime/pipeline/contract'
 import type { QueryStateSchema, QueryStateValues } from '../../core/schema/schema'
-// Anchor the registry augmentation to the core entry
-import type {} from '../../index'
 import { computed, toValue, watch } from 'vue'
 import { emitDebug, isDebugArmed } from '../../core/diagnostics/bus'
 import { defineQueryModule } from '../../core/module-system/define-query-module'

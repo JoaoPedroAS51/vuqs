@@ -12,7 +12,6 @@
       "persistent": true
     },
     "dev:prepare": {
-      "dependsOn": ["^dev:prepare"],
       "cache": false
     },
     "test": {
@@ -55,6 +54,10 @@
     },
 
     // Nuxt
+    "@vuqs/nuxt#dev:prepare": {
+      "dependsOn": ["@vuqs/core#build"],
+      "cache": false
+    },
     "@vuqs/nuxt#build": {
       "dependsOn": ["@vuqs/core#build"],
       "outputs": ["dist/**"]

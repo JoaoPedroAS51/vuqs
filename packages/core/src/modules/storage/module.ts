@@ -1,8 +1,6 @@
 import type { QueryCore } from '../../core/module-system/query-core'
 import type { ModuleOptions } from '../../core/module-system/registry'
 import type { QueryStateSchema } from '../../core/schema/schema'
-// Anchor the registry augmentation to the core entry
-import type {} from '../../index'
 import type { QueryStorage, StorageApi, StorageControls, StorageOptions, StorageStatus } from './contract'
 import type { StoredQuerySnapshot } from './snapshot'
 import { computed, getCurrentInstance, onMounted, onScopeDispose, shallowRef, watch } from 'vue'

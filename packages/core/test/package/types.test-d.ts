@@ -13,9 +13,10 @@ import type {
 } from '@vuqs/core'
 import type { DebugEventCode, DebugEventMap, KnownDebugEvent } from '@vuqs/core/debug-protocol'
 import type { StoredDebugConfigV1 } from '@vuqs/core/debug/console'
+import type { QueryStorage, StorageStatus } from '@vuqs/core/modules'
 import { codecs, defineQueryModule, defineQuerySchema, queryParam, toQueryRefs, useQueryState, useQueryStates } from '@vuqs/core'
 import { createConsoleReporter, createPerformanceReporter, VUQS_DEBUG_STORAGE_KEY } from '@vuqs/core/debug/console'
-import { withActiveParams, withContext, withRuntimeDefaults } from '@vuqs/core/modules'
+import { withActiveParams, withContext, withRuntimeDefaults, withStorage } from '@vuqs/core/modules'
 import { expectTypeOf } from 'vitest'
 import { computed, ref } from 'vue'
 
@@ -187,6 +188,16 @@ expectTypeOf(fromLiteral.activeContext.value).toEqualTypeOf<'products'>()
 expectTypeOf(widened.activeContext.value).toEqualTypeOf<string>()
 // @ts-expect-error - the callback accepts a different context union
 useQueryStates(contextSchema).use(withContext({ active: tab, navigate: (_target: 'other') => {} }))
+
+// Storage controls on grouped and single state
+declare const storage: QueryStorage
+const persisted = useQueryStates(contextSchema).use(withStorage({ key: 'filters', storage }))
+const persistedSingle = useQueryState('q').use(withStorage({ key: 'q', storage }))
+
+expectTypeOf(persisted.storage.status.value).toEqualTypeOf<StorageStatus>()
+expectTypeOf(persistedSingle.storage.flush).toEqualTypeOf<() => Promise<void>>()
+// @ts-expect-error - storage options require a key
+useQueryStates(contextSchema).use(withStorage({ storage }))
 
 // A larger catalog leaves the selected composition exact
 const catalogBare = useQueryStates(contextSchema)
