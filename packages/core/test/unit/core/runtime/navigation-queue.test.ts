@@ -111,16 +111,28 @@ describe('shared update queue', () => {
     expect(q.value).toBe('canonical')
   })
 
-  it('preserves a queued write after reset while an older navigation is pending', async () => {
+  it.each(['resolve', 'reject'] as const)('preserves a queued write after reset while an older navigation is pending and then %ss', async (outcome) => {
     const query = ref<ParsedQuery>({})
-    const commits: Array<() => void> = []
-    const navigate = vi.fn((next: ParsedQueryRaw) => new Promise<void>((resolve) => {
-      commits.push(() => {
+    const finishes: Array<() => void> = []
+    const navigate = vi.fn((next: ParsedQueryRaw) => new Promise<void>((resolve, reject) => {
+      const isOldNavigation = navigate.mock.calls.length === 1
+      finishes.push(() => {
+        if (isOldNavigation && outcome === 'reject') {
+          reject(new Error('blocked'))
+          return
+        }
         query.value = next
         resolve()
       })
     }))
-    const queue = new ThrottledQueue({ query, navigate })
+    const adapter = { query, navigate }
+    const errors: unknown[] = []
+    const stop = addDebugReporter((event) => {
+      if (event.code === 'adapter:error') {
+        errors.push(event.data)
+      }
+    }, { channel: getDebugChannel(adapter) })
+    const queue = new ThrottledQueue(adapter)
 
     try {
       queue.push({ q: 'old' }, {}, 0)
@@ -130,12 +142,13 @@ describe('shared update queue', () => {
       await flush()
 
       expect(navigate).toHaveBeenCalledOnce()
-      commits.shift()?.()
+      finishes.shift()?.()
       await flush()
 
+      expect(errors).toEqual([])
       expect(navigate).toHaveBeenCalledTimes(2)
       expect(queue.overlay.value).toEqual({ q: 'new' })
-      commits.shift()?.()
+      finishes.shift()?.()
       await flush()
 
       expect(queue.overlay.value).toEqual({})
@@ -143,6 +156,7 @@ describe('shared update queue', () => {
     }
     finally {
       queue.reset()
+      stop()
     }
   })
 
@@ -593,6 +607,27 @@ describe('throttledQueue.settle', () => {
     expect(queue.overlay.value).toEqual({})
     expect(errors).toEqual([])
     stop()
+  })
+
+  it('discards a write reset by a synchronous overlay observer without leaking its options', async () => {
+    const navigate = vi.fn<QueryStateNavigate>()
+    const queue = new ThrottledQueue({ query: ref<ParsedQuery>({}), navigate })
+    let pending = true
+    const stop = watchEffect(() => {
+      if (pending && 'q' in queue.overlay.value) {
+        pending = false
+        queue.reset()
+      }
+    }, { flush: 'sync' })
+
+    queue.push({ q: 'stale' }, { history: 'push' }, 0)
+    queue.push({ q: 'fresh' }, { history: 'replace' }, 0)
+    await flush()
+
+    expect(navigate).toHaveBeenCalledOnce()
+    expect(navigate).toHaveBeenCalledWith({ q: 'fresh' }, { history: 'replace' })
+    stop()
+    queue.reset()
   })
 
   it('handles an empty push and empty reset without starting overlay work', async () => {

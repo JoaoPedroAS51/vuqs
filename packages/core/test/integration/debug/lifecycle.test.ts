@@ -1,3 +1,5 @@
+import type { Mock } from 'vitest'
+import type { OnUrlUpdateFunction } from '../../../src/adapters/testing'
 import type { DebugEvent } from '../../../src/core/diagnostics/bus'
 import type { ParsedQuery } from '../../../src/core/query/types'
 import type { QueryStateNavigate } from '../../../src/core/runtime/adapter'
@@ -18,6 +20,8 @@ import { withTestQuery } from '../../helpers/adapter'
 import { captureCodes, captureEvents, flush, inOrder, resetDebugState, trackReporter } from '../../helpers/debug'
 
 afterEach(resetDebugState)
+
+const queueCodes = (codes: readonly string[]): string[] => codes.filter(code => code.startsWith('gtq:') || code.startsWith('adapter:'))
 
 describe('lifecycle tracing', () => {
   it('keeps the default console cardinality constant with many bindings', async () => {
@@ -87,6 +91,30 @@ describe('lifecycle tracing', () => {
     expect(inOrder(codes, ['tx:start', 'binding:set', 'gtq:enqueue', 'gtq:flush', 'adapter:navigate', 'adapter:commit', 'gtq:settle'])).toBe(true)
     expect(codes).toContain('binding:created')
     expect(codes).toContain('binding:set')
+  })
+
+  it('orders the queue events of a single write without coalescing', async () => {
+    const codes = captureCodes()
+    const { run } = withTestQuery({ q: 'a' })
+    const { values } = run(() => useQueryStates({ q: codecs.string }))
+
+    values.q = 'b'
+    await flush()
+
+    expect(queueCodes(codes)).toEqual(['gtq:enqueue', 'gtq:schedule', 'gtq:flush', 'adapter:navigate', 'adapter:commit', 'gtq:settle'])
+  })
+
+  it('orders the queue events of a second write joining a scheduled flush', async () => {
+    const codes = captureCodes()
+    const { run, navigate } = withTestQuery({ q: 'a' })
+    const { values } = run(() => useQueryStates({ q: codecs.string }))
+
+    values.q = 'b'
+    values.q = 'c'
+    await flush()
+
+    expect(queueCodes(codes)).toEqual(['gtq:enqueue', 'gtq:schedule', 'gtq:enqueue', 'gtq:coalesce', 'gtq:flush', 'adapter:navigate', 'adapter:commit', 'gtq:settle'])
+    expect(navigate).toHaveBeenCalledOnce()
   })
 
   it('reports an external committed-query change once at the adapter boundary', async () => {
@@ -523,6 +551,190 @@ describe('lifecycle tracing', () => {
     query.patch({ q: 'sale' })
 
     expect(events).toContainEqual(['tx:start', expect.objectContaining({ id: 1, mode: 'patch', paths: ['q'] })])
+  })
+})
+
+describe('reporter reset during queue events', () => {
+  interface SetupOptions {
+    hasMemory?: boolean
+    onUrlUpdate?: Mock<OnUrlUpdateFunction>
+    /** Resets on the nth event with the resetting code. */
+    occurrence?: number
+    /** Runs inside the resetting reporter, right after the reset. */
+    afterReset?: (q: { set: (value: string) => void }) => void
+  }
+
+  function setup(resetOn: string, { hasMemory, onUrlUpdate = vi.fn(), occurrence = 1, afterReset }: SetupOptions = {}) {
+    const adapter = createTestingAdapter({ searchParams: { q: 'initial' }, onUrlUpdate, hasMemory })
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+    const q = app.runWithContext(() => useQueryState('q', codecs.string))
+    const events: DebugEvent[] = []
+    let remaining = occurrence
+    trackReporter(addDebugReporter((event) => {
+      events.push(event)
+      if (event.code === resetOn && remaining-- === 1) {
+        adapter.resetQueue()
+        afterReset?.(q)
+      }
+    }, { channel: getDebugChannel(adapter) }))
+
+    return { q, adapter, onUrlUpdate, events }
+  }
+
+  const queueCodesAfterReset = (events: readonly DebugEvent[]): string[] => {
+    const codes = events.map(event => event.code)
+    return queueCodes(codes.slice(codes.indexOf('gtq:reset') + 1))
+  }
+
+  it.each([
+    ['gtq:enqueue', 1],
+    ['gtq:coalesce', 2],
+    ['gtq:schedule', 1],
+  ] as const)('starts no navigation for writes discarded on %s', async (resetOn, writes) => {
+    const { q, onUrlUpdate, events } = setup(resetOn)
+
+    for (let i = 0; i < writes; i++) {
+      q.set(`stale-${i}`)
+    }
+    await flush()
+
+    expect(onUrlUpdate).not.toHaveBeenCalled()
+    expect(q.value).toBe('initial')
+    expect(queueCodesAfterReset(events)).toEqual([])
+
+    q.set('fresh')
+    await flush()
+
+    expect(onUrlUpdate).toHaveBeenCalledOnce()
+    expect(q.value).toBe('fresh')
+  })
+
+  it('emits no coalesce or schedule for a second write discarded on its enqueue', async () => {
+    const { q, onUrlUpdate, events } = setup('gtq:enqueue', { occurrence: 2 })
+
+    q.set('first')
+    q.set('second')
+    await flush()
+
+    expect(onUrlUpdate).not.toHaveBeenCalled()
+    expect(queueCodesAfterReset(events)).toEqual([])
+  })
+
+  it('does not apply the push history of a write discarded on enqueue to the replacement write', async () => {
+    const { q, onUrlUpdate, events } = setup('gtq:enqueue')
+
+    q.set('stale', { history: 'push' })
+    q.set('fresh', { history: 'replace' })
+    await flush()
+
+    expect(onUrlUpdate).toHaveBeenCalledOnce()
+    expect(onUrlUpdate.mock.calls[0]?.[0]).toMatchObject({ query: { q: 'fresh' }, options: { history: 'replace' } })
+
+    const codes = events.map(event => event.code).filter(code => code.startsWith('gtq:'))
+    expect(codes.slice(0, 4)).toEqual(['gtq:enqueue', 'gtq:reset', 'gtq:enqueue', 'gtq:schedule'])
+    expect(codes.filter(code => code === 'gtq:coalesce' || code === 'gtq:schedule')).toEqual(['gtq:schedule'])
+  })
+
+  it('leaves no effective flush from a write discarded on schedule', async () => {
+    const { q, onUrlUpdate, events } = setup('gtq:schedule')
+
+    q.set('stale')
+    q.set('fresh')
+    await flush()
+
+    expect(onUrlUpdate).toHaveBeenCalledOnce()
+    expect(onUrlUpdate.mock.calls[0]?.[0]).toMatchObject({ query: { q: 'fresh' } })
+    expect(events.filter(event => event.code === 'gtq:flush')).toHaveLength(1)
+    expect(events.filter(event => event.code === 'gtq:flush-skip')).toHaveLength(0)
+  })
+
+  it.each(['gtq:flush', 'adapter:navigate'] as const)('does not navigate or simulate a write discarded on %s', async (resetOn) => {
+    const { q, onUrlUpdate, events } = setup(resetOn)
+
+    q.set('stale')
+    await flush()
+
+    expect(onUrlUpdate).not.toHaveBeenCalled()
+    expect(q.value).toBe('initial')
+
+    q.set('fresh')
+    await flush()
+
+    expect(onUrlUpdate).toHaveBeenCalledOnce()
+    expect(onUrlUpdate.mock.calls[0]?.[0]).toMatchObject({ query: { q: 'fresh' } })
+    expect(q.value).toBe('fresh')
+    expect(events.filter(event => event.code === 'adapter:commit')).toEqual([])
+  })
+
+  it('announces no navigation for a flush discarded on gtq:flush', async () => {
+    const { q, events } = setup('gtq:flush')
+
+    q.set('stale')
+    await flush()
+
+    expect(events.filter(event => event.code === 'adapter:navigate')).toEqual([])
+
+    q.set('fresh')
+    await flush()
+
+    expect(events.filter(event => event.code === 'adapter:navigate')).toHaveLength(1)
+  })
+
+  it.each(['gtq:enqueue', 'gtq:schedule', 'gtq:flush', 'adapter:navigate'] as const)('keeps a replacement write made by the reporter that resets on %s', async (resetOn) => {
+    const { q, onUrlUpdate } = setup(resetOn, { afterReset: next => next.set('fresh') })
+
+    q.set('stale')
+    await flush()
+
+    expect(onUrlUpdate).toHaveBeenCalledOnce()
+    expect(onUrlUpdate.mock.calls[0]?.[0]).toMatchObject({ query: { q: 'fresh' } })
+    expect(q.value).toBe('fresh')
+  })
+
+  it.each(['adapter:commit', 'gtq:settle'] as const)('keeps a replacement write made by the reporter that resets on %s', async (resetOn) => {
+    const { q, adapter, onUrlUpdate } = setup(resetOn, { hasMemory: true, afterReset: next => next.set('fresh') })
+
+    q.set('stale')
+    await flush()
+
+    expect(onUrlUpdate.mock.calls.map(([event]) => event.query)).toEqual([{ q: 'stale' }, { q: 'fresh' }])
+    expect(adapter.query.value).toEqual({ q: 'fresh' })
+    expect(q.value).toBe('fresh')
+  })
+
+  it('keeps a replacement write made by the reporter that resets on gtq:flush-skip', async () => {
+    const onUrlUpdate = vi.fn()
+    const adapter = createTestingAdapter({ hasMemory: true, onUrlUpdate })
+    const queue = new ThrottledQueue(adapter)
+    let pending = true
+    trackReporter(addDebugReporter((event) => {
+      if (pending && event.code === 'gtq:flush-skip') {
+        pending = false
+        queue.reset()
+        queue.push({ q: 'fresh' }, {}, 0)
+      }
+    }, { channel: getDebugChannel(adapter) }))
+
+    queue.push({}, {}, 0)
+    await flush()
+
+    expect(onUrlUpdate).toHaveBeenCalledOnce()
+    expect(onUrlUpdate.mock.calls[0]?.[0]).toMatchObject({ query: { q: 'fresh' } })
+  })
+
+  it('keeps a replacement write made by the reporter that resets on adapter:error', async () => {
+    const onUrlUpdate = vi.fn<OnUrlUpdateFunction>().mockImplementationOnce(() => {
+      throw new Error('blocked')
+    })
+    const { q } = setup('adapter:error', { hasMemory: true, onUrlUpdate, afterReset: next => next.set('fresh') })
+
+    q.set('stale')
+    await flush()
+
+    expect(onUrlUpdate).toHaveBeenCalledTimes(2)
+    expect(onUrlUpdate.mock.calls[1]?.[0]).toMatchObject({ query: { q: 'fresh' } })
+    expect(q.value).toBe('fresh')
   })
 })
 

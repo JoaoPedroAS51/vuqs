@@ -155,6 +155,7 @@ export class ThrottledQueue {
    * @param transactionId - The transaction this write belongs to, for correlation.
    */
   push(deltas: Overlay, options: NavigateOptions, throttleMs: number, transactionId?: number): void {
+    const generation = this.generation
     const armed = isDebugArmed(this.debug)
     const batch = armed ? this.ensureDebugBatch(transactionId) : undefined
     const entries = Object.entries(deltas)
@@ -183,32 +184,43 @@ export class ThrottledQueue {
         this.overlayDebugOwners.set(path, { batchId: batch.id, transactionIds })
       }
     }
+    const previous = this.options
+    const resolved = mergeOptions(previous, options)
+    this.options = resolved
+
+    const writeCount = batch === undefined ? 0 : ++batch.writeCount
+    const pendingPathCount = this.overlaySize
+
     if (entries.length > 0) {
       triggerRef(this.overlay)
+    }
+    if (generation !== this.generation) {
+      return
     }
 
     if (batch !== undefined) {
       emitDebug(
         this.debug,
         'gtq:enqueue',
-        { deltas: { ...deltas }, pendingPathCount: this.overlaySize },
+        { deltas: { ...deltas }, pendingPathCount },
         this.contextFor(batch, transactionId === undefined ? [] : [transactionId]),
       )
-    }
 
-    const previous = this.options
-    const resolved = mergeOptions(previous, options)
-    this.options = resolved
+      if (generation !== this.generation) {
+        return
+      }
 
-    if (batch !== undefined) {
-      batch.writeCount++
-      if (batch.writeCount > 1) {
+      if (writeCount > 1) {
         emitDebug(this.debug, 'gtq:coalesce', {
           previous: { ...previous },
           incoming: { ...options },
           resolved: { ...resolved },
-          writeCount: batch.writeCount,
+          writeCount,
         }, this.contextFor(batch))
+
+        if (generation !== this.generation) {
+          return
+        }
       }
     }
 
@@ -414,6 +426,7 @@ export class ThrottledQueue {
       return
     }
 
+    const generation = this.generation
     this.scheduled = true
     emitDebug(
       this.debug,
@@ -422,7 +435,10 @@ export class ThrottledQueue {
       batch === undefined ? undefined : this.contextFor(batch),
     )
 
-    const generation = this.generation
+    if (generation !== this.generation) {
+      return
+    }
+
     const run = (): void => {
       if (generation === this.generation) {
         this.flush()
@@ -447,6 +463,7 @@ export class ThrottledQueue {
       return
     }
 
+    const generation = this.generation
     const armed = isDebugArmed(this.debug)
     const batch = armed ? (this.debugBatch ?? this.ensureDebugBatch()) : undefined
     this.debugBatch = undefined
@@ -510,6 +527,10 @@ export class ThrottledQueue {
         { paths: changedQueryPaths(current, next), query: cloneQuery(next), options: { ...options } },
         this.contextFor(batch!),
       )
+
+      if (generation !== this.generation) {
+        return
+      }
     }
 
     const context = batch === undefined ? undefined : this.contextFor(batch)
@@ -519,9 +540,13 @@ export class ThrottledQueue {
         mode: options.history === 'push' ? 'push' : 'replace',
         query: cloneQuery(next),
       }, this.contextFor(batch!))
+
+      if (generation !== this.generation) {
+        return
+      }
     }
 
-    const activeAttempt: NavigationAttempt = { writes: attempt, generation: this.generation, context }
+    const activeAttempt: NavigationAttempt = { writes: attempt, generation, context }
     this.activeAttempt = activeAttempt
 
     this.navigationPending = true
