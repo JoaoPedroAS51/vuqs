@@ -88,13 +88,17 @@ describe('query transactions', () => {
     }))
   })
 
-  it('preserves causal ids when a sync watcher writes during overlay application', () => {
+  it('gives each start of a reentrant write its causal id and the complete optimistic state', () => {
     const adapter = createTestingAdapter()
     const { engine, scope } = createEngine(adapter, schema)
-    const starts: Array<{ id: number, keys: readonly string[] }> = []
+    const starts: Array<{ id: number, keys: readonly string[], explicitValues: object }> = []
 
     engine.query.transactions.observe({
-      start: transaction => starts.push(transaction),
+      start: transaction => starts.push({
+        id: transaction.id,
+        keys: transaction.keys,
+        explicitValues: { ...engine.state.explicitValues.value },
+      }),
     })
 
     scope.run(() => watch(
@@ -110,8 +114,8 @@ describe('query transactions', () => {
     engine.query.transact({ mode: 'patch', values: { q: 'outer' } })
 
     expect(starts).toEqual([
-      expect.objectContaining({ id: 1, keys: ['q'] }),
-      expect.objectContaining({ id: 2, keys: ['sort'] }),
+      { id: 1, keys: ['q'], explicitValues: { q: 'outer', sort: 'inner' } },
+      { id: 2, keys: ['sort'], explicitValues: { q: 'outer', sort: 'inner' } },
     ])
   })
 

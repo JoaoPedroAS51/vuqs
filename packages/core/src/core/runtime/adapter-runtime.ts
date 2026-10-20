@@ -1,6 +1,7 @@
 import type { DebugChannel, DebugEmissionContext } from '../diagnostics/bus'
 import type { QueryStateSchema } from '../schema/schema'
-import type { QueryAdapter } from './adapter'
+import type { NavigateOptions, QueryAdapter } from './adapter'
+import type { Overlay } from './overlay'
 import type { QueryTransaction, QueryTransactionBus, QueryTransactionObserver, RawQueryTransaction } from './transaction'
 import { debugChannelForAdapter, emitDebug } from '../diagnostics/bus'
 import { ThrottledQueue } from './navigation-queue'
@@ -66,12 +67,24 @@ export class QueryTransactionStartRegistry {
   }
 }
 
+/** A prepared write published by {@link QueryRuntime.applyTransaction}. */
+export interface QueryRuntimeWrite extends Omit<RawQueryTransaction, 'id' | 'paths'> {
+  /** Raw pending writes keyed by query path (`null` removes a path). */
+  readonly deltas: Overlay
+  /** The resolved navigation options for this write. */
+  readonly options: NavigateOptions
+  /** Coalesce within this many ms; `0` flushes on a microtask. */
+  readonly throttleMs: number
+}
+
 /** Adapter-scoped query coordination state. */
 export class QueryRuntime {
-  readonly queue: ThrottledQueue
+  /** Completed read-layer values with pending writes applied above them. */
+  readonly readOverlay: ThrottledQueue['readOverlay']
   readonly transactions = new QueryTransactionStartRegistry()
   readonly debug: DebugChannel
 
+  private readonly queue: ThrottledQueue
   private applyingTransactions = 0
   private dispatchingStarts = false
   private nextTransactionId = 1
@@ -79,18 +92,41 @@ export class QueryRuntime {
 
   constructor(adapter: QueryAdapter) {
     this.queue = new ThrottledQueue(adapter)
+    this.readOverlay = this.queue.readOverlay
     this.debug = debugChannelForAdapter(adapter)
   }
 
-  /** Applies one overlay mutation and publishes its start in causal id order. */
+  /**
+   * Keeps committed-query observation alive for one engine binding.
+   *
+   * @returns An idempotent function that releases the binding's observation ownership.
+   */
+  retainBinding(): () => void {
+    return this.queue.retainBinding()
+  }
+
+  /** Clears pending writes, read-layer values, and scheduled flushes. */
+  reset(): void {
+    this.queue.reset()
+  }
+
+  /**
+   * Applies one prepared write and publishes its start in causal id order.
+   *
+   * @param write - The prepared deltas, navigation options and throttle. The transaction's
+   * paths are the delta keys.
+   * @param announce - Called with the assigned transaction before the write enqueues and
+   * before start observers run. The debug context is `undefined` when debug is disarmed.
+   */
   applyTransaction(
-    transaction: Omit<RawQueryTransaction, 'id'>,
-    apply: (transaction: RawQueryTransaction, debugContext?: DebugEmissionContext) => void,
+    write: QueryRuntimeWrite,
+    announce: (transaction: RawQueryTransaction, debugContext?: DebugEmissionContext) => void,
   ): void {
+    const { deltas, options, throttleMs, ...transaction } = write
     const raw: RawQueryTransaction = Object.freeze({
       ...transaction,
       id: this.nextTransactionId++,
-      paths: Object.freeze([...transaction.paths]),
+      paths: Object.freeze(Object.keys(deltas)),
     })
 
     const debugContext = this.queue.reserveDebugBatch(raw.id)
@@ -110,7 +146,8 @@ export class QueryRuntime {
     this.applyingTransactions++
 
     try {
-      apply(raw, debugContext)
+      announce(raw, debugContext)
+      this.queue.push(deltas, options, throttleMs, raw.id)
       this.pendingStarts.push(raw)
     }
     finally {
@@ -183,5 +220,5 @@ export function createQueryTransactionBus<TSchema extends QueryStateSchema>(
  * @internal
  */
 export function resetQueryRuntime(adapter: QueryAdapter): void {
-  runtimes.get(adapter)?.queue.reset()
+  runtimes.get(adapter)?.reset()
 }

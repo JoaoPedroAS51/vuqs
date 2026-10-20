@@ -154,13 +154,13 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
   const managedPaths = getManagedKeys(schema)
 
   const runtime = getQueryRuntime(adapter)
-  const releaseRuntime = runtime.queue.retainBinding()
+  const releaseRuntime = runtime.retainBinding()
   // Attribute events to this binding on the shared adapter channel.
   const debug = bindDebugTarget(runtime.debug, { bindingId: id })
   const lastInvalidRaw = new Map<string, unknown>()
   const installations = createInstallationRegistry()
   const pipeline = createQueryPipeline(schema, installations.snapshot)
-  const readOverlay = runtime.queue.readOverlay
+  const readOverlay = runtime.readOverlay
   const transactions = createQueryTransactionBus(runtime, schema)
 
   const resolvedOptions: ResolvedQueryStateOptions = {
@@ -279,11 +279,11 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
 
     runtime.applyTransaction({
       mode: request.mode,
-      paths: Object.keys(deltas),
       origin: request.origin,
-    }, (transaction, debugContext) => {
-      // Emit inside the callback so the transaction id is assigned: it correlates this
-      // write with the queue events it produces.
+      deltas,
+      options: resolvedOptions,
+      throttleMs,
+    }, (_transaction, debugContext) => {
       if (debugContext !== undefined) {
         const touchedPaths = touchedKeys.flatMap(key => schema[key].paths)
         for (const decision of clearedOnDefault) {
@@ -296,7 +296,6 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
           debugContext,
         )
       }
-      runtime.queue.push(deltas, resolvedOptions, throttleMs, transaction.id)
     })
   }
 

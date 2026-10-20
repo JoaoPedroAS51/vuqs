@@ -4,7 +4,7 @@ import type { DebugEvent } from '../../../src/core/diagnostics/bus'
 import type { ParsedQuery } from '../../../src/core/query/types'
 import type { QueryStateNavigate } from '../../../src/core/runtime/adapter'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createApp, effectScope, ref } from 'vue'
+import { createApp, effectScope, ref, watch } from 'vue'
 import { createTestingAdapter } from '../../../src/adapters/testing'
 import { installQueryAdapter } from '../../../src/core/bindings/adapter-provider'
 import { useQueryState } from '../../../src/core/bindings/use-query-state'
@@ -102,6 +102,36 @@ describe('lifecycle tracing', () => {
     await flush()
 
     expect(queueCodes(codes)).toEqual(['gtq:enqueue', 'gtq:schedule', 'gtq:flush', 'adapter:navigate', 'adapter:commit', 'gtq:settle'])
+  })
+
+  it('orders the events of a write started by a synchronous watcher under their own transaction ids', async () => {
+    const events: Array<{ code: string, transactionIds: readonly number[] | undefined }> = []
+    trackReporter(addDebugReporter(event => events.push({ code: event.code, transactionIds: event.context?.transactionIds })))
+    const { run } = withTestQuery({})
+    const { values, patch } = run(() => {
+      const state = useQueryStates({ q: codecs.string, sort: codecs.string })
+
+      watch(() => state.values.q, (value) => {
+        if (value === 'outer') {
+          state.patch({ sort: 'inner' })
+        }
+      }, { flush: 'sync' })
+
+      return state
+    })
+
+    patch({ q: 'outer' })
+    await flush()
+
+    expect(values.sort).toBe('inner')
+    expect(events.filter(({ code }) => ['tx:start', 'binding:set', 'gtq:enqueue'].includes(code))).toEqual([
+      { code: 'tx:start', transactionIds: [1] },
+      { code: 'binding:set', transactionIds: [1] },
+      { code: 'tx:start', transactionIds: [2] },
+      { code: 'binding:set', transactionIds: [2] },
+      { code: 'gtq:enqueue', transactionIds: [2] },
+      { code: 'gtq:enqueue', transactionIds: [1] },
+    ])
   })
 
   it('orders the queue events of a second write joining a scheduled flush', async () => {
