@@ -575,7 +575,7 @@ describe('coalesced scroll option', () => {
   })
 })
 
-describe('throttledQueue.settle', () => {
+describe('pending overlay settlement', () => {
   it('makes binding ownership disposal idempotent', () => {
     const queue = new ThrottledQueue({ query: ref<ParsedQuery>({}), navigate: vi.fn<QueryStateNavigate>() })
     const release = queue.retainBinding()
@@ -642,9 +642,12 @@ describe('throttledQueue.settle', () => {
     expect(queue.overlay.value).toEqual({})
   })
 
-  it('keeps one canonical overlay object across large write and settlement bursts', () => {
+  it('keeps one canonical overlay object across large write and settlement bursts', async () => {
     const query = ref<ParsedQuery>({})
-    const queue = new ThrottledQueue({ query, navigate: vi.fn<QueryStateNavigate>() })
+    const navigate = vi.fn(async (next: ParsedQueryRaw): Promise<void> => {
+      query.value = next
+    })
+    const queue = new ThrottledQueue({ query, navigate })
     const overlay = queue.overlay.value
 
     for (let index = 0; index < 200; index++) {
@@ -652,29 +655,14 @@ describe('throttledQueue.settle', () => {
       expect(queue.overlay.value).toBe(overlay)
     }
 
-    queue.settle(Object.keys(overlay))
+    await flush()
 
+    expect(navigate).toHaveBeenCalledOnce()
     expect(queue.overlay.value).toBe(overlay)
     expect(queue.overlay.value).toEqual({})
   })
 
-  it('is a no-op for paths not present in the overlay', () => {
-    const query = ref<ParsedQuery>({})
-    const navigate = vi.fn(async (next: ParsedQueryRaw): Promise<void> => {
-      query.value = next
-    })
-    const queue = new ThrottledQueue({ query, navigate })
-
-    queue.push({ q: 'x' }, {}, 0)
-    const before = queue.overlay.value
-
-    queue.settle(['never-pushed'])
-
-    expect(queue.overlay.value).toBe(before)
-    expect(queue.overlay.value).toEqual({ q: 'x' })
-  })
-
-  it('skips a scheduled flush that settle already drained the overlay for', async () => {
+  it('skips a scheduled flush that an external query change already drained the overlay for', async () => {
     vi.useFakeTimers()
 
     const query = ref<ParsedQuery>({})
@@ -686,7 +674,7 @@ describe('throttledQueue.settle', () => {
     queue.push({ q: 'x' }, {}, 50)
     // A commit observed by the adapter runtime already reflects 'q', draining the
     // overlay before the scheduled flush fires.
-    queue.settle(['q'])
+    query.value = { q: 'x' }
 
     await vi.advanceTimersByTimeAsync(50)
 
@@ -695,6 +683,6 @@ describe('throttledQueue.settle', () => {
     queue.push({ p: 'y' }, {}, 0)
     await vi.advanceTimersByTimeAsync(0)
 
-    expect(navigate).toHaveBeenCalledWith({ p: 'y' }, {})
+    expect(navigate).toHaveBeenCalledWith({ q: 'x', p: 'y' }, {})
   })
 })

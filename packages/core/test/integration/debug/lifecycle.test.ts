@@ -554,6 +554,156 @@ describe('lifecycle tracing', () => {
   })
 })
 
+describe('settlement attribution', () => {
+  // Compares only the correlation fields; the bus adds runtime identity to every context.
+  const correlationOf = (event: DebugEvent): { batchId?: number, transactionIds?: readonly number[] } => ({
+    batchId: event.context?.batchId,
+    transactionIds: event.context?.transactionIds,
+  })
+
+  // Holds each navigation open until the test finishes it, so observation can change
+  // while an attempt is in flight.
+  function setup() {
+    const query = ref<ParsedQuery>({})
+    const finishers: Array<() => void> = []
+    const adapter = {
+      debugName: 'deferred',
+      query,
+      navigate: vi.fn<QueryStateNavigate>(() => new Promise<void>((resolve) => {
+        finishers.push(resolve)
+      })),
+    }
+    const events: DebugEvent[] = []
+    const observe = (): (() => void) => {
+      const dispose = addDebugReporter(event => events.push(event), { channel: getDebugChannel(adapter) })
+      trackReporter(dispose)
+      return dispose
+    }
+    const finish = async (attempt: number): Promise<void> => {
+      finishers[attempt]!()
+      await flush()
+    }
+    const eventsOf = (code: string): DebugEvent[] => events.filter(event => event.code === code)
+
+    return { adapter, query, queue: new ThrottledQueue(adapter), events, observe, finish, eventsOf }
+  }
+
+  it('settles an observed attempt with its own context after observation detaches and resumes', async () => {
+    const { queue, observe, finish, eventsOf } = setup()
+    const dispose = observe()
+    queue.push({ q: 'a' }, {}, 0, 1)
+    await flush()
+
+    dispose()
+    observe()
+    await finish(0)
+
+    const [settled] = eventsOf('gtq:settle')
+    expect(settled?.data).toEqual({ dropped: ['q'] })
+    expect(correlationOf(settled!)).toEqual({ batchId: 1, transactionIds: [1] })
+  })
+
+  it('keeps a later batch free of the transaction ids of an earlier attempt on the same path', async () => {
+    const { adapter, queue, observe, finish, eventsOf } = setup()
+    const dispose = observe()
+    queue.push({ q: 'a' }, {}, 0, 1)
+    await flush()
+
+    dispose()
+    queue.push({ q: 'b' }, {}, 0, 2)
+    await flush()
+    observe()
+    await finish(0)
+    await finish(1)
+
+    expect(adapter.navigate).toHaveBeenCalledTimes(2)
+    expect(eventsOf('gtq:flush').map(correlationOf)).toEqual([
+      { batchId: 1, transactionIds: [1] },
+      { batchId: 2 },
+    ])
+    expect(eventsOf('adapter:navigate').map(correlationOf)).toEqual([
+      { batchId: 1, transactionIds: [1] },
+      { batchId: 2 },
+    ])
+    expect(eventsOf('gtq:settle').map(event => [event.data, correlationOf(event)])).toEqual([
+      [{ dropped: ['q'] }, { batchId: 2 }],
+    ])
+  })
+
+  it('reports the settlement of an attempt invoked before observation without fabricated context', async () => {
+    const { queue, observe, finish, eventsOf } = setup()
+    queue.push({ q: 'a' }, {}, 0, 1)
+    await flush()
+
+    observe()
+    await finish(0)
+
+    expect(eventsOf('adapter:commit').map(correlationOf)).toEqual([{}])
+    expect(eventsOf('gtq:settle').map(event => [event.data, correlationOf(event)])).toEqual([
+      [{ dropped: ['q'] }, {}],
+    ])
+  })
+
+  it('records no batch or transaction ids while writes stay unobserved', async () => {
+    const { queue, observe, finish, eventsOf } = setup()
+    queue.push({ q: 'a' }, {}, 0, 1)
+    await flush()
+    await finish(0)
+
+    observe()
+    queue.push({ p: 'b' }, {}, 0, 2)
+    await flush()
+    await finish(1)
+
+    expect(eventsOf('gtq:flush').map(correlationOf)).toEqual([{ batchId: 1, transactionIds: [2] }])
+    expect(eventsOf('gtq:settle').map(correlationOf)).toEqual([{ batchId: 1, transactionIds: [2] }])
+  })
+
+  it('reports every path an external change removes, observed or not', async () => {
+    const { query, queue, observe, eventsOf } = setup()
+    queue.push({ a: 'x' }, {}, 0)
+    observe()
+    queue.push({ b: 'y' }, {}, 0, 5)
+
+    query.value = { a: 'x', b: 'y' }
+    await flush()
+
+    expect(queue.overlay.value).toEqual({})
+    expect(eventsOf('gtq:settle').map(event => [event.data, correlationOf(event)])).toEqual([
+      [{ dropped: ['a', 'b'] }, { batchId: 1, transactionIds: [5] }],
+    ])
+  })
+
+  it('attributes a partial external settlement to the whole open batch and keeps the rest pending', async () => {
+    const { query, queue, observe, finish, eventsOf } = setup()
+    observe()
+    queue.push({ a: 'x' }, {}, 0, 1)
+    queue.push({ b: 'y' }, {}, 0, 2)
+
+    query.value = { a: 'x' }
+
+    expect(queue.overlay.value).toEqual({ b: 'y' })
+    expect(eventsOf('gtq:settle').map(event => [event.data, correlationOf(event)])).toEqual([
+      [{ dropped: ['a'] }, { batchId: 1, transactionIds: [1, 2] }],
+    ])
+
+    await flush()
+    await finish(0)
+  })
+
+  it('reports an external settlement without a context when no observed batch is open', async () => {
+    const { query, queue, observe, eventsOf } = setup()
+    queue.push({ a: 'x' }, {}, 0, 1)
+    observe()
+
+    query.value = { a: 'x' }
+
+    expect(eventsOf('gtq:settle').map(event => [event.data, correlationOf(event)])).toEqual([
+      [{ dropped: ['a'] }, {}],
+    ])
+  })
+})
+
 describe('reporter reset during queue events', () => {
   interface SetupOptions {
     hasMemory?: boolean

@@ -115,6 +115,13 @@ The context supplied by an emitter. The channel supplies `runtimeId`. This type 
 
 `seq` orders events across the global debug stream. Context identifiers relate events to an adapter runtime, binding, transaction, or navigation batch. Context fields are optional because not every event belongs to each of those operations.
 
+A `batchId` identifies one write window, and every queue event in that window shares it. `gtq:enqueue` lists its own transaction. `gtq:flush`, `adapter:navigate`, `adapter:commit` and `gtq:settle` list every observed transaction in the batch in ascending order.
+
+- A navigation keeps the context captured when it flushed. Its `gtq:settle` carries that context even when observation detaches and resumes before the navigation completes. A later batch on the same path does not inherit it.
+- A `gtq:settle` caused by an external query change carries the open batch's context, when one exists. `transactionIds` lists every transaction in that batch, not the writers of each settled path.
+- A `gtq:settle` lists every path it removes, including paths written while no reporter was attached.
+- Writes made without an attached reporter are recorded in no batch, and attaching later does not recover their transaction ids. The flush of such a write that is still queued when a reporter attaches has a `batchId` without `transactionIds`. The settlement of a navigation invoked before a reporter attached has neither.
+
 For operation sequences and their console results, see [Write lifecycle](/guide/debugging/write-lifecycle).
 
 Summary policies and console examples are documented in [Summary and trace](/guide/debugging/console-output#summary-and-trace).

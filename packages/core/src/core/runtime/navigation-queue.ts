@@ -36,11 +36,6 @@ interface DebugBatch {
   writeCount: number
 }
 
-interface OverlayDebugOwner {
-  readonly batchId: number
-  readonly transactionIds: Set<number>
-}
-
 interface AttemptedDelta {
   readonly delta: OverlayDelta
   readonly version: number
@@ -64,7 +59,7 @@ interface NavigationAttempt {
  */
 export class ThrottledQueue {
   /** The single optimistic overlay shared by every engine using this adapter. */
-  readonly overlay: ShallowRef<Overlay> = shallowRef<Overlay>(Object.create(null) as Overlay)
+  readonly overlay: Readonly<Ref<Readonly<Overlay>>>
 
   /**
    * Completed read-layer values with pending writes applied above them.
@@ -73,6 +68,7 @@ export class ThrottledQueue {
    */
   readonly readOverlay: Readonly<Ref<Readonly<Overlay>>>
 
+  private readonly writableOverlay: ShallowRef<Overlay> = shallowRef<Overlay>(Object.create(null) as Overlay)
   private readonly debug: DebugChannel
   private readonly readLayer: QueryReadLayer | undefined
   private options: NavigateOptions = {}
@@ -88,12 +84,10 @@ export class ThrottledQueue {
   private bindingOwners = 0
   private nextDebugBatchId = 1
   private debugBatch: DebugBatch | undefined
-  // Debug-only ownership survives the flush until each pending write settles. It is
-  // populated only while observed, preserving the disarmed path's zero-retention goal.
-  private readonly overlayDebugOwners = new Map<string, OverlayDebugOwner>()
 
   constructor(private readonly adapter: QueryAdapter) {
     this.debug = debugChannelForAdapter(adapter)
+    this.overlay = this.writableOverlay
     const readLayer = getQueryReadLayer(adapter)
     this.readLayer = readLayer
     this.readOverlay = readLayer === undefined
@@ -167,22 +161,11 @@ export class ThrottledQueue {
     // Copying the growing overlay for each write makes a burst of T writes O(T²).
     // Keep its identity and notify once to preserve transaction atomicity.
     for (const [path, delta] of entries) {
-      if (!Object.hasOwn(this.overlay.value, path)) {
+      if (!Object.hasOwn(this.writableOverlay.value, path)) {
         this.overlaySize++
       }
-      this.overlay.value[path] = delta
+      this.writableOverlay.value[path] = delta
       this.overlayVersions.set(path, this.nextOverlayVersion++)
-
-      if (batch !== undefined) {
-        const existing = this.overlayDebugOwners.get(path)
-        const transactionIds = existing?.batchId === batch.id
-          ? existing.transactionIds
-          : new Set<number>()
-        if (transactionId !== undefined) {
-          transactionIds.add(transactionId)
-        }
-        this.overlayDebugOwners.set(path, { batchId: batch.id, transactionIds })
-      }
     }
     const previous = this.options
     const resolved = mergeOptions(previous, options)
@@ -192,7 +175,7 @@ export class ThrottledQueue {
     const pendingPathCount = this.overlaySize
 
     if (entries.length > 0) {
-      triggerRef(this.overlay)
+      triggerRef(this.writableOverlay)
     }
     if (generation !== this.generation) {
       return
@@ -228,72 +211,16 @@ export class ThrottledQueue {
   }
 
   /**
-   * Removes the pending writes at the given query paths.
-   *
-   * @param paths - The query paths whose pending writes should be removed.
-   */
-  settle(paths: string[]): void {
-    if (paths.length === 0) {
-      return
-    }
-
-    const dropped: string[] = []
-    const groups = new Map<number, { paths: string[], transactionIds: Set<number> }>()
-    const armed = isDebugArmed(this.debug)
-    const current = this.overlay.value
-
-    for (const path of paths) {
-      if (Object.hasOwn(current, path)) {
-        delete current[path]
-        this.overlayVersions.delete(path)
-        this.overlaySize--
-        dropped.push(path)
-
-        const owner = this.overlayDebugOwners.get(path)
-        this.overlayDebugOwners.delete(path)
-        if (armed && owner !== undefined) {
-          let group = groups.get(owner.batchId)
-          if (group === undefined) {
-            group = { paths: [], transactionIds: new Set<number>() }
-            groups.set(owner.batchId, group)
-          }
-          group.paths.push(path)
-          for (const id of owner.transactionIds) {
-            group.transactionIds.add(id)
-          }
-        }
-      }
-    }
-
-    if (dropped.length > 0) {
-      triggerRef(this.overlay)
-
-      if (groups.size === 0) {
-        emitDebug(this.debug, 'gtq:settle', { dropped })
-      }
-      else {
-        for (const [batchId, group] of groups) {
-          emitDebug(this.debug, 'gtq:settle', { dropped: group.paths }, {
-            batchId,
-            transactionIds: [...group.transactionIds].sort((a, b) => a - b),
-          })
-        }
-      }
-    }
-    this.stopAdapterObserverIfIdle()
-  }
-
-  /**
    * Clears pending writes, read-layer values, and scheduled flushes.
    */
   reset(): void {
     this.readLayer?.reset()
-    const paths = Object.keys(this.overlay.value)
+    const paths = Object.keys(this.writableOverlay.value)
     for (const path of paths) {
-      delete this.overlay.value[path]
+      delete this.writableOverlay.value[path]
     }
     if (paths.length > 0) {
-      triggerRef(this.overlay)
+      triggerRef(this.writableOverlay)
     }
     this.overlaySize = 0
     this.overlayVersions.clear()
@@ -306,7 +233,6 @@ export class ThrottledQueue {
     }
     this.activeAttempt = undefined
     this.debugBatch = undefined
-    this.overlayDebugOwners.clear()
     // Invalidate any flush already scheduled, so it cannot fire against a later push.
     this.generation++
     emitDebug(this.debug, 'gtq:reset')
@@ -387,7 +313,7 @@ export class ThrottledQueue {
 
     const reflected: string[] = []
 
-    for (const [path, delta] of Object.entries(this.overlay.value)) {
+    for (const [path, delta] of Object.entries(this.writableOverlay.value)) {
       const urlValue = getPath(query, path)
       const settled = delta === null ? urlValue === undefined : structuralEq(urlValue, delta)
 
@@ -396,7 +322,30 @@ export class ThrottledQueue {
       }
     }
 
-    this.settle(reflected)
+    // Capture the open batch before notifying, so reentrant writes cannot reattribute
+    // the paths removed here.
+    const batch = this.debugBatch
+    const context = batch !== undefined && isDebugArmed(this.debug) ? this.contextFor(batch) : undefined
+    this.settle(reflected, context)
+  }
+
+  // Callers pass only paths whose pending write is still in the overlay.
+  private settle(pendingPaths: string[], context?: DebugEmissionContext): void {
+    if (pendingPaths.length === 0) {
+      return
+    }
+
+    const pending = this.writableOverlay.value
+
+    for (const path of pendingPaths) {
+      delete pending[path]
+      this.overlayVersions.delete(path)
+    }
+    this.overlaySize -= pendingPaths.length
+
+    triggerRef(this.writableOverlay)
+    emitDebug(this.debug, 'gtq:settle', { dropped: pendingPaths }, context)
+    this.stopAdapterObserverIfIdle()
   }
 
   private ensureDebugBatch(transactionId?: number): DebugBatch {
@@ -468,7 +417,7 @@ export class ThrottledQueue {
     const batch = armed ? (this.debugBatch ?? this.ensureDebugBatch()) : undefined
     this.debugBatch = undefined
 
-    const paths = Object.keys(this.overlay.value)
+    const paths = Object.keys(this.writableOverlay.value)
     const options = this.options
     this.options = {}
 
@@ -485,37 +434,16 @@ export class ThrottledQueue {
     const attempt = new Map<string, AttemptedDelta>()
     for (const path of paths) {
       attempt.set(path, {
-        delta: this.overlay.value[path],
+        delta: this.writableOverlay.value[path],
         version: this.overlayVersions.get(path)!,
       })
-    }
-
-    // A new navigation reapplies every still-pending path, including paths from an
-    // earlier in-flight navigation. Attribute their eventual settlement to this latest
-    // batch and carry every contributing transaction forward.
-    if (batch !== undefined) {
-      for (const path of paths) {
-        const owner = this.overlayDebugOwners.get(path)
-        if (owner !== undefined) {
-          for (const id of owner.transactionIds) {
-            batch.transactionIds.add(id)
-          }
-        }
-      }
-      const ownership = { batchId: batch.id, transactionIds: new Set(batch.transactionIds) }
-      for (const path of paths) {
-        this.overlayDebugOwners.set(path, ownership)
-      }
-    }
-    else {
-      this.overlayDebugOwners.clear()
     }
 
     const current = toValue(this.adapter.query)
     const flushed: Overlay = {}
 
     for (const path of paths) {
-      flushed[path] = this.overlay.value[path]
+      flushed[path] = this.writableOverlay.value[path]
     }
 
     const next = applyOverlay(current, flushed)
@@ -621,7 +549,7 @@ export class ThrottledQueue {
         committed.push(path)
       }
     }
-    this.settle(committed)
+    this.settle(committed, expected.context)
   }
 
   private reportNavigationError(
@@ -644,16 +572,15 @@ export class ThrottledQueue {
       if (
         this.overlayVersions.get(path) === failed.version
       ) {
-        delete this.overlay.value[path]
+        delete this.writableOverlay.value[path]
         this.overlayVersions.delete(path)
-        this.overlayDebugOwners.delete(path)
         this.overlaySize--
         dropped.push(path)
       }
     }
 
     if (dropped.length > 0) {
-      triggerRef(this.overlay)
+      triggerRef(this.writableOverlay)
       this.stopAdapterObserverIfIdle()
     }
 
