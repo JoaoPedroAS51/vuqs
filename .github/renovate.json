@@ -1,0 +1,77 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    "group:allNonMajor",
+    "schedule:weekly",
+    "security:minimumReleaseAgeNpm",
+    ":approveMajorUpdates",
+    ":disablePeerDependencies",
+    ":maintainLockFilesMonthly",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(chore)",
+    ":semanticCommitScope(deps)"
+  ],
+  "timezone": "America/Sao_Paulo",
+  "labels": [
+    "dependencies"
+  ],
+  "rangeStrategy": "bump",
+  "prConcurrentLimit": 5,
+  "automerge": false,
+  "postUpdateOptions": [
+    "pnpmDedupe"
+  ],
+  "packageRules": [
+    {
+      "description": "Preserve the supported Node.js and pnpm engine ranges",
+      "matchManagers": [
+        "npm"
+      ],
+      "matchDepTypes": [
+        "engines"
+      ],
+      "matchPackageNames": [
+        "node",
+        "pnpm"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Match the Node.js 22 compatibility target",
+      "matchPackageNames": [
+        "@types/node"
+      ],
+      "allowedVersions": "<23"
+    },
+    {
+      "description": "Keep the package manager within the supported pnpm 12 range",
+      "matchPackageNames": [
+        "pnpm"
+      ],
+      "allowedVersions": ">=12 <13"
+    },
+    {
+      "description": "Review Nuxt framework updates together",
+      "matchPackageNames": [
+        "nuxt",
+        "@nuxt/kit",
+        "@nuxt/schema"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "nuxt framework",
+      "groupSlug": "nuxt"
+    },
+    {
+      "description": "Review VitePress updates independently",
+      "matchPackageNames": [
+        "vitepress"
+      ],
+      "groupName": null
+    }
+  ]
+}
