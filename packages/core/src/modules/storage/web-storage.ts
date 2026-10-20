@@ -1,4 +1,4 @@
-import type { QueryStorage } from './module'
+import type { QueryStorage } from './contract'
 import type { StoredQuerySnapshot } from './snapshot'
 
 /**

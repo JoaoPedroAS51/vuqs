@@ -1,11 +1,12 @@
-import type { StorageControls } from '../../../../src/modules/storage/module'
+import type { StorageControls } from '../../../../src/modules/storage/contract'
 import type { StoredQuerySnapshot } from '../../../../src/modules/storage/snapshot'
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
-import { createApp, createRenderer, effectScope } from 'vue'
+import { createApp, createRenderer, effectScope, watch } from 'vue'
 import { createTestingAdapter } from '../../../../src/adapters/testing'
 import { installQueryAdapter } from '../../../../src/core/bindings/adapter-provider'
 import { useQueryStates } from '../../../../src/core/bindings/use-query-states'
 import { createCodec } from '../../../../src/core/codecs/codec'
+import { addDebugReporter } from '../../../../src/core/diagnostics/bus'
 import { queryParam } from '../../../../src/core/schema/params/query-param'
 import { withStorage } from '../../../../src/modules/storage/module'
 import { withTestQuery as setup } from '../../../helpers/adapter'
@@ -59,6 +60,117 @@ describe('withStorage lifecycle', () => {
     expect(adapter.query.value).toEqual({})
     expect(memory.save).not.toHaveBeenCalled()
     expect(memory.remove).not.toHaveBeenCalled()
+  })
+
+  it('completes a flush requested by a synchronous status observer during disposal after ready', async () => {
+    const pending = deferred<StoredQuerySnapshot | undefined>()
+    const memory = createMemoryStorage()
+    memory.load.mockImplementation(() => pending.promise)
+
+    const adapter = createTestingAdapter({ hasMemory: true })
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+
+    const scope = effectScope()
+    onTestFinished(() => scope.stop())
+
+    const state = app.runWithContext(() => scope.run(() => useQueryStates(schema).use(withStorage({
+      key: 'filters',
+      storage: memory.storage,
+    }))))!
+
+    // The observer lives in its own scope so disposing the storage scope does not stop it
+    const observed: string[] = []
+    const order: string[] = []
+    let flushing: Promise<void> | undefined
+
+    const observerScope = effectScope(true)
+    onTestFinished(() => observerScope.stop())
+
+    observerScope.run(() => watch(state.storage.status, (status) => {
+      observed.push(status)
+      flushing = state.storage.flush().then(() => {
+        order.push('flush')
+      })
+    }, { flush: 'sync' }))
+
+    await flushMicrotasks()
+    expect(state.storage.status.value).toBe('restoring')
+
+    scope.stop()
+    void state.storage.ready.then(() => {
+      order.push('ready')
+    })
+    await flushing
+
+    expect(observed).toEqual(['ready'])
+    expect(order).toEqual(['ready', 'flush'])
+    expect(memory.save).not.toHaveBeenCalled()
+    expect(memory.remove).not.toHaveBeenCalled()
+  })
+
+  it('completes a flush requested after disposal and ready without waiting on ready again', async () => {
+    const pending = deferred<StoredQuerySnapshot | undefined>()
+    const memory = createMemoryStorage()
+    memory.load.mockImplementation(() => pending.promise)
+
+    const adapter = createTestingAdapter({ hasMemory: true })
+    const app = createApp({})
+    installQueryAdapter(app, adapter)
+
+    const scope = effectScope()
+    onTestFinished(() => scope.stop())
+
+    const state = app.runWithContext(() => scope.run(() => useQueryStates(schema).use(withStorage({
+      key: 'filters',
+      storage: memory.storage,
+    }))))!
+
+    await flushMicrotasks()
+    scope.stop()
+    await state.storage.ready
+
+    const order: string[] = []
+    const flushing = state.storage.flush().then(() => {
+      order.push('flush')
+    })
+    void Promise.resolve().then(() => {
+      order.push('next microtask')
+    })
+    await flushing
+
+    expect(order).toEqual(['flush', 'next microtask'])
+  })
+
+  it('completes a flush without waiting when its own materialization disposes the module', async () => {
+    const memory = createMemoryStorage()
+    const { build, dispose } = setup()
+
+    const state = build(() => useQueryStates(schema).use(withStorage({
+      key: 'filters',
+      storage: memory.storage,
+    })))
+    await state.storage.ready
+
+    onTestFinished(addDebugReporter((event) => {
+      if (event.code === 'storage:write') {
+        dispose()
+      }
+    }))
+
+    state.patch({ q: 'changed' })
+
+    const order: string[] = []
+    const flushing = state.storage.flush().then(() => {
+      order.push('flush')
+    })
+    void Promise.resolve().then(() => {
+      order.push('next microtask')
+    })
+    await flushing
+    await flushMicrotasks()
+
+    expect(order).toEqual(['flush', 'next microtask'])
   })
 
   it('does not start a queued restoration after synchronous disposal', async () => {

@@ -1,4 +1,4 @@
-import type { StorageOptions } from '../../../../src/modules/storage/module'
+import type { StorageOptions } from '../../../../src/modules/storage/contract'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useQueryState } from '../../../../src/core/bindings/use-query-state'
 import { useQueryStates } from '../../../../src/core/bindings/use-query-states'

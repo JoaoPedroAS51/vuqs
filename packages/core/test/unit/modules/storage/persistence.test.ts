@@ -1,6 +1,7 @@
-import type { QueryStorage } from '../../../../src/modules/storage/module'
+import type { QueryStorage } from '../../../../src/modules/storage/contract'
 import type { StoredQuerySnapshot } from '../../../../src/modules/storage/snapshot'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, onTestFinished } from 'vitest'
+import { effectScope, watch } from 'vue'
 import { useQueryStates } from '../../../../src/core/bindings/use-query-states'
 import { withStorage } from '../../../../src/modules/storage/module'
 import { withTestQuery as setup } from '../../../helpers/adapter'
@@ -156,6 +157,58 @@ describe('withStorage mirroring', () => {
     laterWrite.resolve()
     await flushing
     await state.storage.flush()
+  })
+
+  it('does not wait for a write requested after mirroring starts while ready is pending', async () => {
+    const mirroredWrite = deferred<void>()
+    const saves: StoredQuerySnapshot[] = []
+    const storage: QueryStorage = {
+      load: () => undefined,
+      save: (_key, next) => {
+        saves.push(next)
+        return saves.length === 1 ? undefined : mirroredWrite.promise
+      },
+      remove: () => undefined,
+    }
+
+    const { build } = setup({ q: 'url' })
+    const state = build(() => useQueryStates(schema).use(withStorage({ key: 'filters', storage, restore: 'never' })))
+
+    // Mirroring starts when the status turns ready, before the ready promise settles
+    const order: string[] = []
+
+    const observerScope = effectScope(true)
+    onTestFinished(() => observerScope.stop())
+
+    observerScope.run(() => watch(state.storage.status, () => {
+      state.patch({ q: 'mirrored' })
+      void state.storage.flush().then(() => {
+        order.push('flush')
+      })
+    }, { flush: 'sync' }))
+
+    void state.storage.ready.then(() => {
+      order.push('ready')
+    })
+
+    await state.storage.ready
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(order).toEqual(['ready', 'flush'])
+    expect(saves.map(item => item.query)).toEqual([{ q: 'url' }, { q: 'mirrored' }])
+
+    let settled = false
+    const mirroredFlush = state.storage.flush().then(() => {
+      settled = true
+    })
+    await flushMicrotasks()
+
+    expect(settled).toBe(false)
+
+    mirroredWrite.resolve()
+    await mirroredFlush
+
+    expect(settled).toBe(true)
   })
 
   it('mirrors direct query-source changes, including invalid raw values', async () => {

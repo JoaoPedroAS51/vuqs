@@ -1,4 +1,4 @@
-import type { QueryStorage } from '../../src/modules/storage/module'
+import type { QueryStorage } from '../../src/modules/storage/contract'
 import type { StoredQuerySnapshot } from '../../src/modules/storage/snapshot'
 import { vi } from 'vitest'
 

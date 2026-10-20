@@ -1,5 +1,5 @@
 import type { QueryCore } from '../../../../src/core/module-system/query-core'
-import type { QueryStorage } from '../../../../src/modules/storage/module'
+import type { QueryStorage } from '../../../../src/modules/storage/contract'
 import type { StoredQuerySnapshot } from '../../../../src/modules/storage/snapshot'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useQueryState } from '../../../../src/core/bindings/use-query-state'

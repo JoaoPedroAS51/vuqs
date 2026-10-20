@@ -2,7 +2,7 @@ import type { DebugEvent } from '../../../src/core/diagnostics/bus'
 import type { ParsedQuery } from '../../../src/core/query/types'
 import type { QueryStateNavigate } from '../../../src/core/runtime/adapter'
 import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
-import { createApp, effectScope, ref } from 'vue'
+import { createApp, effectScope, ref, watch } from 'vue'
 import { installQueryAdapter } from '../../../src/core/bindings/adapter-provider'
 import { useQueryState } from '../../../src/core/bindings/use-query-state'
 import { useQueryStates } from '../../../src/core/bindings/use-query-states'
@@ -58,6 +58,61 @@ describe('module tracing', () => {
 
     expect(events).toContainEqual(['storage:error', expect.objectContaining({ key: 'filters', operation: 'load', error: failure })])
     expect(events).toContainEqual(['storage:restore', expect.objectContaining({ key: 'filters', outcome: 'load-error' })])
+  })
+
+  it('traces a disposal before mirroring begins as a disposed restore outcome', async () => {
+    vi.stubGlobal('window', {})
+    const events = captureEvents()
+    let resolveLoad!: () => void
+
+    const { build, dispose } = withTestQuery()
+    const query = build(() => useQueryStates({ q: codecs.string }).use(withStorage({
+      key: 'filters',
+      storage: {
+        load: () => new Promise<undefined>((resolve) => {
+          resolveLoad = () => resolve(undefined)
+        }),
+        save: vi.fn(),
+        remove: vi.fn(),
+      },
+    })))
+    await flush()
+
+    dispose()
+    resolveLoad()
+    await query.storage.ready
+    await flush()
+
+    const outcomes = events.filter(([code]) => code === 'storage:restore')
+    expect(outcomes).toEqual([['storage:restore', { key: 'filters', outcome: 'disposed' }]])
+  })
+
+  it('traces a disposal after mirroring begins with the restore outcome it reached', async () => {
+    vi.stubGlobal('window', {})
+    const events = captureEvents()
+
+    const { build, dispose } = withTestQuery({ q: 'url' })
+    const query = build(() => useQueryStates({ q: codecs.string }).use(withStorage({
+      key: 'filters',
+      storage: { load: () => undefined, save: vi.fn(), remove: vi.fn() },
+      restore: 'never',
+    })))
+
+    // Disposing from the status observer lands after mirroring began and before ready settles
+    const observerScope = effectScope(true)
+    onTestFinished(() => observerScope.stop())
+
+    observerScope.run(() => watch(query.storage.status, dispose, { flush: 'sync' }))
+
+    const restoreOutcomes = () => events.filter(([code]) => code === 'storage:restore')
+
+    await query.storage.ready
+
+    expect(restoreOutcomes()).toEqual([])
+
+    await flush()
+
+    expect(restoreOutcomes()).toEqual([['storage:restore', { key: 'filters', outcome: 'mirror-only' }]])
   })
 
   it('traces a context change resetting runtime defaults', async () => {

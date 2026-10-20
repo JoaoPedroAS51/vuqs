@@ -1,79 +1,19 @@
-import type { ComputedRef, ShallowRef } from 'vue'
 import type { QueryCore } from '../../core/module-system/query-core'
 import type { ModuleOptions } from '../../core/module-system/registry'
-import type { ParsedQueryRaw } from '../../core/query/types'
 import type { QueryStateSchema } from '../../core/schema/schema'
 // Anchor the registry augmentation to the core entry
 import type {} from '../../index'
+import type { QueryStorage, StorageApi, StorageControls, StorageOptions, StorageStatus } from './contract'
 import type { StoredQuerySnapshot } from './snapshot'
 import { computed, getCurrentInstance, onMounted, onScopeDispose, shallowRef, watch } from 'vue'
 import { emitDebug, emitWarn } from '../../core/diagnostics/bus'
 import { registerSnapshotSource } from '../../core/diagnostics/snapshot'
 import { defineQueryModule } from '../../core/module-system/define-query-module'
-import { cloneQuery } from '../../core/query/object'
 import { getPath } from '../../core/query/path'
 import { parseQueryStates, serializeQueryStates } from '../../core/schema/operations'
 import { getManagedKeys } from '../../core/schema/schema'
-import { structuralEq } from '../../shared/utils/object'
 import { validateSnapshot } from './snapshot'
-
-/** A value returned immediately or through a promise-like operation. */
-export type Awaitable<T> = T | PromiseLike<T>
-
-/** Async-first persistence boundary consumed by {@link withStorage}. */
-export interface QueryStorage {
-  /**
-   * Loads a stored snapshot.
-   *
-   * @returns The snapshot, or `undefined` when the key is absent,
-   * directly or through a promise-like operation.
-   */
-  load: (key: string) => Awaitable<StoredQuerySnapshot | undefined>
-  /** Saves one non-empty snapshot. */
-  save: (key: string, snapshot: StoredQuerySnapshot) => Awaitable<void>
-  /** Removes the snapshot stored under `key`. */
-  remove: (key: string) => Awaitable<void>
-}
-
-/** Restore policy applied when storage initialization begins. */
-export type StorageRestorePolicy = 'if-empty' | 'never'
-
-/** Options for {@link withStorage}. */
-export interface StorageOptions {
-  /** Stable storage key for this query-state mirror. */
-  key: string
-  /** Sync or async persistence implementation. */
-  storage: QueryStorage
-  /**
-   * Restores only into an empty state, or skips restoration.
-   *
-   * @default 'if-empty'
-   */
-  restore?: StorageRestorePolicy
-  /** Application version that must match a stored snapshot before restore. */
-  version?: string
-}
-
-/** Lifecycle state exposed by {@link StorageControls}. */
-export type StorageStatus = 'restoring' | 'ready' | 'error'
-
-/** Persistence lifecycle controls contributed by {@link withStorage}. */
-export interface StorageControls {
-  /** Current restoration or operational-error state. */
-  status: ComputedRef<StorageStatus>
-  /** Latest operational error; contract errors throw synchronously instead. */
-  error: ShallowRef<unknown | undefined>
-  /** Resolves when the restoration attempt settles, including on operational failure. */
-  ready: Promise<void>
-  /** Waits for the write boundary captured at call time. Operational failures never reject. */
-  flush: () => Promise<void>
-}
-
-/** API contributed to grouped and single-param query state. */
-export interface StorageApi {
-  /** Storage lifecycle and flush controls. */
-  storage: StorageControls
-}
+import { createStorageWriter } from './writer'
 
 declare module '@vuqs/core' {
   // eslint-disable-next-line unused-imports/no-unused-vars -- the params must match the base registry signature
@@ -106,12 +46,9 @@ export const withStorage = /* @__PURE__ */ defineQueryModule({
   ): { api: StorageApi } => ({ api: createStorageApi(core, options) }),
 })
 
-interface PendingStorageWrite {
-  revision: number
-  snapshot?: StoredQuerySnapshot
-}
-
 type StorageFailureOperation = 'load' | 'snapshot' | 'restore' | 'serialize' | 'save' | 'remove'
+
+type StoragePhase = 'pending' | 'initializing' | 'mirroring' | 'disposed'
 
 function createStorageApi<TSchema extends QueryStateSchema>(
   core: QueryCore<TSchema>,
@@ -130,38 +67,18 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     resolveReady = resolve
   })
 
+  let phase: StoragePhase = 'pending'
   let readyResolved = false
-  let disposed = false
-  let loadStarted = false
-  let restorationSettled = false
   let changedDuringRestore = false
   let sourceRevision = 0
-  let persistRequested = false
-  let persistMicrotaskQueued = false
-  let requestedRevision = 0
   let outcomeRevision = -1
-  let desiredQuery: ParsedQueryRaw | undefined
-  let pendingWrite: PendingStorageWrite | undefined
-  let pumpPromise: Promise<void> | undefined
-  const unsettledRevisions = new Set<number>()
-  const settlementWaiters = new Set<() => void>()
 
-  const notifySettlement = (): void => {
-    for (const resolve of settlementWaiters) {
-      resolve()
-    }
+  const isDisposed = (): boolean => phase === 'disposed'
 
-    settlementWaiters.clear()
-  }
-
-  const settleRevision = (revision: number): void => {
-    if (unsettledRevisions.delete(revision)) {
-      notifySettlement()
-    }
-  }
+  const isBeforeMirroring = (): boolean => phase === 'pending' || phase === 'initializing'
 
   const recordError = (cause: unknown, operation: StorageFailureOperation, revision = 0): void => {
-    if (disposed) {
+    if (isDisposed()) {
       return
     }
 
@@ -177,14 +94,14 @@ function createStorageApi<TSchema extends QueryStateSchema>(
   }
 
   const recordSuccess = (revision: number): void => {
-    if (disposed || revision < outcomeRevision) {
+    if (isDisposed() || revision < outcomeRevision) {
       return
     }
 
     outcomeRevision = revision
     error.value = undefined
 
-    if (restorationSettled) {
+    if (phase === 'mirroring') {
       statusState.value = 'ready'
     }
   }
@@ -198,164 +115,55 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     resolveReady()
   }
 
-  const pumpWrites = async (): Promise<void> => {
-    try {
-      while (pendingWrite !== undefined) {
-        const write = pendingWrite
-        pendingWrite = undefined
-        const operation = write.snapshot === undefined ? 'remove' : 'save'
-
-        emitDebug(core.debug, 'storage:write', {
-          key: storageOptions.key,
-          revision: write.revision,
-          operation,
-          query: write.snapshot?.query ?? {},
-        })
-
-        try {
-          if (write.snapshot === undefined) {
-            await storageOptions.storage.remove(storageOptions.key)
-          }
-          else {
-            await storageOptions.storage.save(storageOptions.key, write.snapshot)
-          }
-
-          recordSuccess(write.revision)
-        }
-        catch (cause) {
-          recordError(cause, operation, write.revision)
-        }
-
-        settleRevision(write.revision)
-      }
-    }
-    finally {
-      pumpPromise = undefined
-    }
-  }
-
-  const ensurePump = (): Promise<void> => {
-    if (pumpPromise !== undefined) {
-      return pumpPromise
-    }
-
-    pumpPromise = pumpWrites()
-
-    return pumpPromise
-  }
-
-  const materializePersistRequest = (): void => {
-    if (!persistRequested || disposed) {
-      return
-    }
-
-    persistRequested = false
-    try {
-      const query = serializeQueryStates(core.schema, core.state.explicitValues.value)
-
-      if (desiredQuery !== undefined && structuralEq(query, desiredQuery)) {
-        return
-      }
-
-      const revision = ++requestedRevision
-      desiredQuery = cloneQuery(query)
-
-      if (pendingWrite !== undefined) {
-        emitDebug(core.debug, 'storage:coalesce', { key: storageOptions.key, from: pendingWrite.revision, to: revision })
-        settleRevision(pendingWrite.revision)
-      }
-
-      unsettledRevisions.add(revision)
-      pendingWrite = {
-        revision,
-        snapshot: Object.keys(query).length === 0
-          ? undefined
-          : {
-              format: 1,
-              ...(storageOptions.version === undefined ? {} : { version: storageOptions.version }),
-              savedAt: Date.now(),
-              query,
-            },
-      }
-
-      void ensurePump()
-    }
-    catch (cause) {
-      const revision = ++requestedRevision
-      desiredQuery = undefined
-      recordError(cause, 'serialize', revision)
-    }
-  }
-
-  const requestPersist = (): void => {
-    persistRequested = true
-
-    if (persistMicrotaskQueued) {
-      return
-    }
-
-    persistMicrotaskQueued = true
-    queueMicrotask(() => {
-      persistMicrotaskQueued = false
-      materializePersistRequest()
-    })
-  }
-
-  const waitForRevision = async (revision: number): Promise<void> => {
-    for (;;) {
-      const pending = [...unsettledRevisions].some(item => item <= revision)
-
-      if (disposed || !pending) {
-        return
-      }
-
-      await new Promise<void>((resolve) => {
-        settlementWaiters.add(resolve)
-      })
-    }
-  }
-
-  const flushWrites = async (): Promise<void> => {
-    materializePersistRequest()
-    const revision = requestedRevision
-    await waitForRevision(revision)
-  }
+  const writer = createStorageWriter({
+    target: storageOptions,
+    debug: core.debug,
+    serialize: () => serializeQueryStates(core.schema, core.state.explicitValues.value),
+    onSuccess: recordSuccess,
+    onError: recordError,
+  })
 
   const flush = async (): Promise<void> => {
-    let revision = requestedRevision
+    if (readyResolved && !isDisposed()) {
+      const waiting = writer.flush()
 
-    if (readyResolved && !disposed) {
-      materializePersistRequest()
-      revision = requestedRevision
+      if (isDisposed()) {
+        return
+      }
+
+      await waiting
+      return
     }
+
+    const revision = writer.revision
 
     if (!readyResolved) {
       await ready
     }
 
-    if (disposed) {
+    if (isDisposed()) {
       return
     }
 
-    await waitForRevision(revision)
+    await writer.waitFor(revision)
   }
 
   const handleSourceChange = (markBeforeLoad = false): void => {
     sourceRevision++
 
-    if (!restorationSettled) {
-      if (loadStarted || markBeforeLoad) {
+    if (isBeforeMirroring()) {
+      if (phase === 'initializing' || markBeforeLoad) {
         changedDuringRestore = true
       }
 
       return
     }
 
-    requestPersist()
+    writer.request()
   }
 
   const beginMirroring = (): void => {
-    restorationSettled = true
+    phase = 'mirroring'
 
     if (statusState.value === 'restoring') {
       statusState.value = 'ready'
@@ -368,10 +176,10 @@ function createStorageApi<TSchema extends QueryStateSchema>(
     // normal mirroring synchronously so no change can fall between the two phases.
     for (;;) {
       const revision = sourceRevision
-      requestPersist()
-      await flushWrites()
+      writer.request()
+      await writer.flush()
 
-      if (disposed) {
+      if (isDisposed()) {
         return
       }
 
@@ -383,11 +191,11 @@ function createStorageApi<TSchema extends QueryStateSchema>(
   }
 
   const restoreFromStorage = async (): Promise<void> => {
-    if (disposed) {
+    if (isDisposed()) {
       return
     }
 
-    loadStarted = true
+    phase = 'initializing'
     emitDebug(core.debug, 'storage:restore-start', { key: storageOptions.key, policy: restore })
 
     try {
@@ -408,7 +216,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
         return
       }
 
-      if (disposed) {
+      if (isDisposed()) {
         return
       }
 
@@ -419,7 +227,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
       }
 
       if (loaded === undefined) {
-        desiredQuery = {}
+        writer.markPersisted({})
         emitDebug(core.debug, 'storage:restore', { key: storageOptions.key, outcome: 'empty' })
         return
       }
@@ -449,7 +257,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
       emitDebug(core.debug, 'storage:restore', { key: storageOptions.key, outcome: 'failed' })
     }
     finally {
-      if (!disposed) {
+      if (!isDisposed()) {
         beginMirroring()
       }
 
@@ -465,7 +273,7 @@ function createStorageApi<TSchema extends QueryStateSchema>(
   const stopSnapshot = registerSnapshotSource(core.debug, 'storage', () => ({
     key: storageOptions.key,
     status: statusState.value,
-    revision: requestedRevision,
+    revision: writer.revision,
   }))
   onScopeDispose(stopSnapshot)
 
@@ -482,13 +290,13 @@ function createStorageApi<TSchema extends QueryStateSchema>(
         return
       }
 
-      if (!restorationSettled) {
+      if (isBeforeMirroring()) {
         sourceRevision++
         changedDuringRestore = true
       }
       else if (statusState.value === 'error') {
-        desiredQuery = undefined
-        requestPersist()
+        writer.invalidate()
+        writer.request()
       }
     },
   })
@@ -506,15 +314,12 @@ function createStorageApi<TSchema extends QueryStateSchema>(
   )
 
   onScopeDispose(() => {
-    if (!restorationSettled) {
+    if (isBeforeMirroring()) {
       emitDebug(core.debug, 'storage:restore', { key: storageOptions.key, outcome: 'disposed' })
     }
 
-    disposed = true
-    pendingWrite = undefined
-    persistRequested = false
-    unsettledRevisions.clear()
-    notifySettlement()
+    phase = 'disposed'
+    writer.dispose()
     stopTransactions()
     stopExplicitValues()
     stopQuery()
