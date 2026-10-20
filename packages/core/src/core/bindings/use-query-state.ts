@@ -1,34 +1,16 @@
-import type { WritableComputedRef } from 'vue'
 import type { Codec, CodecWithDefault } from '../codecs/codec'
 import type { QueryStateUsable, StateModuleApi, StateModulePipeline, VerifiedStateModule } from '../module-system/composition'
 import type { DefinedQueryStateModule } from '../module-system/contract'
 import type { SingleParamSchema } from '../module-system/registry'
 import type { ApplyPipelineEffects } from '../runtime/pipeline/contract'
-import type { QueryWriteOptions } from '../runtime/transaction'
 import type { AnyDefinedQueryParam, DefinedQueryParam } from '../schema/params/definition'
 import type { QueryStateRefInput, QueryStateRefValue } from '../schema/schema'
-import type { UseQueryStatesOptions } from './binding'
-import { computed } from 'vue'
+import type { QueryStateRef, UseQueryStatesOptions } from './binding'
 import { codecs } from '../codecs/catalog'
 import { isCodec } from '../codecs/codec'
 import { applyQueryStateModule } from '../module-system/apply-module'
 import { queryParam } from '../schema/params/query-param'
-import { createQueryBinding, transactQueryKey } from './binding'
-
-/**
- * A writable ref bound to one query param, returned by {@link useQueryState}.
- *
- * @typeParam TRead - The value type the ref reads.
- * @typeParam TWrite - The value type the ref and `set` accept.
- *
- * @see https://vuqs.dev/guide/query-state/use-query-state
- */
-export interface QueryStateRef<TRead, TWrite = TRead> extends WritableComputedRef<TRead, TWrite> {
-  /** Writes `value`, optionally overriding navigation and default omission. */
-  set: (value: TWrite, options?: QueryWriteOptions) => void
-  /** Removes the param from the URL, optionally overriding the navigation options. */
-  clear: (options?: QueryWriteOptions) => void
-}
+import { createQueryBinding, createQueryStateRef } from './binding'
 
 /**
  * The value a single param reads after the presence effects of the installed pipeline
@@ -183,15 +165,7 @@ function toQueryStateRef<TParam extends AnyDefinedQueryParam>(
   const schema = { value: definition } satisfies SingleParamSchema<TParam>
   const { binding, host } = createQueryBinding(schema, options)
 
-  const valueRef = computed({
-    get: () => (binding.read.value as Record<string, unknown>).value,
-    set: value => transactQueryKey(binding, 'value', value),
-  })
-
-  const queryRef = Object.assign(valueRef, {
-    set: (value: unknown, perCall?: QueryWriteOptions) => transactQueryKey(binding, 'value', value, perCall),
-    clear: (perCall?: QueryWriteOptions) => transactQueryKey(binding, 'value', undefined, perCall),
-  }) as UseQueryStateReturn<TParam>
+  const queryRef = createQueryStateRef(binding, 'value') as UseQueryStateReturn<TParam>
 
   queryRef.use = ((module: DefinedQueryStateModule) => {
     applyQueryStateModule(queryRef, host, 'value', module)

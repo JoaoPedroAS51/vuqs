@@ -1,9 +1,6 @@
-import type { QueryWriteOptions } from '../runtime/transaction'
 import type { QueryStateRefInput, QueryStateSchema } from '../schema/schema'
-import type { QueryBindingSource, QueryReadMap, QueryReadShape } from './binding'
-import type { QueryStateRef } from './use-query-state'
-import { computed } from 'vue'
-import { transactQueryKey } from './binding'
+import type { QueryBindingSource, QueryReadMap, QueryReadShape, QueryStateRef } from './binding'
+import { createQueryStateRef } from './binding'
 
 /**
  * The per-field refs produced by {@link toQueryRefs}: one {@link QueryStateRef}
@@ -40,15 +37,7 @@ export function toQueryRefs<TSchema extends QueryStateSchema, TRead extends Quer
   const result: Record<string, unknown> = {}
 
   for (const key of binding.keys) {
-    const fieldRef = computed({
-      get: () => (binding.read.value as Record<string, unknown>)[key],
-      set: value => transactQueryKey(binding, key, value),
-    })
-
-    result[key] = Object.assign(fieldRef, {
-      set: (value: unknown, options?: QueryWriteOptions) => transactQueryKey(binding, key, value, options),
-      clear: (options?: QueryWriteOptions) => transactQueryKey(binding, key, undefined, options),
-    })
+    result[key] = createQueryStateRef(binding, key)
   }
 
   return result as ToQueryRefs<TSchema, TRead>

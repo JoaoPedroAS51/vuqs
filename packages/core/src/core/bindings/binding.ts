@@ -1,9 +1,9 @@
-import type { ComputedRef } from 'vue'
+import type { ComputedRef, WritableComputedRef } from 'vue'
 import type { ModuleHost } from '../module-system/apply-module'
 import type { NavigateOptions } from '../runtime/adapter'
 import type { QueryStateEngine } from '../runtime/engine'
 import type { QueryTransactionRequest, QueryWriteOptions } from '../runtime/transaction'
-import type { QueryStateRefValue, QueryStateResolvedValues, QueryStateSchema, QueryStateWriteValues } from '../schema/schema'
+import type { QueryStateRefInput, QueryStateRefValue, QueryStateResolvedValues, QueryStateSchema, QueryStateWriteValues } from '../schema/schema'
 import { computed, getCurrentScope, onScopeDispose, reactive } from 'vue'
 import { emitDebug } from '../diagnostics/bus'
 import { createQueryStateEngine } from '../runtime/engine'
@@ -80,6 +80,21 @@ export interface QueryBinding<TSchema extends QueryStateSchema> {
   readonly read: ComputedRef<QueryStateResolvedValues<TSchema>>
   /** Atomically applies a partial or exhaustive query-state write. */
   readonly transact: (request: QueryTransactionRequest<TSchema>) => void
+}
+
+/**
+ * A writable ref bound to one query param.
+ *
+ * @typeParam TRead - The value type the ref reads.
+ * @typeParam TWrite - The value type the ref and `set` accept.
+ *
+ * @see https://vuqs.dev/guide/query-state/use-query-state
+ */
+export interface QueryStateRef<TRead, TWrite = TRead> extends WritableComputedRef<TRead, TWrite> {
+  /** Writes `value`, optionally overriding navigation and default omission. */
+  set: (value: TWrite, options?: QueryWriteOptions) => void
+  /** Removes the param from the URL, optionally overriding the navigation options. */
+  clear: (options?: QueryWriteOptions) => void
 }
 
 /**
@@ -226,34 +241,48 @@ export function toReactiveQuery<TSchema extends QueryStateSchema>(
   const refs: Record<string, unknown> = {}
 
   for (const key of binding.keys) {
-    refs[key] = computed({
-      get: () => (binding.read.value as Record<string, unknown>)[key],
-      set: value => transactQueryKey(binding, key, value),
-    })
+    refs[key] = createQueryStateRef(binding, key)
   }
 
   return reactive(refs) as QueryStatesValues<TSchema>
 }
 
 /**
- * Writes one reactive field, where assigning `undefined` explicitly clears it.
+ * Projects one binding param into a writable ref with `set` and `clear`.
+ *
+ * @returns A new ref over the binding's current read and transaction writer.
  *
  * @internal
  */
-export function transactQueryKey<TSchema extends QueryStateSchema>(
+export function createQueryStateRef<TSchema extends QueryStateSchema, TKey extends keyof TSchema & string>(
   binding: QueryBinding<TSchema>,
-  key: keyof TSchema & string,
-  value: unknown,
-  options?: QueryWriteOptions,
-): void {
-  const { clearOnDefault, ...navigation } = options ?? {}
+  key: TKey,
+): QueryStateRef<QueryStateResolvedValues<TSchema>[TKey], QueryStateRefInput<TSchema[TKey]>> {
+  const set = (value: QueryStateRefInput<TSchema[TKey]>, options?: QueryWriteOptions): void => {
+    write(value, options)
+  }
 
-  binding.transact({
-    mode: 'patch',
-    values: { [key]: value } as QueryStateWriteValues<TSchema>,
-    navigation: options === undefined ? undefined : navigation,
-    clearOnDefault,
+  const clear = (options?: QueryWriteOptions): void => {
+    write(undefined, options)
+  }
+
+  const ref = computed<QueryStateResolvedValues<TSchema>[TKey], QueryStateRefInput<TSchema[TKey]>>({
+    get: () => binding.read.value[key],
+    set,
   })
+
+  return Object.assign(ref, { set, clear })
+
+  function write(value: QueryStateRefInput<TSchema[TKey]> | undefined, options?: QueryWriteOptions): void {
+    const { clearOnDefault, ...navigation } = options ?? {}
+
+    binding.transact({
+      mode: 'patch',
+      values: { [key]: value } as QueryStateWriteValues<TSchema>,
+      navigation: options === undefined ? undefined : navigation,
+      clearOnDefault,
+    })
+  }
 }
 
 function resolveSchemaClearOnDefault<TSchema extends QueryStateSchema>(

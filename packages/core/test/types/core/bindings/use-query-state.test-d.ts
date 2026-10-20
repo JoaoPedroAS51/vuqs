@@ -1,4 +1,4 @@
-import type { QueryStateRef } from '../../../../src/core/bindings/use-query-state'
+import type { QueryStateRef } from '../../../../src/core/bindings/binding'
 import { describe, expectTypeOf, it } from 'vitest'
 import { useQueryState } from '../../../../src/core/bindings/use-query-state'
 import { codecs } from '../../../../src/core/codecs/catalog'
