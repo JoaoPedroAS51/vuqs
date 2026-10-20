@@ -102,6 +102,7 @@ describe('shared update queue', () => {
     })
     const app = createApp({})
     installQueryAdapter(app, { query, navigate })
+
     const q = app.runWithContext(() => useQueryState('q', codecs.string))
 
     q.set('requested')
@@ -148,6 +149,7 @@ describe('shared update queue', () => {
       expect(errors).toEqual([])
       expect(navigate).toHaveBeenCalledTimes(2)
       expect(queue.overlay.value).toEqual({ q: 'new' })
+
       finishes.shift()?.()
       await flush()
 
@@ -215,6 +217,7 @@ describe('shared update queue', () => {
     }))
     const app = createApp({})
     installQueryAdapter(app, { query, navigate })
+
     const q = app.runWithContext(() => useQueryState('q', codecs.string))
 
     q.set('first')
@@ -259,6 +262,7 @@ describe('shared update queue', () => {
     })
     const app = createApp({})
     installQueryAdapter(app, { query, navigate })
+
     const q = app.runWithContext(() => useQueryState('q', codecs.string))
 
     q.set('same')
@@ -301,6 +305,7 @@ describe('shared update queue', () => {
     })
     const app = createApp({})
     installQueryAdapter(app, { query, navigate })
+
     const q = app.runWithContext(() => useQueryState('q', codecs.string))
 
     q.set('same')
@@ -331,6 +336,7 @@ describe('shared update queue', () => {
     })
     const app = createApp({})
     installQueryAdapter(app, { query, navigate })
+
     const first = app.runWithContext(() => useQueryState('first', codecs.string))
     const ready = app.runWithContext(() => useQueryState('ready', codecs.string))
     const late = app.runWithContext(() => useQueryState('late', codecs.string, { throttleMs: 100 }))
@@ -431,12 +437,14 @@ describe('shared update queue', () => {
     first.run(() => app.runWithContext(() => useQueryState('q', codecs.string)))
     first.stop()
     query.value = { q: 'after-dispose' }
+
     expect(commits).toEqual([])
 
     const second = effectScope()
     onTestFinished(() => second.stop())
     second.run(() => app.runWithContext(() => useQueryState('q', codecs.string)))
     query.value = { q: 'after-remount' }
+
     expect(commits).toEqual([{ q: 'after-remount' }])
 
     second.stop()

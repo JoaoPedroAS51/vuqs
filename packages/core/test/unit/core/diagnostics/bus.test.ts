@@ -19,7 +19,9 @@ describe('debug bus: emission', () => {
     channel.debug('gtq:settle', { dropped: ['a', 'b'] })
 
     expect(events).toHaveLength(1)
+
     const [event] = events
+
     expect(event.code).toBe('gtq:settle')
     expect(event.scope).toBe('gtq')
     expect(event.level).toBe('debug')
@@ -125,8 +127,10 @@ describe('debug bus: reporters', () => {
     expect(order).toHaveLength(2)
     expect(order[0]).toContain('gtq:reset')
     expect(order[1]).toContain('gtq:settle')
+
     const firstSeq = Number(order[0]!.split('#')[1])
     const secondSeq = Number(order[1]!.split('#')[1])
+
     expect(secondSeq).toBeGreaterThan(firstSeq)
   })
 })
@@ -307,6 +311,7 @@ describe('debug bus: binding target', () => {
     track(target.addReporter(event => events.push(event)))
     track(target.retainHistory({ limit: 4 }))
     track(target.registerSnapshotSource('engine', () => engineSnapshot('e')))
+
     expect(isDebugArmed(target)).toBe(true)
 
     // The base bindingId wins: a call site cannot override or spoof it.

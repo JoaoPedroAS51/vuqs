@@ -153,7 +153,9 @@ describe('useQueryStates', () => {
     expect(state.values.q).toBeNull()
     expect(state.values.tags).toBeNull()
     expect(state.values.page).toBe(2)
+
     await flush()
+
     expect(query.value).toEqual({ search: { page: '2' }, other: 'keep' })
 
     refs.q.set('second')
@@ -215,7 +217,9 @@ describe('useQueryStates', () => {
     expect(state.values.payload).toBeNull()
     expect(single.value).toBeNull()
     expect(whole.value).toEqual({ payload: null })
+
     await flush()
+
     expect(query.value).toEqual({ payload: 'null', keep: 'me' })
     expect(refs.payload.value).toBeNull()
 
@@ -224,7 +228,9 @@ describe('useQueryStates', () => {
     expect(state.values.payload).toBeUndefined()
     expect(single.value).toBeUndefined()
     expect(whole.value).toEqual({})
+
     await flush()
+
     expect(query.value).toEqual({ keep: 'me' })
     expect(refs.payload.value).toBeUndefined()
   })
@@ -264,7 +270,9 @@ describe('useQueryStates', () => {
       expect(values.page).toBe(1)
       expect(values.enabled).toBe(false)
       expect(values.count).toBe(0)
+
       await flush()
+
       expect(query.value).toEqual({ other: 'keep', enabled: 'false', count: '0' })
     })
 

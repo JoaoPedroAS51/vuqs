@@ -40,9 +40,11 @@ describe('nuxt debug runtime ownership', () => {
     ;(clientPlugin as Plugin).setup({ vueApp: { onUnmount } })
 
     expect(mocks.addConsole).toHaveBeenCalledWith()
+
     const stop = onUnmount.mock.calls[0]?.[0] as () => void
     stop()
     stop()
+
     expect(release).toHaveBeenCalledOnce()
   })
 
@@ -105,11 +107,15 @@ describe('nuxt debug runtime ownership', () => {
     expect([...hooks.keys()]).toEqual(['app:rendered', 'app:error', 'app:redirected'])
     expect(mocks.getChannel).toHaveBeenCalledExactlyOnceWith(adapter)
     expect(mocks.getChannel.mock.calls[0]![0]).toBe(adapter)
+
     hooks.get(terminalHook)!()
+
     expect(release).toHaveBeenCalledOnce()
+
     hooks.get('app:error')?.()
     hooks.get('app:rendered')?.()
     hooks.get('app:redirected')?.()
+
     expect(release).toHaveBeenCalledOnce()
   })
 

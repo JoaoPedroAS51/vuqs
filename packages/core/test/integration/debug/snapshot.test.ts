@@ -54,11 +54,14 @@ describe('state snapshot', () => {
 
   it('registers and disposes a storage source on the server (SSR)', async () => {
     vi.stubGlobal('window', undefined)
+
     const adapter = createTestingAdapter()
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const scope = effectScope()
     onTestFinished(() => scope.stop())
+
     const query = app.runWithContext(() => scope.run(() => useQueryStates({ q: codecs.string }).use(withStorage({
       key: 'ssr-only',
       storage: { load: () => undefined, save: vi.fn(), remove: vi.fn() },
@@ -78,10 +81,13 @@ describe('state snapshot', () => {
     const adapter = createTestingAdapter()
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const scope = effectScope()
     onTestFinished(() => scope.stop())
     app.runWithContext(() => scope.run(() => useQueryStates({ q: codecs.string })))
+
     const channel = getDebugChannel(adapter)
+
     expect(getDebugSnapshot(channel).engines).toHaveLength(1)
 
     scope.stop()
@@ -93,16 +99,20 @@ describe('state snapshot', () => {
     const adapter = createTestingAdapter({ searchParams: { q: 'initial', flag: 'committed' }, hasMemory: true })
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const scope = effectScope()
+
     onTestFinished(() => {
       scope.stop()
       adapter.resetQueue()
     })
+
     const state = app.runWithContext(() => scope.run(() => useQueryStates({ q: codecs.string }).use(core => ({
       api: { explicit: core.state.explicitValues },
       pipeline: [core.pipeline.define('read', (values, context) => ({ ...values, q: String(context.query.flag) }), { projection: 'explicit' })],
     }))))!
     const sibling = app.runWithContext(() => scope.run(() => useQueryStates({ flag: codecs.string })))!
+
     expect(state.explicit.value.q).toBe('committed')
 
     sibling.patch({ flag: 'pending' })

@@ -22,6 +22,7 @@ describe('withTestQuery', () => {
 
     query.set('next')
     await Promise.resolve()
+
     expect(fixture.query.value).toEqual({ q: 'next' })
     expect(observed).toHaveBeenCalled()
     expect(getDebugSnapshot(channel).engines).toHaveLength(1)

@@ -24,9 +24,13 @@ describe('createWebStorage', () => {
     const stored = snapshot({ q: 'saved' })
 
     expect(storage.load('filters')).toBeUndefined()
+
     storage.save('filters', stored)
+
     expect(storage.load('filters')).toEqual(stored)
+
     storage.remove('filters')
+
     expect(storage.load('filters')).toBeUndefined()
     expect(resolve).toHaveBeenCalledTimes(5)
   })

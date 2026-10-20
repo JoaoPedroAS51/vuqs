@@ -99,6 +99,7 @@ describe('createCodec', () => {
         expect(codec.serialize(2)).toBe('2')
         expect(codec.parse(undefined)).toBeUndefined()
       }
+
       expect(first.defaultValue).toBe(0)
       expect(second.defaultValue).toBe(0)
       expect(replaced.defaultValue).toBeNull()

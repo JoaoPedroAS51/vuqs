@@ -34,6 +34,7 @@ test('preserves a newer state while an earlier navigation is waiting in a guard'
   await expect(page.getByRole('searchbox', { name: 'Search' })).toHaveValue('latest')
   await expect(page.getByTestId('state')).toHaveText('latest')
   await expectUrl(page, `${path}?q=initial`)
+
   await page.getByRole('button', { name: 'Release navigation' }).click()
 
   await expectUrl(page, `${path}?q=latest`)
@@ -42,6 +43,7 @@ test('preserves a newer state while an earlier navigation is waiting in a guard'
   await page.goBack()
   await expectUrl(page, `${path}?q=first`)
   await expect(page.getByRole('searchbox', { name: 'Search' })).toHaveValue('first')
+
   await page.goForward()
   await expectUrl(page, `${path}?q=latest`)
   await expect(page.getByRole('searchbox', { name: 'Search' })).toHaveValue('latest')

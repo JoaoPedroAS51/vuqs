@@ -34,6 +34,7 @@ describe('console reporter: payload policy', () => {
     closed.debug('rd:set', { defaults: { visible: 'never exposed' } })
 
     const preview = log.mock.calls[0]?.[1] as { data: { defaults: Record<string, unknown> } }
+
     expect(preview).toMatchObject({
       data: {
         defaults: {

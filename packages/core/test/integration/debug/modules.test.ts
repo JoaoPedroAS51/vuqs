@@ -182,6 +182,7 @@ describe('module tracing', () => {
     expect(logged[0]?.data).toEqual({ namespace: 'my-module', message: 'writing %s', values: ['a'] })
     expect(write?.context?.bindingId).toBeDefined()
     expect(write?.context?.runtimeId).toBeDefined()
+
     for (const event of logged) {
       expect(event.context?.bindingId).toBe(write?.context?.bindingId)
       expect(event.context?.runtimeId).toBe(write?.context?.runtimeId)

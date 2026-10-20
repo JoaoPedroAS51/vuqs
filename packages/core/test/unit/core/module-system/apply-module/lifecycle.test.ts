@@ -279,7 +279,9 @@ describe.each(facades)('complete installation lifecycle ($name)', (facade) => {
     expect(facade.read(query)).toBe('kept')
     expect('ok' in query).toBe(false)
     expect(teardown).toHaveBeenCalledOnce()
+
     query.emit()
+
     expect(handler).not.toHaveBeenCalled()
   })
 

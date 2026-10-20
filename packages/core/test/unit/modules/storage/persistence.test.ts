@@ -117,7 +117,9 @@ describe('withStorage mirroring', () => {
 
     state.patch({ q: 'after' })
     await flushMicrotasks()
+
     expect(flushed).toBe(false)
+
     firstWrite.resolve()
     await flushing
 

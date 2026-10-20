@@ -37,6 +37,7 @@ describe('parse visibility', () => {
     const query = ref<ParsedQuery>({ n: 'bad', color: 'red' })
     const app = createApp({})
     installQueryAdapter(app, { query, navigate: vi.fn<QueryStateNavigate>() })
+
     const state = app.runWithContext(() => useQueryStates({ n: codecs.integer, color: codecs.string }))
 
     void state.values.n
@@ -48,6 +49,7 @@ describe('parse visibility', () => {
     void state.values.n
     query.value = { n: 'bad', color: 'blue' }
     void state.values.n
+
     expect(events.filter(([code]) => code === 'engine:parse-miss')).toHaveLength(2)
   })
 
@@ -56,6 +58,7 @@ describe('parse visibility', () => {
     const adapter = { query, navigate: vi.fn<QueryStateNavigate>() }
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const state = app.runWithContext(() => useQueryStates({ n: codecs.integer, color: codecs.string }))
     void state.values.n
 
@@ -71,9 +74,11 @@ describe('parse visibility', () => {
 
   it('reports the public path of an invalid prefixed param', () => {
     const events = captureEvents()
+
     const adapter = createTestingAdapter({ searchParams: { 'filters.page': 'bad' }, hasMemory: true })
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const page = app.runWithContext(() => useQueryState(queryParam.object('filters', {
       page: codecs.integer,
     })))
@@ -88,6 +93,7 @@ describe('parse visibility', () => {
 
   it('attributes malformed JSON once through the binding engine', () => {
     const events = captureEvents()
+
     const adapter = createTestingAdapter({ searchParams: { filters: '{bad' }, hasMemory: true })
     const app = createApp({})
     installQueryAdapter(app, adapter)
@@ -109,6 +115,7 @@ describe('parse visibility during default omission evaluation', () => {
     const app = createApp({})
     const adapter = createTestingAdapter({ searchParams: query.value, hasMemory: true })
     installQueryAdapter(app, adapter)
+
     const state = app.runWithContext(() => useQueryStates({
       page: queryParam('page', codecs.integer.withDefault(1)),
       other: codecs.string,
@@ -127,9 +134,11 @@ describe('parse visibility during default omission evaluation', () => {
 
   it('emits no setter event for the evaluated alternatives', async () => {
     const events = captureEvents()
+
     const adapter = createTestingAdapter({ hasMemory: true })
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const state = app.runWithContext(() => useQueryStates({
       page: queryParam('page', codecs.integer.withDefault(1)),
     }))

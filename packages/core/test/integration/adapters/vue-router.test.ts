@@ -273,9 +273,11 @@ describe('vue router query runtime', () => {
     const router = makeRouter()
     await router.push('/')
     router.beforeEach(() => false)
+
     const adapter = createVueRouterAdapter({ router })
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const q = app.runWithContext(() => useQueryState('q', codecs.string))
 
     q.set('sale')
@@ -289,6 +291,7 @@ describe('vue router query runtime', () => {
     const { router, adapter } = await setupScroll(routerScroll())
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const scope = effectScope()
 
     try {
@@ -313,9 +316,11 @@ describe('vue router query runtime', () => {
     })
     await router.push('/?value=3')
     const initial = router.currentRoute.value.query
+
     const adapter = createVueRouterAdapter({ router })
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const scope = effectScope()
 
     try {
@@ -349,9 +354,11 @@ describe('vue router query runtime', () => {
       const serialized = typeof value === 'string' || (Array.isArray(value) && typeof value[0] === 'string')
       return serialized ? to.fullPath : undefined
     })
+
     const adapter = createVueRouterAdapter({ router, defaultOptions: { throttleMs: 0 } })
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const scope = effectScope()
     const codec = createCodec<ParsedQueryValue>({
       parse: raw => structuralEq(raw, written) ? committed : raw,

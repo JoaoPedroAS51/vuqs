@@ -38,11 +38,14 @@ describe('withStorage lifecycle', () => {
     const pending = deferred<StoredQuerySnapshot | undefined>()
     const memory = createMemoryStorage()
     memory.load.mockImplementation(() => pending.promise)
+
     const adapter = createTestingAdapter({ hasMemory: true })
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const scope = effectScope()
     onTestFinished(() => scope.stop())
+
     const state = app.runWithContext(() => scope.run(() => useQueryStates(schema).use(withStorage({
       key: 'filters',
       storage: memory.storage,
@@ -175,11 +178,14 @@ describe('withStorage lifecycle', () => {
 
   it('does not start a queued restoration after synchronous disposal', async () => {
     const memory = createMemoryStorage(snapshot({ q: 'late' }))
+
     const adapter = createTestingAdapter({ hasMemory: true })
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const scope = effectScope()
     onTestFinished(() => scope.stop())
+
     const state = app.runWithContext(() => scope.run(() => useQueryStates(schema).use(withStorage({
       key: 'filters',
       storage: memory.storage,
@@ -195,11 +201,14 @@ describe('withStorage lifecycle', () => {
 
   it('never loads or writes when its installation fails', async () => {
     const memory = createMemoryStorage(snapshot({ q: 'stored' }))
+
     const adapter = createTestingAdapter({ searchParams: { q: 'phone' }, hasMemory: true })
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const scope = effectScope()
     onTestFinished(() => scope.stop())
+
     const query = app.runWithContext(() => scope.run(() => useQueryStates(schema).use(() => ({ api: { storage: true } }))))!
 
     expect(() => query.use(withStorage({ key: 'filters', storage: memory.storage }))).toThrow(/module key "storage"/)
@@ -215,11 +224,14 @@ describe('withStorage lifecycle', () => {
 
   it('stops mirroring once the binding that installed it is disposed', async () => {
     const memory = createMemoryStorage()
+
     const adapter = createTestingAdapter({ searchParams: { q: 'phone' }, hasMemory: true })
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const scope = effectScope()
     onTestFinished(() => scope.stop())
+
     const query = app.runWithContext(() => scope.run(() => useQueryStates(schema)))!
     const state = query.use(withStorage({ key: 'filters', storage: memory.storage, restore: 'never' }))
 
@@ -238,11 +250,14 @@ describe('withStorage lifecycle', () => {
     const pending = deferred<void>()
     const memory = createMemoryStorage()
     memory.save.mockImplementation(() => pending.promise)
+
     const adapter = createTestingAdapter({ searchParams: { q: 'phone' }, hasMemory: true })
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const scope = effectScope()
     onTestFinished(() => scope.stop())
+
     const state = app.runWithContext(() => scope.run(() => useQueryStates(schema).use(withStorage({
       key: 'filters',
       storage: memory.storage,

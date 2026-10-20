@@ -43,9 +43,12 @@ describe('createNuxtMinimalRouterAdapter', () => {
       const navigation = Promise.resolve(adapter.navigate({}, {})).then(settled)
 
       await Promise.resolve()
+
       expect(settled).not.toHaveBeenCalled()
+
       finish()
       await navigation
+
       expect(settled).toHaveBeenCalledOnce()
       expect(router.push).not.toHaveBeenCalled()
     })

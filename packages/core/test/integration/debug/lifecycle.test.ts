@@ -172,6 +172,7 @@ describe('lifecycle tracing', () => {
     }))
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const q = app.runWithContext(() => useQueryState('q', codecs.string))
 
     q.set('same')
@@ -196,6 +197,7 @@ describe('lifecycle tracing', () => {
     }, { channel: getDebugChannel(adapter) }))
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const q = app.runWithContext(() => useQueryState('q', codecs.string))
 
     q.set('sale')
@@ -226,6 +228,7 @@ describe('lifecycle tracing', () => {
     }, { channel: getDebugChannel(adapter) }))
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const q = app.runWithContext(() => useQueryState('q', codecs.string))
 
     q.set('pending')
@@ -259,6 +262,7 @@ describe('lifecycle tracing', () => {
     }, { channel: getDebugChannel(adapter) }))
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const q = app.runWithContext(() => useQueryState('q', codecs.string))
 
     q.set('write')
@@ -300,12 +304,14 @@ describe('lifecycle tracing', () => {
     trackReporter(addDebugReporter(event => events.push(event), { channel: getDebugChannel(adapter) }))
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const n = app.runWithContext(() => useQueryState('n', codecs.integer))
 
     n.set(2)
     await flush()
 
     const commits = events.filter(event => event.code === 'adapter:commit')
+
     expect(commits).toHaveLength(1)
     expect(commits[0]?.data).toEqual({ query: { n: 2 }, paths: ['n'], pendingPathCount: 1, source: 'write' })
     expect(commits[0]?.context).toMatchObject({ batchId: 1, transactionIds: [1] })
@@ -329,6 +335,7 @@ describe('lifecycle tracing', () => {
     }, { channel: getDebugChannel(adapter) }))
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const q = app.runWithContext(() => useQueryState('q', codecs.string))
 
     q.set('pending')
@@ -347,12 +354,14 @@ describe('lifecycle tracing', () => {
     trackReporter(addDebugReporter(event => events.push(event), { channel }))
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const q = app.runWithContext(() => useQueryState('q', codecs.string))
 
     q.set('simulated')
     await flush()
 
     const snapshot = getDebugSnapshot(channel)
+
     expect(snapshot.queues).toEqual([expect.objectContaining({ overlay: {}, overlayKeys: [], scheduled: false })])
     expect(snapshot.engines).toEqual([expect.objectContaining({ committedExplicitValues: { value: 'initial' }, values: { value: 'simulated' } })])
     expect(events.filter(event => event.code === 'adapter:commit')).toEqual([])
@@ -370,6 +379,7 @@ describe('lifecycle tracing', () => {
     })
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const q = app.runWithContext(() => useQueryState('q', codecs.string))
     const resetValues: Array<string | undefined> = []
     const errors: DebugEvent[] = []
@@ -440,6 +450,7 @@ describe('lifecycle tracing', () => {
 
     const flushed = events.find(event => event.code === 'gtq:flush')
     const navigated = events.find(event => event.code === 'adapter:navigate')
+
     expect(flushed?.context).toMatchObject({ batchId: 1 })
     expect(flushed?.context?.transactionIds).toBeUndefined()
     expect(navigated?.data).toMatchObject({ mode: 'push' })
@@ -748,6 +759,7 @@ describe('reporter reset during queue events', () => {
     const adapter = createTestingAdapter({ searchParams: { q: 'initial' }, onUrlUpdate, hasMemory })
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const q = app.runWithContext(() => useQueryState('q', codecs.string))
     const events: DebugEvent[] = []
     let remaining = occurrence
@@ -940,9 +952,11 @@ describe('binding ownership of diagnostics', () => {
     b.setDefaults({ value: 10 })
 
     const after = getDebugSnapshot(channel).engines
+
     expect(after).toHaveLength(1)
     expect(after[0]!.defaults.value).toBe(10)
     expect(before.map(engine => engine.defaults.value).sort()).toEqual([5, 9])
+
     scopeB.stop()
   })
 })

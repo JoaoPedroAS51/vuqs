@@ -263,8 +263,11 @@ describe('registration identity and ownership', () => {
 
     dispose()
     await flush()
+
     expect(outside).toBeDefined()
+
     q.emit()
+
     expect(handler).toHaveBeenCalledTimes(1)
   })
 })

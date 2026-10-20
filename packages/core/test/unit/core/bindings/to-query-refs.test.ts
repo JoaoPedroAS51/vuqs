@@ -52,6 +52,7 @@ describe('toQueryRefs over the composable', () => {
     await flush()
     q.value = undefined
     await flush()
+
     expect(query.values.q).toBeUndefined()
   })
 

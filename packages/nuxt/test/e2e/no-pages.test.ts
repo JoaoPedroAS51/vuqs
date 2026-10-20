@@ -59,6 +59,7 @@ describe('no-pages fixture', async () => {
       await page.locator('#tags-write').click()
       await page.waitForURL('**/catalog?keep=yes&tags=red&tags=blue#section')
       expect(await page.locator('#tags').textContent()).toBe('red,blue')
+
       await page.reload({ waitUntil: 'networkidle' })
       expect(await page.locator('#tags').textContent()).toBe('red,blue')
     }

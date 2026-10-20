@@ -443,7 +443,9 @@ describe('createQueryStateEngine', () => {
 
       expect(defaults).toHaveBeenCalledOnce()
       expect(decisions).toEqual([expect.objectContaining({ key: 'page', defaultValue: 2 })])
+
       await flush()
+
       expect(adapter.query.value).toEqual({ mode: 'mirror' })
       expect(engine.state.values.value.page).toBe(2)
     })
@@ -800,6 +802,7 @@ describe('createQueryStateEngine', () => {
       expect(first.engine.defaults.candidates.value.page).toBe(5)
       expect(second.engine.defaults.candidates.value.page).toBe(1)
       expect(second.engine.installations.snapshot.value).toHaveLength(0)
+
       first.scope.stop()
       second.scope.stop()
     })

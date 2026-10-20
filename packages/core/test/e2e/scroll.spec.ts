@@ -122,8 +122,10 @@ test.describe('vue-router scroll policy', () => {
 
     await page.evaluate(() => window.scrollTo(0, 800))
     await expectScroll(page, { x: 0, y: 800 })
+
     await page.getByRole('button', { name: 'Keep position' }).click()
     await expectUrl(page, `${path}?page=4`)
+
     await afterRender(page)
     expect(await readScroll(page)).toEqual({ x: 0, y: 800 })
   })

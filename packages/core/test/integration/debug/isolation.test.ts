@@ -48,6 +48,7 @@ describe('adapter isolation', () => {
 
     // A's channel reporter sees only A's runtime and only A's write ('a'), never B's ('b').
     const aWrites = onA.filter(seen => seen.code === 'binding:set')
+
     expect(aWrites.length).toBeGreaterThan(0)
     expect(aWrites.every(seen => seen.runtimeId === channelA.runtimeId)).toBe(true)
     expect(aWrites.some(seen => seen.value === 'a')).toBe(true)
@@ -85,6 +86,7 @@ describe('adapter isolation', () => {
     )?.context?.bindingId
     const idA = idOf('a')
     const idB = idOf('b')
+
     expect(idA).toBeDefined()
     expect(idB).toBeDefined()
     expect(idA).not.toBe(idB)

@@ -74,6 +74,7 @@ describe('query transactions', () => {
     })
 
     const transaction = (starts[0] as { transaction: object & { keys: object, paths: object } }).transaction
+
     expect(Object.isFrozen(transaction)).toBe(true)
     expect(Object.isFrozen(transaction.keys)).toBe(true)
     expect(Object.isFrozen(transaction.paths)).toBe(true)
@@ -152,7 +153,9 @@ describe('query transactions', () => {
       paths: ['filters.sort'],
     }))
     expect(engine.state.explicitValues.value).toEqual({ q: 'phone' })
+
     await flush()
+
     expect(adapter.query.value).toEqual({ q: 'phone', filters: { keep: '' }, other: 'keep' })
     expect(onUrlUpdate).toHaveBeenCalledOnce()
   })
@@ -354,6 +357,7 @@ describe('query transactions', () => {
 
     stop()
     engine.query.transact({ mode: 'patch', values: { q: 'two' } })
+
     expect(surviving).toHaveBeenCalledOnce()
     expect(late).toHaveBeenCalledOnce()
     expect(consoleError).toHaveBeenCalledTimes(2)

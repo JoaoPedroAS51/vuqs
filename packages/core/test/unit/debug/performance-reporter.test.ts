@@ -50,10 +50,15 @@ describe('performance reporter', () => {
     expect(mark).not.toHaveBeenCalled()
 
     vi.stubGlobal('performance', undefined)
+
     const unavailable = createPerformanceReporter({ limit: Number.POSITIVE_INFINITY })
+
     expect(() => unavailable.clear()).not.toThrow()
+
     const stop = channel.addReporter(unavailable)
+
     expect(() => channel.debug('gtq:reset')).not.toThrow()
+
     stop()
   })
 

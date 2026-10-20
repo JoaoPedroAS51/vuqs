@@ -17,6 +17,7 @@ describe('browser history query runtime', () => {
     const adapter = makeAdapter({ defaultOptions: { history: 'push', scroll: true } })
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const scope = effectScope()
     try {
       const states = scope.run(() => app.runWithContext(() => useQueryStates({
@@ -35,12 +36,17 @@ describe('browser history query runtime', () => {
 
       states.patch({ page: 1 }, { history: 'replace', scroll: false })
       await Promise.resolve()
+
       expect(browser.history.replaceState).toHaveBeenCalledOnce()
+
       await nextTick()
+
       expect(browser.scrollTo).toHaveBeenCalledOnce()
       expect(browser.location.searchParams.has('page')).toBe(false)
       expect(states.values.page).toBe(1)
+
       browser.history.back()
+
       expect(states.values.sort).toBe('name')
       expect(q.value).toBeUndefined()
     }
@@ -54,6 +60,7 @@ describe('browser history query runtime', () => {
     const adapter = makeAdapter()
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const scope = effectScope()
     const stop = addDebugReporter(() => {})
     try {
@@ -81,6 +88,7 @@ describe('browser history query runtime', () => {
     const adapter = makeAdapter({ defaultOptions: { throttleMs: 100 } })
     const app = createApp({})
     installQueryAdapter(app, adapter)
+
     const scope = effectScope()
     try {
       const q = scope.run(() => app.runWithContext(() => useQueryState('q', codecs.string)))!

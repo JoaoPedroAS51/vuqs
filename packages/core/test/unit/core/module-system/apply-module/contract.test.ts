@@ -83,9 +83,13 @@ describe('module results', () => {
     }))
 
     expect(q.candidates.value.q).toBeUndefined()
+
     q.fill('loaded')
+
     expect(q.candidates.value.q).toBe('loaded')
+
     q.fill('reloaded')
+
     expect(q.candidates.value.q).toBe('reloaded')
     expect(q.values.q).toBe('reloaded')
   })

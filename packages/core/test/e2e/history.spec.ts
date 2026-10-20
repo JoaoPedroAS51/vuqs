@@ -10,6 +10,7 @@ for (const adapter of ['vue-router', 'browser-history']) {
       await page.getByRole('button', { name: 'Push search' }).click()
       await expectUrl(page, `${path}?q=pushed`)
       await expect(page.getByRole('searchbox', { name: 'Search' })).toHaveValue('pushed')
+
       await page.getByRole('button', { name: 'Replace search' }).click()
       await expectUrl(page, `${path}?q=replaced`)
       await expect(page.getByRole('searchbox', { name: 'Search' })).toHaveValue('replaced')

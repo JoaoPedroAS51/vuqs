@@ -25,6 +25,7 @@ describe('testing adapter query runtime', () => {
 
   it('coalesces writes from multiple params into one navigate call', async () => {
     const onUrlUpdate = vi.fn()
+
     const adapter = createTestingAdapter({ onUrlUpdate })
     const app = createApp({})
     installQueryAdapter(app, adapter)
