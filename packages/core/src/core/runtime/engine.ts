@@ -14,6 +14,7 @@ import { bindDebugTarget, emitDebug, emitWarn, isDebugArmed } from '../diagnosti
 import { normalizeForHistory } from '../diagnostics/normalize'
 import { registerSnapshotSource } from '../diagnostics/snapshot'
 import { getPath } from '../query/path'
+import { resolveClearOnDefault } from '../schema/default-elision'
 import { parseQueryStates } from '../schema/operations'
 import { composeDefaultCandidates } from '../schema/resolution'
 import { assertUniquePaths, getManagedKeys } from '../schema/schema'
@@ -46,13 +47,13 @@ export interface QueryStateEngineOptions<TSchema extends QueryStateSchema> exten
    */
   throttleMs?: number
   /**
-   * Allows default-equal writes to omit their URL representation when the binding
-   * reads the same value afterward. Overrides the param and adapter settings.
+   * Allows default-equal values to be omitted from the URL when the complete read is preserved.
+   * Per-write and param settings take precedence.
    *
-   * @default The param setting, then `adapterClearOnDefault`, then `true`.
+   * @default `adapterClearOnDefault`, then `true`.
    */
   clearOnDefault?: boolean
-  /** Adapter-level default for `clearOnDefault`. */
+  /** The adapter setting for omitting default-equal values from the URL. */
   adapterClearOnDefault?: boolean
 }
 
@@ -68,7 +69,7 @@ export interface ResolvedQueryStateOptions {
   scroll?: NavigateOptions['scroll']
   /** The write-coalescing window in ms (`0` means one microtask). */
   throttleMs: number
-  /** The default-omission policy baseline; omission also requires preserving the complete read. */
+  /** The resolved baseline for omitting default-equal values. Per-write and param settings take precedence. */
   clearOnDefault: boolean
 }
 
@@ -248,7 +249,7 @@ export function createQueryStateEngine<TSchema extends QueryStateSchema>(
     getQuery: readEffectiveQuery,
     getCandidates: () => candidates.value,
     shouldClearOnDefault: (key: keyof TSchema & string) =>
-      clearOnDefault ?? schema[key].clearOnDefault ?? adapterClearOnDefault ?? true,
+      resolveClearOnDefault(schema[key], clearOnDefault, adapterClearOnDefault),
   }
 
   const resolvedDefaults = computed(() => evaluation.projectCandidates(candidates.value, readEffectiveQuery))

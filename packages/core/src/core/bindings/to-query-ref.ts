@@ -1,5 +1,5 @@
 import type { WritableComputedRef } from 'vue'
-import type { NavigateOptions } from '../runtime/adapter'
+import type { QueryWriteOptions } from '../runtime/transaction'
 import type { QueryStateResolvedValues, QueryStateSchema, QueryStateValues } from '../schema/schema'
 import type { QueryBindingSource, QueryReadShape } from './binding'
 import { computed } from 'vue'
@@ -14,11 +14,11 @@ export interface QueryRef<TSchema extends QueryStateSchema>
   extends WritableComputedRef<QueryStateResolvedValues<TSchema>, QueryStateValues<TSchema>> {
   /**
    * Replaces the whole state as one atomic transaction, optionally overriding
-   * navigation options.
+   * navigation and default omission.
    */
-  set: (value: QueryStateValues<TSchema>, options?: NavigateOptions) => void
+  set: (value: QueryStateValues<TSchema>, options?: QueryWriteOptions) => void
   /** Clears every param, optionally overriding the navigation options. */
-  clear: (options?: NavigateOptions) => void
+  clear: (options?: QueryWriteOptions) => void
 }
 
 /**
@@ -44,8 +44,10 @@ export function toQueryRef<TSchema extends QueryStateSchema, TRead extends Query
 ): QueryRef<TSchema> {
   const { binding } = query
 
-  const replace = (next: QueryStateValues<TSchema>, options?: NavigateOptions): void => {
-    binding.transact({ mode: 'replace', values: next, navigation: options })
+  const replace = (next: QueryStateValues<TSchema>, options?: QueryWriteOptions): void => {
+    const { clearOnDefault, ...navigation } = options ?? {}
+
+    binding.transact({ mode: 'replace', values: next, navigation: options === undefined ? undefined : navigation, clearOnDefault })
   }
 
   // Keep equivalent snapshots stable to avoid feedback through v-model.
@@ -65,7 +67,7 @@ export function toQueryRef<TSchema extends QueryStateSchema, TRead extends Query
   })
 
   return Object.assign(ref, {
-    set: (next: QueryStateValues<TSchema>, options?: NavigateOptions) => replace(next, options),
-    clear: (options?: NavigateOptions) => replace({}, options),
+    set: (next: QueryStateValues<TSchema>, options?: QueryWriteOptions) => replace(next, options),
+    clear: (options?: QueryWriteOptions) => replace({}, options),
   }) as QueryRef<TSchema>
 }

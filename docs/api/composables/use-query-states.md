@@ -82,7 +82,7 @@ interface UseQueryStatesOptions extends NavigateOptions {
 | `history` | `'replace' \| 'push'` | Optional. Defaults to `'replace'`. Push or replace a history entry. |
 | `scroll` | `boolean \| ScrollToOptions` | Optional. Defaults to `false`. Where the window scrolls after navigation. |
 | `throttleMs` | `number` | Optional. Defaults to a microtask. Coalesce writes within this many milliseconds. |
-| `clearOnDefault` | `boolean` | Optional. Defaults to `true`. Drop values equal to their resolved defaults. |
+| `clearOnDefault` | `boolean` | Optional. Allows safe default omission. Falls back to the adapter setting, then `true`; param settings and per-call overrides take precedence. |
 
 See [Navigation & options](/guide/query-state/navigation-options) for behavior and
 precedence.
@@ -99,11 +99,25 @@ type QueryStatesValues<TSchema extends QueryStateSchema> = {
 
 ```ts
 interface QueryStatesActions<TSchema extends QueryStateSchema> {
-  patch: (values: QueryStateWriteValues<TSchema>, options?: NavigateOptions) => void
-  replace: (values: QueryStateValues<TSchema>, options?: NavigateOptions) => void
-  clear: (options?: NavigateOptions) => void
+  patch: (values: QueryStateWriteValues<TSchema>, options?: QueryWriteOptions) => void
+  replace: (values: QueryStateValues<TSchema>, options?: QueryWriteOptions) => void
+  clear: (options?: QueryWriteOptions) => void
 }
 ```
+
+## QueryWriteOptions
+
+Options for one call to `patch`, `replace`, `set` or `clear`, including ref writers.
+
+```ts
+interface QueryWriteOptions extends NavigateOptions {
+  clearOnDefault?: boolean
+}
+```
+
+`clearOnDefault` overrides the param, composable and adapter settings for that
+write. Explicit clearing still removes the param regardless of this option.
+`history` and `scroll` follow [`NavigateOptions`](/api/adapters/query-adapter#navigateoptions).
 
 ## UseQueryStatesReturn
 

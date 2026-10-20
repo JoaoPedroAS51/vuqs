@@ -58,9 +58,11 @@ interface QueryCore<TSchema extends QueryStateSchema> {
 and clears explicit `undefined`; a `replace` clears absent or `undefined` entries.
 Both apply their full key set to the optimistic state before emitting one
 transaction start. Its `defaultPolicy` is `'binding'` by default, which applies
-`clearOnDefault`.
+`clearOnDefault`. Set `request.clearOnDefault` to override the param and binding
+settings for one transaction; it is separate from `request.navigation`.
 Use `'preserve-explicit'` only for exact state replay: an explicitly supplied
-value remains present even when it equals the resolved default. Codecs, the write
+value remains present even when it equals the resolved default or the request
+enables `clearOnDefault`. Codecs, the write
 pipeline, replacement clears, navigation, and transaction observation still apply.
 
 An empty patch creates no transaction. An explicitly touched
@@ -96,6 +98,10 @@ core.query.transact({
 ```
 
 ## QueryTransactionRequest
+
+`navigation` contains `history` and `scroll`. `clearOnDefault` overrides omission
+for this transaction, while `defaultPolicy: 'preserve-explicit'` disables automatic
+omission regardless of that override. `origin` identifies the producer.
 
 ```ts
 type QueryTransactionRequest<TSchema extends QueryStateSchema>

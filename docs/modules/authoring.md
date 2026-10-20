@@ -207,7 +207,7 @@ The context is readonly:
 | `schema` | The binding's schema topology. | Same. |
 | `query` | The query this evaluation reads. It is the live query, or an alternative being compared. | The effective query before the request, including earlier optimistic writes. It does not change while the callbacks run. |
 | `projection` | The projection being processed. | none |
-| `request` | none | The request as supplied: `mode`, `values`, and `origin`, `navigation` and `defaultPolicy` only when the caller set them. |
+| `request` | none | The request as supplied: `mode`, `values`, and optional `origin`, `navigation`, `clearOnDefault` and `defaultPolicy`. |
 
 Callbacks must be synchronous and pure. The input and `context.request.values` are
 readonly down through declared composed children, so assigning `values.record.a`

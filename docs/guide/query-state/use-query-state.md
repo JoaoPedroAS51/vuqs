@@ -18,13 +18,13 @@ const q = useQueryState('q', codecs.string.withDefault(''))
 
 ```ts
 interface QueryStateRef<T> extends WritableComputedRef<T> {
-  set: (value: T, options?: NavigateOptions) => void
-  clear: (options?: NavigateOptions) => void
+  set: (value: T, options?: QueryWriteOptions) => void
+  clear: (options?: QueryWriteOptions) => void
 }
 ```
 
 - `q.value` reads or writes the value (`v-model` writes here).
-- `q.set(value, options?)` writes with [per-call options](/guide/query-state/navigation-options).
+- `q.set(value, options?)` writes with [`QueryWriteOptions`](/api/composables/use-query-states#querywriteoptions).
 - `q.clear(options?)` removes the key from the URL, reverting to the default.
 
 ```ts

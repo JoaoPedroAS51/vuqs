@@ -3,6 +3,7 @@ import type {
   ApplyPipelineEffects,
   Codec,
   ModuleOptions,
+  NavigateOptions,
   OrderedPipelineDescriptors,
   PipelineDescriptor,
   PipelinePath,
@@ -10,11 +11,12 @@ import type {
   QueryPipelineBus,
   QueryStateSchema,
   QueryStateValues,
+  QueryWriteOptions,
 } from '@vuqs/core'
 import type { DebugEventCode, DebugEventMap, KnownDebugEvent } from '@vuqs/core/debug-protocol'
 import type { StoredDebugConfigV1 } from '@vuqs/core/debug/console'
 import type { QueryStorage, StorageStatus } from '@vuqs/core/modules'
-import { codecs, defineQueryModule, defineQuerySchema, queryParam, toQueryRefs, useQueryState, useQueryStates } from '@vuqs/core'
+import { codecs, defineQueryModule, defineQuerySchema, queryParam, toQueryRef, toQueryRefs, useQueryState, useQueryStates } from '@vuqs/core'
 import { createConsoleReporter, createPerformanceReporter, VUQS_DEBUG_STORAGE_KEY } from '@vuqs/core/debug/console'
 import { withActiveParams, withContext, withRuntimeDefaults, withStorage } from '@vuqs/core/modules'
 import { expectTypeOf } from 'vitest'
@@ -65,6 +67,15 @@ expectTypeOf(grouped.explicitSnapshot).toEqualTypeOf<{ readonly page?: number, r
 expectTypeOf(grouped.isActive).parameter(0).toEqualTypeOf<'page' | 'q'>()
 expectTypeOf(single.setDefault).parameter(0).toEqualTypeOf<number>()
 expectTypeOf<{ page: string }>().not.toExtend<typeof grouped.explicitSnapshot>()
+
+const writeOptions: QueryWriteOptions = { history: 'push', scroll: false, clearOnDefault: true }
+grouped.patch({ page: 1 }, writeOptions)
+grouped.replace({ page: 1 }, writeOptions)
+single.set(1, writeOptions)
+toQueryRefs(grouped).page.set(1, writeOptions)
+toQueryRef(grouped).set({ page: 1 }, writeOptions)
+expectTypeOf<QueryWriteOptions['clearOnDefault']>().toEqualTypeOf<boolean | undefined>()
+expectTypeOf<'clearOnDefault'>().not.toExtend<keyof NavigateOptions>()
 
 interface Payload { id: string }
 const validator: StandardSchemaV1<unknown, Payload> = {

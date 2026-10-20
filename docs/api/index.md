@@ -180,6 +180,7 @@ Module walkthroughs remain in the [Modules guides](/modules/).
 | [`QueryTransactionDefaultPolicy`](/api/authoring/query-core#querytransactiondefaultpolicy) |
 | [`QueryTransactionOrigin`](/api/authoring/query-core#querytransactionorigin) |
 | [`QueryTransactionRequest`](/api/authoring/query-core#querytransactionrequest) |
+| [`QueryWriteOptions`](/api/composables/use-query-states#querywriteoptions) |
 | [`QueryAdapter`](/api/adapters/query-adapter) |
 | [`QueryAdapterDefaultOptions`](/api/adapters/query-adapter#queryadapterdefaultoptions) |
 | [`NavigateOptions`](/api/adapters/query-adapter#navigateoptions) |

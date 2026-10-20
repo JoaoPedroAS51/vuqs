@@ -93,13 +93,13 @@ describe('createQueryStateEngine', () => {
   })
 
   describe('param-level clearOnDefault precedence', () => {
-    it('lets the binding option override a keep-on-default param', async () => {
+    it('lets a keep-on-default param override the binding option', async () => {
       const { adapter, engine, scope } = setup({ page: queryParam('page', codecs.integer.withDefault(1)).keepOnDefault() }, { clearOnDefault: true })
 
       engine.query.transact({ mode: 'patch', values: { page: 1 } })
       await flush()
 
-      expect(adapter.query.value).toEqual({})
+      expect(adapter.query.value).toEqual({ page: '1' })
       scope.stop()
     })
 
@@ -114,6 +114,25 @@ describe('createQueryStateEngine', () => {
 
       expect(adapter.query.value).toEqual({ page: '1' })
       scope.stop()
+    })
+
+    it.each([
+      { keep: true, baseline: true, override: true, expected: {}, subsequent: { page: '1' } },
+      { keep: false, baseline: true, override: false, expected: { page: '1' }, subsequent: {} },
+      { keep: false, baseline: false, override: true, expected: {}, subsequent: { page: '1' } },
+    ])('keeps an override local to its transaction (keep=$keep, baseline=$baseline, override=$override)', async ({ keep, baseline, override, expected, subsequent }) => {
+      const page = queryParam('page', codecs.integer.withDefault(1))
+      const { adapter, engine } = setup({ page: keep ? page.keepOnDefault() : page }, { clearOnDefault: baseline })
+
+      engine.query.transact({ mode: 'patch', values: { page: 1 }, clearOnDefault: override })
+      await flush()
+
+      expect(adapter.query.value).toEqual(expected)
+
+      engine.query.transact({ mode: 'patch', values: { page: 1 } })
+      await flush()
+
+      expect(adapter.query.value).toEqual(subsequent)
     })
 
     it('keeps explicit clears and codec omission when automatic omission is disabled', async () => {
@@ -134,7 +153,7 @@ describe('createQueryStateEngine', () => {
       installRead(engine, read)
       read.mockClear()
 
-      engine.query.transact({ mode: 'patch', values: { page: 1 }, defaultPolicy: 'preserve-explicit' })
+      engine.query.transact({ mode: 'patch', values: { page: 1 }, defaultPolicy: 'preserve-explicit', clearOnDefault: true })
       await flush()
 
       expect(read).not.toHaveBeenCalled()

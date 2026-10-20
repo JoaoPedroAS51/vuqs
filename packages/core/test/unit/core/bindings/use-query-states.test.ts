@@ -496,7 +496,7 @@ describe('useQueryStates', () => {
       expect(query.value).toEqual({ page: '1' })
     })
 
-    it('composable options override keepOnDefault', async () => {
+    it('keepOnDefault overrides composable options', async () => {
       const schema = {
         page: queryParam('page', codecs.integer).withDefault(1).keepOnDefault(),
       }
@@ -506,7 +506,7 @@ describe('useQueryStates', () => {
       values.page = 1
       await flush()
 
-      expect(query.value).toEqual({})
+      expect(query.value).toEqual({ page: '1' })
     })
   })
 
@@ -669,4 +669,49 @@ describe('write policy through every bound writer', () => {
     expect(calls).toEqual([{ value: 'a' }])
     await flush()
   })
+
+  const writers = ['patch', 'replace', 'single', 'param ref', 'whole ref'] as const
+  const policies = [
+    { override: true, keep: true, expected: { other: 'keep' }, subsequent: { other: 'keep', page: '1' } },
+    { override: false, keep: false, expected: { other: 'keep', page: '1' }, subsequent: { other: 'keep' } },
+  ]
+
+  it.each(writers.flatMap(writer => policies.map(policy => ({ writer, ...policy }))))(
+    'applies clearOnDefault=$override through $writer without changing later writes',
+    async ({ writer, override, keep, expected, subsequent }) => {
+      const { query, navigate, run } = setup({ other: 'keep', page: '2' })
+      const page = queryParam('page', codecs.integer.withDefault(1))
+      const definition = keep ? page.keepOnDefault() : page
+      const state = run(() => useQueryStates({ page: definition }))
+      const options = { clearOnDefault: override, history: 'push' as const }
+
+      switch (writer) {
+        case 'patch':
+          state.patch({ page: 1 }, options)
+          break
+        case 'replace':
+          state.replace({ page: 1 }, options)
+          break
+        case 'single':
+          run(() => useQueryState(definition)).set(1, options)
+          break
+        case 'param ref':
+          toQueryRefs(state).page.set(1, options)
+          break
+        case 'whole ref':
+          toQueryRef(state).set({ page: 1 }, options)
+          break
+      }
+      await flush()
+
+      expect(query.value).toEqual(expected)
+      expect(navigate).toHaveBeenLastCalledWith(expected, { history: 'push', scroll: false })
+
+      state.patch({ page: 1 })
+      await flush()
+
+      expect(query.value).toEqual(subsequent)
+      expect(navigate).toHaveBeenLastCalledWith(subsequent, { scroll: false })
+    },
+  )
 })

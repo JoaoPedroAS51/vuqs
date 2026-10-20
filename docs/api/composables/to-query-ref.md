@@ -45,10 +45,12 @@ function toQueryRef<TSchema extends QueryStateSchema>(query: QueryBindingSource<
 ```ts
 interface QueryRef<TSchema extends QueryStateSchema>
   extends WritableComputedRef<QueryStateResolvedValues<TSchema>, QueryStateValues<TSchema>> {
-  set: (value: QueryStateValues<TSchema>, options?: NavigateOptions) => void
-  clear: (options?: NavigateOptions) => void
+  set: (value: QueryStateValues<TSchema>, options?: QueryWriteOptions) => void
+  clear: (options?: QueryWriteOptions) => void
 }
 ```
+
+Per-call options follow [`QueryWriteOptions`](/api/composables/use-query-states#querywriteoptions).
 
 ## QueryBinding
 

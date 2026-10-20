@@ -1,8 +1,8 @@
 # Navigation & options
 
-Every write (`q.value = …`, `.set`, `.clear`, `patch`, `replace`, `clear`) accepts
-options that control how and when the URL changes. The same options can be set at
-four levels with a defined precedence order.
+Write methods accept options that control navigation and default omission.
+Direct assignments use the binding's configuration. See [Precedence](#precedence)
+for the order in which settings apply.
 
 ## The options
 
@@ -103,34 +103,55 @@ its own defaults beneath the shared explicit value, so it can read a different
 fallback after a drop without blocking it.
 
 ```ts
-// Keep defaults in the URL (rarely needed):
+// Keep defaults in the URL:
 useQueryState('page', codecs.integer.withDefault(1), { clearOnDefault: false })
 ```
 
-A param can opt out with `keepOnDefault()`. The effective setting follows the
-binding option, then the param, then the adapter default, then `true`. A transaction
-that restores state with `defaultPolicy: 'preserve-explicit'` keeps every supplied
-value, including default-equal ones.
+A param can opt out with `keepOnDefault()`, which takes precedence over the
+composable and adapter defaults. Override it for one write through the method's
+`clearOnDefault` option:
+
+```ts
+import { codecs, queryParam, useQueryState } from '@vuqs/core'
+
+const page = useQueryState(queryParam('page', codecs.integer.withDefault(1)).keepOnDefault())
+
+page.set(1) // Keeps page=1.
+page.set(1, { clearOnDefault: true }) // Omits page when the complete read is preserved.
+page.set(1) // Keeps page=1 again.
+```
+
+The override applies only to that write. A transaction with
+`defaultPolicy: 'preserve-explicit'` disables automatic omission even when
+`clearOnDefault: true` is supplied.
 
 | Option | Type | Default | Settable at |
 | --- | --- | --- | --- |
 | `history` | `'push' \| 'replace'` | `'replace'` | per call, composable, adapter |
 | `scroll` | `boolean \| ScrollToOptions` | `false` | per call, composable, adapter |
 | `throttleMs` | `number` | microtask | composable, adapter |
-| `clearOnDefault` | `boolean` | `true` | composable, adapter |
+| `clearOnDefault` | `boolean` | `true` | per call, param, composable, adapter |
 
-`history` and `scroll` are per-navigation, so they are accepted on every write
-method. `throttleMs` and `clearOnDefault` describe the binding itself, so they are
-set once when you create it, or on the adapter.
+Write methods accept [`QueryWriteOptions`](/api/composables/use-query-states#querywriteoptions):
+`history`, `scroll` and `clearOnDefault`. Adapters receive only `history` and
+`scroll`. Set `throttleMs` on the composable or adapter.
 
 ## Precedence
 
-The same option can be set at four levels. When more than one sets it, the most
-specific wins:
+For `history` and `scroll`:
 
 ```
 per-call  ▶  per-composable  ▶  adapter defaultOptions  ▶  built-in default
 ```
+
+For `clearOnDefault`:
+
+```
+per-call  ▶  param  ▶  per-composable  ▶  adapter defaultOptions  ▶  true
+```
+
+The [serializer](/api/serialization/create-serializer) uses the param setting,
+then its own `clearOnDefault` option, then `true`.
 
 Say the app defaults to `replace`, one component overrides to `push`, and a single
 "apply" write overrides back to `replace`.

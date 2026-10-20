@@ -3,7 +3,7 @@ import type { NormalizeQueryStateSchema, QueryStateSchema, QueryStateSchemaInput
 import { emitDebug, globalDebugChannel, isDebugArmed } from '../diagnostics/bus'
 import { cloneQuery, compactQuery, mergeQueries } from '../query/object'
 import { deletePath, pruneEmptyAncestors } from '../query/path'
-import { createStaticOmissionEvaluator, prepareDefaultOmission } from './default-elision'
+import { createStaticOmissionEvaluator, prepareDefaultOmission, resolveClearOnDefault } from './default-elision'
 import { normalizeQueryStateSchema } from './schema'
 
 /**
@@ -11,10 +11,10 @@ import { normalizeQueryStateSchema } from './schema'
  */
 export interface CreateSerializerOptions {
   /**
-   * Allows values equal to their static defaults to omit their URL representation
-   * when the complete static read is preserved. Overrides the param setting.
+   * Allows default-equal values to be omitted from the query when the complete static read is preserved.
+   * Param settings take precedence.
    *
-   * @default The param setting, or `true`.
+   * @default true
    */
   clearOnDefault?: boolean
   /**
@@ -179,7 +179,7 @@ export function createSerializer<TSchema extends QueryStateSchemaInput>(
 
       query = mergeQueries(query, compactQuery(definition.write(value)))
 
-      if (clearOnDefault ?? definition.clearOnDefault ?? true) {
+      if (resolveClearOnDefault(definition, clearOnDefault)) {
         requested.push(key)
       }
     }

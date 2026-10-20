@@ -114,6 +114,7 @@ export type {
   QueryTransactionObserver,
   QueryTransactionOrigin,
   QueryTransactionRequest,
+  QueryWriteOptions,
 } from './core/runtime/transaction'
 export { dropDefaults } from './core/schema/default-elision'
 export { buildQuery, omitManagedKeys, parseQueryStates, serializeQueryStates } from './core/schema/operations'

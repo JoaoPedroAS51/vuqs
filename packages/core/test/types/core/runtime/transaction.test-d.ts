@@ -22,6 +22,7 @@ describe('query transaction types', () => {
 
       core.query.transact({ mode: 'patch', values: { q: 'sale', category: undefined } })
       core.query.transact({ mode: 'replace', values: { category: 'cpu' } })
+      core.query.transact({ mode: 'patch', values: { q: 'sale' }, clearOnDefault: false })
       core.query.transact({
         mode: 'replace',
         values: { q: 'sale' },
@@ -29,6 +30,8 @@ describe('query transaction types', () => {
       })
 
       type Transaction = Parameters<typeof core.query.transact>[0]
+      expectTypeOf<Transaction['clearOnDefault']>().toEqualTypeOf<boolean | undefined>()
+      expectTypeOf<'clearOnDefault'>().not.toExtend<keyof NonNullable<Transaction['navigation']>>()
       expectTypeOf<{ mode: 'patch', values: { category: 'memory' } }>().not.toExtend<Transaction>()
       expectTypeOf<'preserve'>().not.toExtend<NonNullable<Transaction['defaultPolicy']>>()
 

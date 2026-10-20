@@ -3,8 +3,8 @@ import type { Codec, CodecWithDefault } from '../codecs/codec'
 import type { QueryStateUsable, StateModuleApi, StateModulePipeline, VerifiedStateModule } from '../module-system/composition'
 import type { DefinedQueryStateModule } from '../module-system/contract'
 import type { SingleParamSchema } from '../module-system/registry'
-import type { NavigateOptions } from '../runtime/adapter'
 import type { ApplyPipelineEffects } from '../runtime/pipeline/contract'
+import type { QueryWriteOptions } from '../runtime/transaction'
 import type { AnyDefinedQueryParam, DefinedQueryParam } from '../schema/params/definition'
 import type { QueryStateRefInput, QueryStateRefValue } from '../schema/schema'
 import type { UseQueryStatesOptions } from './binding'
@@ -24,10 +24,10 @@ import { createQueryBinding, transactQueryKey } from './binding'
  * @see https://vuqs.dev/guide/query-state/use-query-state
  */
 export interface QueryStateRef<TRead, TWrite = TRead> extends WritableComputedRef<TRead, TWrite> {
-  /** Writes `value`, optionally overriding the navigation options for this write. */
-  set: (value: TWrite, options?: NavigateOptions) => void
+  /** Writes `value`, optionally overriding navigation and default omission. */
+  set: (value: TWrite, options?: QueryWriteOptions) => void
   /** Removes the param from the URL, optionally overriding the navigation options. */
-  clear: (options?: NavigateOptions) => void
+  clear: (options?: QueryWriteOptions) => void
 }
 
 /**
@@ -189,8 +189,8 @@ function toQueryStateRef<TParam extends AnyDefinedQueryParam>(
   })
 
   const queryRef = Object.assign(valueRef, {
-    set: (value: unknown, perCall?: NavigateOptions) => transactQueryKey(binding, 'value', value, perCall),
-    clear: (perCall?: NavigateOptions) => transactQueryKey(binding, 'value', undefined, perCall),
+    set: (value: unknown, perCall?: QueryWriteOptions) => transactQueryKey(binding, 'value', value, perCall),
+    clear: (perCall?: QueryWriteOptions) => transactQueryKey(binding, 'value', undefined, perCall),
   }) as UseQueryStateReturn<TParam>
 
   queryRef.use = ((module: DefinedQueryStateModule) => {

@@ -1,4 +1,4 @@
-import type { NavigateOptions } from '../runtime/adapter'
+import type { QueryWriteOptions } from '../runtime/transaction'
 import type { QueryStateRefInput, QueryStateSchema } from '../schema/schema'
 import type { QueryBindingSource, QueryReadMap, QueryReadShape } from './binding'
 import type { QueryStateRef } from './use-query-state'
@@ -46,8 +46,8 @@ export function toQueryRefs<TSchema extends QueryStateSchema, TRead extends Quer
     })
 
     result[key] = Object.assign(fieldRef, {
-      set: (value: unknown, options?: NavigateOptions) => transactQueryKey(binding, key, value, options),
-      clear: (options?: NavigateOptions) => transactQueryKey(binding, key, undefined, options),
+      set: (value: unknown, options?: QueryWriteOptions) => transactQueryKey(binding, key, value, options),
+      clear: (options?: QueryWriteOptions) => transactQueryKey(binding, key, undefined, options),
     })
   }
 

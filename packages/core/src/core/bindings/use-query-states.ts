@@ -1,7 +1,7 @@
 import type { QueryStatesUsable, StatesModuleApi, StatesModulePipeline, VerifiedStatesModule } from '../module-system/composition'
 import type { QueryStatesModule } from '../module-system/contract'
-import type { NavigateOptions } from '../runtime/adapter'
 import type { ApplyPipelineEffects } from '../runtime/pipeline/contract'
+import type { QueryWriteOptions } from '../runtime/transaction'
 import type { NormalizeQueryStateSchema, QueryStateSchema, QueryStateSchemaInput, QueryStateValues, QueryStateWriteValues } from '../schema/schema'
 import type { QueryBindingSource, QueryReadMap, QueryReadShape, QueryStatesValues, UseQueryStatesOptions } from './binding'
 import { applyQueryStatesModule } from '../module-system/apply-module'
@@ -56,15 +56,15 @@ export interface QueryStatesActions<TSchema extends QueryStateSchema> {
    * it, pass `undefined` to clear it, or a value to set it.
    * Other writes in the same adapter's coalescing window may share its navigation.
    */
-  patch: (values: QueryStateWriteValues<TSchema>, options?: NavigateOptions) => void
+  patch: (values: QueryStateWriteValues<TSchema>, options?: QueryWriteOptions) => void
   /**
    * Replaces the whole state as one atomic transaction: sets the given params and
    * clears every param absent or explicitly `undefined`. Other writes in the
    * adapter's coalescing window may share its navigation.
    */
-  replace: (values: QueryStateValues<TSchema>, options?: NavigateOptions) => void
+  replace: (values: QueryStateValues<TSchema>, options?: QueryWriteOptions) => void
   /** Clears every param, optionally overriding the navigation options. */
-  clear: (options?: NavigateOptions) => void
+  clear: (options?: QueryWriteOptions) => void
 }
 
 /**
@@ -119,15 +119,19 @@ export function useQueryStates(schema: QueryStateSchemaInput, options: UseQueryS
 
   const values = toReactiveQuery(binding)
 
-  const patch = (next: QueryStateWriteValues<typeof normalizedSchema>, perCall?: NavigateOptions): void => {
-    binding.transact({ mode: 'patch', values: next, navigation: perCall })
+  const patch = (next: QueryStateWriteValues<typeof normalizedSchema>, perCall?: QueryWriteOptions): void => {
+    const { clearOnDefault, ...navigation } = perCall ?? {}
+
+    binding.transact({ mode: 'patch', values: next, navigation: perCall === undefined ? undefined : navigation, clearOnDefault })
   }
 
-  const replace = (next: QueryStateValues<typeof normalizedSchema>, perCall?: NavigateOptions): void => {
-    binding.transact({ mode: 'replace', values: next, navigation: perCall })
+  const replace = (next: QueryStateValues<typeof normalizedSchema>, perCall?: QueryWriteOptions): void => {
+    const { clearOnDefault, ...navigation } = perCall ?? {}
+
+    binding.transact({ mode: 'replace', values: next, navigation: perCall === undefined ? undefined : navigation, clearOnDefault })
   }
 
-  const clear = (perCall?: NavigateOptions): void => {
+  const clear = (perCall?: QueryWriteOptions): void => {
     replace({}, perCall)
   }
 

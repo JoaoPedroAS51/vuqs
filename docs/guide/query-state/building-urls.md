@@ -21,6 +21,9 @@ serialize({ q: 'laptop', page: 2 })
 ```
 
 It uses the partial-write semantics of `patch` and applies `clearOnDefault`.
+The param's setting takes precedence over the serializer option, then defaults
+to `true`. A param with `.keepOnDefault()` retains its default-valued writes even
+when the serializer enables `clearOnDefault`.
 
 ## Patching over a base
 

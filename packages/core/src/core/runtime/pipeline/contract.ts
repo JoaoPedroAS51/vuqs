@@ -264,6 +264,8 @@ export interface PipelineWriteRequest<TSchema extends QueryStateSchema> {
   readonly values: PipelineView<TSchema, 'explicit'>
   readonly origin?: symbol
   readonly navigation?: Readonly<NavigateOptions>
+  /** The per-write setting for omitting default-equal values from the URL. */
+  readonly clearOnDefault?: boolean
   readonly defaultPolicy?: 'binding' | 'preserve-explicit'
 }
 

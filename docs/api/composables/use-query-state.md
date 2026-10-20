@@ -59,7 +59,7 @@ writes its explicit value, and module APIs infer from the same param.
   - `state.value`
     - Read the resolved value or write the explicit value; `v-model` binds here. Assigning `undefined` clears a param whose read type includes it.
   - `state.set(value, options?): void`
-    - Write the explicit value with per-call [navigation options](/guide/query-state/navigation-options). A composed param accepts a partial object: omitted children keep resolving from their defaults.
+    - Write the explicit value with per-call [write options](/api/composables/use-query-states#querywriteoptions). A composed param accepts a partial object: omitted children keep resolving from their defaults.
   - `state.clear(options?): void`
     - Remove the key from the URL, reverting to its default.
   - `state.use(module): UseQueryStateReturn<…>`
@@ -77,8 +77,8 @@ Vue auto-unwraps a top-level ref in templates, so call them from a function in
 
 ```ts
 interface QueryStateRef<TRead, TWrite = TRead> extends WritableComputedRef<TRead, TWrite> {
-  set: (value: TWrite, options?: NavigateOptions) => void
-  clear: (options?: NavigateOptions) => void
+  set: (value: TWrite, options?: QueryWriteOptions) => void
+  clear: (options?: QueryWriteOptions) => void
 }
 ```
 

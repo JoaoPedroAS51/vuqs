@@ -1,6 +1,15 @@
 import type { QueryStateSchema, QueryStateValues, QueryStateWriteValues } from '../schema/schema'
 import type { NavigateOptions } from './adapter'
 
+/** Options for one query-state write. */
+export interface QueryWriteOptions extends NavigateOptions {
+  /**
+   * Allows default-equal values to be omitted from the URL when the complete read is preserved.
+   * Overrides the param, binding and adapter settings for this write.
+   */
+  clearOnDefault?: boolean
+}
+
 /** Identifies the producer of a query transaction. */
 export type QueryTransactionOrigin = symbol
 
@@ -10,6 +19,11 @@ export type QueryTransactionDefaultPolicy = 'binding' | 'preserve-explicit'
 interface QueryTransactionBase {
   /** Per-transaction navigation overrides. */
   navigation?: NavigateOptions
+  /**
+   * Allows default-equal values to be omitted from the URL when the complete read is preserved.
+   * Overrides the param, binding and adapter settings for this write.
+   */
+  clearOnDefault?: boolean
   /** Optional producer identity, used to ignore self-originated writes. */
   origin?: QueryTransactionOrigin
   /** Uses the binding's default elision by default; exact replays can preserve presence. */

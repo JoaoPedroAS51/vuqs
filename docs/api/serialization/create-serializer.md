@@ -45,7 +45,7 @@ function createSerializer<TSchema extends QueryStateSchemaInput>(
   - Codecs or param definitions keyed by logical name. Codec inputs are normalized
     before serialization.
 - `options?: CreateSerializerOptions`
-  - `clearOnDefault?: boolean`: default `true`. Drop a value when it equals its codec default.
+  - `clearOnDefault?: boolean`: allows omission of static-default values when the complete static read is preserved. The param setting takes precedence over this option; otherwise the default is `true`.
   - `stringify?: (query: ParsedQueryRaw) => string`: enables string output. Provide it to return a query string instead of a query object.
   - `parse?: (search: string) => ParsedQuery`: enables a string base. Provide it to accept a raw query string as the base argument.
   - `stringify` controls output; `parse` controls the accepted base. They can be

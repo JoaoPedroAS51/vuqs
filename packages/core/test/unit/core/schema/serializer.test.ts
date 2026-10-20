@@ -127,12 +127,12 @@ describe('createSerializer', () => {
     expect(serialize({ page: 1 })).toEqual({ page: '1' })
   })
 
-  it('serializer options override keepOnDefault', () => {
+  it('keepOnDefault overrides serializer options', () => {
     const serialize = createSerializer({
       page: queryParam('page', codecs.integer).withDefault(1).keepOnDefault(),
     }, { clearOnDefault: true })
 
-    expect(serialize({ page: 1 })).toEqual({})
+    expect(serialize({ page: 1 })).toEqual({ page: '1' })
   })
 
   it('does not inject a default for a field absent from the base (clearOnDefault false)', () => {

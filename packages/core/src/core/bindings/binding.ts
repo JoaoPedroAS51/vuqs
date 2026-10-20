@@ -2,12 +2,13 @@ import type { ComputedRef } from 'vue'
 import type { ModuleHost } from '../module-system/apply-module'
 import type { NavigateOptions } from '../runtime/adapter'
 import type { QueryStateEngine } from '../runtime/engine'
-import type { QueryTransactionRequest } from '../runtime/transaction'
+import type { QueryTransactionRequest, QueryWriteOptions } from '../runtime/transaction'
 import type { QueryStateRefValue, QueryStateResolvedValues, QueryStateSchema, QueryStateWriteValues } from '../schema/schema'
 import { computed, getCurrentScope, onScopeDispose, reactive } from 'vue'
 import { emitDebug } from '../diagnostics/bus'
 import { createQueryStateEngine } from '../runtime/engine'
 import { createQueryHooks } from '../runtime/hooks'
+import { resolveClearOnDefault } from '../schema/default-elision'
 import { assertUniquePaths, getManagedKeys } from '../schema/schema'
 import { useQueryAdapter } from './adapter-provider'
 
@@ -22,10 +23,10 @@ export interface UseQueryStatesOptions extends NavigateOptions {
    */
   throttleMs?: number
   /**
-   * Allows default-equal writes to omit their URL representation when the binding
-   * reads the same value afterward. Overrides the param and adapter settings.
+   * Allows default-equal values to be omitted from the URL when the complete read is preserved.
+   * Per-write and param settings take precedence.
    *
-   * @default The param setting, then the adapter setting, then `true`.
+   * @default The adapter setting, then `true`.
    */
   clearOnDefault?: boolean
 }
@@ -243,12 +244,15 @@ export function transactQueryKey<TSchema extends QueryStateSchema>(
   binding: QueryBinding<TSchema>,
   key: keyof TSchema & string,
   value: unknown,
-  navigation?: NavigateOptions,
+  options?: QueryWriteOptions,
 ): void {
+  const { clearOnDefault, ...navigation } = options ?? {}
+
   binding.transact({
     mode: 'patch',
     values: { [key]: value } as QueryStateWriteValues<TSchema>,
-    navigation,
+    navigation: options === undefined ? undefined : navigation,
+    clearOnDefault,
   })
 }
 
@@ -264,10 +268,7 @@ function resolveSchemaClearOnDefault<TSchema extends QueryStateSchema>(
 
     resolved[key] = {
       ...definition,
-      clearOnDefault: instanceClearOnDefault
-        ?? definition.clearOnDefault
-        ?? adapterClearOnDefault
-        ?? true,
+      clearOnDefault: resolveClearOnDefault(definition, instanceClearOnDefault, adapterClearOnDefault),
     }
   }
 

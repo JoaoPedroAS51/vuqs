@@ -505,10 +505,10 @@ describe('full-request write policy', () => {
       return values
     }, { optional: [['q']] })
 
-    engine.query.transact({ mode: 'patch', values: { q: undefined, page: 2 }, origin, navigation: { history: 'push' }, defaultPolicy: 'preserve-explicit' })
+    engine.query.transact({ mode: 'patch', values: { q: undefined, page: 2 }, origin, navigation: { history: 'push' }, clearOnDefault: false, defaultPolicy: 'preserve-explicit' })
     engine.query.transact({ mode: 'replace', values: { page: 4 } })
 
-    expect(seen[0]!.request).toEqual({ mode: 'patch', values: { q: undefined, page: 2 }, origin, navigation: { history: 'push' }, defaultPolicy: 'preserve-explicit' })
+    expect(seen[0]!.request).toEqual({ mode: 'patch', values: { q: undefined, page: 2 }, origin, navigation: { history: 'push' }, clearOnDefault: false, defaultPolicy: 'preserve-explicit' })
     expect(Object.hasOwn(seen[0]!.request.values as object, 'q')).toBe(true)
     expect(Object.keys(seen[1]!.request)).toEqual(['mode', 'values'])
     expect(seen[1]!.values).toEqual({ page: 4 })

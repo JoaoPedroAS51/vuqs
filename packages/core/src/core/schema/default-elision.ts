@@ -1,4 +1,5 @@
 import type { ParsedQuery, ParsedQueryRaw } from '../query/types'
+import type { AnyDefinedQueryParam } from './params/definition'
 import type { QueryStateSchema, QueryStateValues } from './schema'
 import { definedOnly } from '../../shared/utils/object'
 import { omitManagedKeys, parseQueryStates, serializeQueryStates } from './operations'
@@ -29,6 +30,19 @@ export interface DefaultOmission {
   keys: string[]
   /** The normal query without the omitted representations. */
   query: ParsedQueryRaw
+}
+
+/**
+ * Resolves the param's omission policy over the instance and adapter defaults.
+ *
+ * @internal
+ */
+export function resolveClearOnDefault(
+  param: AnyDefinedQueryParam,
+  instanceClearOnDefault?: boolean,
+  adapterClearOnDefault?: boolean,
+): boolean {
+  return param.clearOnDefault ?? instanceClearOnDefault ?? adapterClearOnDefault ?? true
 }
 
 /**

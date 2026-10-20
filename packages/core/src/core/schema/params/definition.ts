@@ -87,7 +87,10 @@ export interface DefinedQueryParam<
   ) => [TGuaranteed] extends [true] ? TResolved : TResolved | undefined
   /** The param's static default candidate, if the codec or builder declared one. */
   readonly defaultValue?: TContribution
-  /** Param-level `clearOnDefault` override. */
+  /**
+   * Allows default-equal values to be omitted from the URL when the complete read is preserved.
+   * Overrides binding, adapter and serializer settings; per-write settings take precedence.
+   */
   readonly clearOnDefault?: boolean
   /** Conditions every default of the param on decoded explicit presence. */
   readonly presenceGated?: boolean

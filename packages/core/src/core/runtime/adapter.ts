@@ -34,7 +34,12 @@ export type QueryStateNavigate = (query: ParsedQueryRaw, options: NavigateOption
 export interface QueryAdapterDefaultOptions extends NavigateOptions {
   /** Coalesce writes within this many ms into one navigation. */
   throttleMs?: number
-  /** Drop a value from the URL when it equals its codec default. */
+  /**
+   * Allows default-equal values to be omitted from the URL when the complete read is preserved.
+   * Per-write, param and binding settings take precedence.
+   *
+   * @default true
+   */
   clearOnDefault?: boolean
 }
 

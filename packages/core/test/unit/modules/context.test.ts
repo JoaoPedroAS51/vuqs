@@ -148,6 +148,18 @@ describe('withContext buildContextQuery', () => {
     expect(next).toEqual({ q: 'foo', page: '1' })
   })
 
+  it('preserves a keep-on-default param when the binding enables default omission', () => {
+    const { query, build } = setup({ page: '1' })
+    const active = ref<'products' | 'orders'>('products')
+    const q = build(() =>
+      useQueryStates({ page: schema.page.keepOnDefault() }, { clearOnDefault: true }).use(
+        withContext({ active, preserve: ['page'] }),
+      ),
+    )
+
+    expect(q.buildContextQuery(query.value, 'orders')).toEqual({ page: '1' })
+  })
+
   it('does not materialize an absent or invalid default-valued field, even with clearOnDefault false', () => {
     const tab = ref<'products' | 'orders'>('products')
 

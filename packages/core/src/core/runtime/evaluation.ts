@@ -109,7 +109,9 @@ export function createQueryEvaluation<TSchema extends QueryStateSchema>(
     const baseQuery = inputs.getQuery()
     const prepared = prepareRequest(request, requested, baseQuery)
     const omittable = prepared.touched.filter(key =>
-      prepared.written.has(key) && request.defaultPolicy !== 'preserve-explicit' && inputs.shouldClearOnDefault(key),
+      prepared.written.has(key)
+      && request.defaultPolicy !== 'preserve-explicit'
+      && (request.clearOnDefault ?? inputs.shouldClearOnDefault(key)),
     )
     const omission = omittable.length > 0
       ? omitEquivalentDefaults(omittable, prepared.deltas, baseQuery, inputs)
