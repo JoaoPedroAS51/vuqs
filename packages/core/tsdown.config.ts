@@ -18,7 +18,9 @@ export default defineConfig({
   sourcemap: true,
   dts: {
     generator: 'tsgo',
-    sourcemap: true,
+    tsgo: {
+      moduleUrl: import.meta.resolve('typescript-next'),
+    },
   },
   fixedExtension: true,
   inputOptions: {
@@ -31,7 +33,4 @@ export default defineConfig({
       defaultHandler(level, log)
     },
   },
-  suppressWarnings: [
-    /^TypeScript 7\.0 does not yet have a stable API and is experimental\. Some options will be unavailable\.$/,
-  ],
 })
