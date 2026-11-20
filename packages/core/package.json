@@ -110,11 +110,11 @@
   },
   "devDependencies": {
     "@playwright/test": "catalog:",
-    "@typescript/native-preview": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
+    "typescript-next": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
     "vue": "catalog:",

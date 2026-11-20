@@ -28,7 +28,6 @@ catalog:
   '@playwright/test': ^1.65.1
   '@standard-schema/spec': ^1.1.0
   '@types/node': ^22.20.5
-  '@typescript/native-preview': npm:typescript@7.0.2
   '@vitejs/plugin-vue': ^6.0.11
   '@vitest/coverage-v8': ^5.1.0
   defu: ^6.1.7
@@ -39,6 +38,7 @@ catalog:
   tsdown: ^0.23.7
   turbo: ^2.11.11
   typescript: npm:@typescript/typescript6@6.0.2
+  typescript-next: npm:typescript@7.1.0-beta
   vite: ^8.3.8
   vitepress: 2.0.0-alpha.20
   vitest: ^5.1.0
