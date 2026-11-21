@@ -3,7 +3,9 @@
   "compilerOptions": {
     "paths": {
       "@vuqs/core": ["./src/index.ts"]
-    }
+    },
+    "declaration": true,
+    "declarationMap": true
   },
   "include": [
     "src",

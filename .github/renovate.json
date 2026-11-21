@@ -25,6 +25,19 @@
   ],
   "packageRules": [
     {
+      "description": "Keep GitHub Actions Node.js versions managed manually",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchDepTypes": [
+        "uses-with"
+      ],
+      "matchDepNames": [
+        "node"
+      ],
+      "enabled": false
+    },
+    {
       "description": "Preserve the supported Node.js and pnpm engine ranges",
       "matchManagers": [
         "npm"
